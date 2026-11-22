@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "purpose": "Source effect inventory. Runtime type IDs and controls are defined by engine metadata; capture playback uses FCM approximations, not native NAM.",
+  "effects": [
+    {
+      "id": "gain",
+      "status": "implemented"
+    },
+    {
+      "id": "noise_gate",
+      "status": "implemented"
+    },
+    {
+      "id": "eq",
+      "status": "implemented"
+    },
+    {
+      "id": "cabinet_ir",
+      "status": "implemented"
+    },
+    {
+      "id": "overdrive",
+      "status": "implemented-experimental"
+    },
+    {
+      "id": "chorus",
+      "status": "implemented-experimental"
+    },
+    {
+      "id": "flanger",
+      "status": "implemented-experimental"
+    },
+    {
+      "id": "delay",
+      "status": "implemented-experimental"
+    },
+    {
+      "id": "reverb",
+      "status": "implemented-experimental"
+    },
+    {
+      "id": "drop_tune",
+      "status": "implemented",
+      "folder": "effects/drop_tune",
+      "type_id": 34,
+      "name": "DROP",
+      "note": "Stage 5 (2026-11-19): correlation-spliced single-head pitch shifter, 1/2..3 steps down, MIX. Host-tested; pedal listening pending."
+    },
+    {
+      "id": "ts",
+      "type_id": 9,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "bd2",
+      "type_id": 10,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "klon",
+      "type_id": 11,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "bluesbreaker",
+      "type_id": 12,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ocd",
+      "type_id": 13,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ds1",
+      "type_id": 14,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "rat",
+      "type_id": 15,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "distplus",
+      "type_id": 16,
+      "folder": "effects/drives",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "dd3",
+      "type_id": 17,
+      "folder": "effects/delays",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "dm2",
+      "type_id": 18,
+      "folder": "effects/delays",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "rv6",
+      "type_id": 19,
+      "folder": "effects/reverbs",
+      "status": "implemented; SHIMMER mode experimental",
+      "physical": "not qualified"
+    },
+    {
+      "id": "spring",
+      "type_id": 20,
+      "folder": "effects/reverbs",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "phase90",
+      "type_id": 21,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ce2",
+      "type_id": 22,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "mistress",
+      "type_id": 23,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "m117",
+      "type_id": 24,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "univibe",
+      "type_id": 25,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "vb2",
+      "type_id": 26,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "tr2",
+      "type_id": 27,
+      "folder": "effects/modulators",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "pog",
+      "type_id": 28,
+      "folder": "effects/octave",
+      "status": "experimental",
+      "physical": "not qualified"
+    },
+    {
+      "id": "dynacomp",
+      "type_id": 29,
+      "folder": "effects/dynamics",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "compplus",
+      "type_id": 30,
+      "folder": "effects/dynamics",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ge7",
+      "type_id": 31,
+      "folder": "effects/dynamics",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ns2",
+      "type_id": 32,
+      "folder": "effects/dynamics",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ns1x",
+      "type_id": 35,
+      "folder": "effects/ns1x",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "multiband",
+      "type_id": 36,
+      "folder": "effects/multiband",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "highpass",
+      "type_id": 37,
+      "folder": "effects/highpass",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "lowpass",
+      "type_id": 38,
+      "folder": "effects/lowpass",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "autowah",
+      "type_id": 39,
+      "folder": "effects/autowah",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "treble_boost",
+      "type_id": 40,
+      "folder": "effects/treble_boost",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "foxx",
+      "type_id": 41,
+      "folder": "effects/foxx",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "tape",
+      "type_id": 42,
+      "folder": "effects/tape",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "vintage_fuzz",
+      "type_id": 43,
+      "folder": "effects/vintage_fuzz",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "acoustic",
+      "type_id": 44,
+      "folder": "effects/acoustic",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "deluxe",
+      "type_id": 45,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "twin",
+      "type_id": 46,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ac30",
+      "type_id": 47,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "jc120",
+      "type_id": 48,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "jcm800",
+      "type_id": 49,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "rectifier",
+      "type_id": 50,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "5150",
+      "type_id": 51,
+      "folder": "effects/amp_heads",
+      "status": "implemented",
+      "physical": "not qualified"
+    }
+  ]
+}

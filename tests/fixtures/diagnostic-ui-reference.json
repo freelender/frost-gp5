@@ -1,0 +1,161 @@
+{
+  "kind": "Host RGB565 framebuffer regression; not physical display evidence",
+  "baseline_controller_source_sha256": "6e1e4f110908a1ed11652f0fa37f1625ae3358b23a43c9857e689cea52c2bce0",
+  "frames": [
+    {
+      "action": "init",
+      "argument": 0,
+      "pixel_sha256": "3158e3ca180e9e8674c76ebccce79370ffbf0aa02e54dee04245c76079d25bc9"
+    },
+    {
+      "action": "turn",
+      "argument": -1,
+      "pixel_sha256": "ea493cae7208f185efc5b99319b9f6fb42220ab41342721936eaa0fa294226ae"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "31a4ca5a9a2855d9482739114b4869e899d85ac7fe6a6310897b01dfcf07d9f2"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "0748c8f23810161cd571b79ccfe0863bfd3fb14e6c7ced6f8d7f27e3ed38ac5a"
+    },
+    {
+      "action": "turn",
+      "argument": 2,
+      "pixel_sha256": "5f0faabb0840ffc86fbbebe2091d1f2e21289de975f256a33c532c142c3614f5"
+    },
+    {
+      "action": "foot",
+      "argument": 0,
+      "pixel_sha256": "e1b67fee48090ff23557a4ec463f8b9abb623e9aab053d5ce31e78e764ab8e01"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "ab64e237f3b14131ebb156058da75cc7a1756385995b2e99dbda4985ec5c302c"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "7c38caddb9b3f264a6abccdc96f8a8f26bd874d169b1814a2b901fca2d7a7ab7"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "5ea3cb8ea559c268e9d01b7538af63f38e8fa32f60a739005a9afafaac57a145"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "36d9e56f79d30aa786d4c67cbc51aa0f280decfc955d7d14e1b2bc1e267bc863"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "fb158227ad3691056c714c8bbd180b1a9146c2c29da620abb98aca5b3d1bdc1f"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "7ed47aa5ca98835b14c9dba996a57644e5a8622e0657288561dc2f515a66d977"
+    },
+    {
+      "action": "turn",
+      "argument": 3,
+      "pixel_sha256": "274e12b42acc8e43c37193417908f76a49b5b4dff7886475d8dd52546503a9a3"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "a2d624368232f28b99608a6e47ed3f0b17ca32885a88b4d11bdfd8148712e2d1"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "b3b265a7640ee60d689726af6a70253a5269349970ad06d36b9e1fae7bd874ba"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "36d9e56f79d30aa786d4c67cbc51aa0f280decfc955d7d14e1b2bc1e267bc863"
+    },
+    {
+      "action": "turn",
+      "argument": 3,
+      "pixel_sha256": "087d01a516aad5a0b37fe62dc4206b361b0adc8e755d57be5c77f548a2793ef1"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "9f71119a7afbc9e0a0ef63f38ce7318202ecfaa11e98ec369fb8475860afd2d6"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "06392728a621794bc6160a47bbf035eb975234f6d44e239c38ffae8b4ab8b321"
+    },
+    {
+      "action": "turn",
+      "argument": 2,
+      "pixel_sha256": "190ef538b149ab1ca5fe6361fa5605898ee0ae2f3c494a0f0d229a42ac6b425a"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "f5507b0e6a12adbb60b767480d953c16777591ad632ee7955fc133db58e0aa63"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "aeaeacfc1d4f06c179fc272092c1fe98b5e2e822cb9a26f8998357cef585d1ba"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "d62d41046244b9f785b3e430fb7df1aac703d570231e3fe85e45de2008a9ac90"
+    },
+    {
+      "action": "turn",
+      "argument": -2,
+      "pixel_sha256": "f9aad64ef63ade3828aeb423e12a4ccb267566478e6c6aeab3a2f7f9a5839c8a"
+    },
+    {
+      "action": "foot",
+      "argument": 0,
+      "pixel_sha256": "3e596212249fb889b10bbe68d46c8175e90142c5bcd21f0948c2a7871d5a056f"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "c64e15d99ef4dfda1eddcdff95df18e4dd4a362649fca5f67f13bdb943d7b8dd"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "e9045d541bcd3a2d87338b1a8ecfe6cf126a968ddae2a1428bfada4440d225ea"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "cffd653ee73399213e9f17a1f476e3f348e7f8e0adfd6be3adae9efa8a91805d"
+    },
+    {
+      "action": "turn",
+      "argument": 1,
+      "pixel_sha256": "631f6cd3583deb0a15329ae4610b61b6aecf8bf81099e37721046bc59e18af62"
+    },
+    {
+      "action": "press",
+      "argument": 0,
+      "pixel_sha256": "8d5b28c55ab7261cd1497caf61db3592b43913e7d56445eaa5a19015090f78c0"
+    },
+    {
+      "action": "foot",
+      "argument": 0,
+      "pixel_sha256": "8d5b28c55ab7261cd1497caf61db3592b43913e7d56445eaa5a19015090f78c0"
+    }
+  ]
+}

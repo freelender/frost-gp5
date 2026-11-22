@@ -1,0 +1,8 @@
+{
+  "id": "eq",
+  "name": "Three-band EQ",
+  "status": "implemented",
+  "source": "eq.c",
+  "hardware_qualified": false,
+  "note": "Complementary one-pole low/mid/high split; not a parametric or graphic EQ."
+}

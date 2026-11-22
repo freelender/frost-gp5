@@ -1,0 +1,10 @@
+#ifndef FROST_PRESET_READ_WIRE_H
+#define FROST_PRESET_READ_WIRE_H
+#include "preset_wire.h"
+#define FROST_PRESET_READ_COMMAND 0x7f44u
+#define FROST_PRESET_READ_REQUEST_BYTES 24u
+#define FROST_PRESET_READ_REPLY_BYTES 48u
+/* DESCRIBE/READ: the full version-1/2 body. DESCRIBE_COMPACT/READ_COMPACT:
+ * the version-3 compact body (no IR samples), for flash presets. */
+enum { FROST_PRESET_DESCRIBE, FROST_PRESET_READ, FROST_PRESET_DESCRIBE_COMPACT, FROST_PRESET_READ_COMPACT };
+#endif

@@ -1,0 +1,7 @@
+{
+  "OpenGP5": {
+    "url": "https://github.com/OpenGP5/OpenGP5.git",
+    "path": ".deps/OpenGP5",
+    "commit": "ce8417c80e78832c6744a0f606b6049303238699"
+  }
+}

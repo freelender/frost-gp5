@@ -1,0 +1,11 @@
+{
+  "id": "flanger",
+  "name": "Flanger",
+  "status": "implemented-experimental",
+  "source": "flanger.c",
+  "type_id": 7,
+  "workspace_bytes": 4624,
+  "shared_modulation_pool_capacity": 2,
+  "hardware_qualified": false,
+  "note": "Mono fractional flanger with rate/depth/signed feedback and fixed50% mix, C1 cubic LFO, bounded storage and logical reset. Two workspaces shared with chorus; no physical CPU/latency/audio qualification."
+}

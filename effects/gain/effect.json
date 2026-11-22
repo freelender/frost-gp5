@@ -1,0 +1,8 @@
+{
+  "id": "gain",
+  "name": "Input gain",
+  "status": "implemented",
+  "source": "gain.c",
+  "hardware_qualified": false,
+  "note": "Fixed 44.1 kHz chain; multiplier 0..4 with smoothing owned by engine."
+}

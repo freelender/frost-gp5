@@ -1,0 +1,11 @@
+{
+  "id": "overdrive",
+  "name": "Overdrive",
+  "status": "implemented-experimental",
+  "source": "overdrive.c",
+  "type_id": 4,
+  "state_bytes": 12,
+  "workspace_bytes": 0,
+  "hardware_qualified": false,
+  "note": "Native-rate cubic saturation with DC blocker, tone filter and drive/tone/level controls. Host/reference/WAV/editor tested; aliasing remains, CPU/latency/audio quality physically unqualified."
+}

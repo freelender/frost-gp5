@@ -1,0 +1,11 @@
+{
+  "id": "delay",
+  "name": "Delay",
+  "status": "implemented-experimental",
+  "source": "delay.c",
+  "type_id": 5,
+  "workspace_bytes": 88220,
+  "max_instances_per_chain": 1,
+  "hardware_qualified": false,
+  "note": "Mono 1–500 ms float delay with time/feedback/mix, fractional interpolation, read-head slew and constant-time history invalidation. One external workspace; no physical CPU/latency/audio qualification."
+}

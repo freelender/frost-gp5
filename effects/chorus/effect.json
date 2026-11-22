@@ -1,0 +1,11 @@
+{
+  "id": "chorus",
+  "name": "Chorus",
+  "status": "implemented-experimental",
+  "source": "chorus.c",
+  "type_id": 6,
+  "workspace_bytes": 4624,
+  "shared_modulation_pool_capacity": 2,
+  "hardware_qualified": false,
+  "note": "Mono fractional chorus with rate/depth/mix, C1 cubic LFO, read-head slew and logical reset. Two workspaces shared with flanger; no physical CPU/latency/audio qualification."
+}

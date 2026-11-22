@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "number": 1,
+      "name": "Acoustic",
+      "sha256": "0b5746069d74539e14a4545713b14a177abfe9693dd9ef51593f25f84fb13a7a"
+    },
+    {
+      "number": 2,
+      "name": "Deluxe Clean",
+      "sha256": "137f4492fbf18bf5280eebc6533c1e45d420dd7e1bdc7b284c1ca28a7fec811c"
+    },
+    {
+      "number": 3,
+      "name": "Twin Sparkle",
+      "sha256": "aa4a4920cceb202209ddba764c4951267f0d08ca7a0cf09739e5871f70f1572e"
+    },
+    {
+      "number": 4,
+      "name": "Jazz Club",
+      "sha256": "0a8ad2a4fe93e7b9c8e81e49d283c89f509cd73c473dc17fa1be7210c4f51dd0"
+    },
+    {
+      "number": 5,
+      "name": "Nashville Snap",
+      "sha256": "84ad79142b8209c9feffcc404cad5d0873bb7c4691688912b6e8b03128e19080"
+    },
+    {
+      "number": 6,
+      "name": "Brit Jangle",
+      "sha256": "f3012f30ece09f5073aaf91f8eb78ece188d5cc9d033b5362716c2c85460c2c7"
+    },
+    {
+      "number": 7,
+      "name": "Edge of Chime",
+      "sha256": "7b6ed0306569fa672a5dc1deb2e33101566ab000fd2b2805a756e0d85b8cb3a4"
+    },
+    {
+      "number": 8,
+      "name": "Blues Breakup",
+      "sha256": "0282ff30cb1edd46ba20c21cc4ce309af044895f58fcd066bd333a5105b1ec08"
+    },
+    {
+      "number": 9,
+      "name": "Texas Drive",
+      "sha256": "42e96d8c1fc2bfe92cf9d07e2bee483f81c6b07677a3fee9f6323aba8862af43"
+    },
+    {
+      "number": 10,
+      "name": "Vintage Trem",
+      "sha256": "1d8b5e1e37945d1625dd061d12cd96181ff01c4d436773022bed81b8a6a2aa41"
+    },
+    {
+      "number": 11,
+      "name": "Classic Crunch",
+      "sha256": "79acfd7c63b71ead2bd2da17125005ca1c41f683e663a9e61b36ba32a808ea50"
+    },
+    {
+      "number": 12,
+      "name": "Arena Rock",
+      "sha256": "9c2e260c09927749a51dea257bff9d9c173c7afff3c9e923250956815332d362"
+    },
+    {
+      "number": 13,
+      "name": "Brown Crunch",
+      "sha256": "4e96e7bbe7dde0ae10109f1de8c7dd6b33d98916fff530984013c0c04fb603ca"
+    },
+    {
+      "number": 14,
+      "name": "Modern Rhythm",
+      "sha256": "9d46e656809fdbce5e3d0ec6e0e402c7457fc013662352a3be18c88b400c1c5f"
+    },
+    {
+      "number": 15,
+      "name": "Tight Metal",
+      "sha256": "1ff4dc1c6d3e9b9c9e42141bad4db84be55e04715d84808197a6f5ebd513a154"
+    },
+    {
+      "number": 16,
+      "name": "Singing Lead",
+      "sha256": "4ae55374840568edb042aa2d8292d0062f62fa5d66ba66c869023bf38b98bf8a"
+    },
+    {
+      "number": 17,
+      "name": "Fuzz Sunset",
+      "sha256": "e9cb2868fa6d01304621bb6e91f82379c01b13d08d0c83ddec94446321eb2669"
+    },
+    {
+      "number": 18,
+      "name": "Liquid Vibe",
+      "sha256": "4e8098cd38b3d45442fb92ef9a4c28f9a5699c348813d255da8c85b0163fef2f"
+    },
+    {
+      "number": 19,
+      "name": "Funk Filter",
+      "sha256": "ca518f33962ede420508b99742171321d53d33fcfdaf720210e511da15d2f6cd"
+    },
+    {
+      "number": 20,
+      "name": "Ambient Bloom",
+      "sha256": "a7b62eb69453af1f5465803825fd262563134e2a9363943120f81a7f1ecdddfb"
+    }
+  ]
+}

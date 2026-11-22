@@ -1,0 +1,8 @@
+{
+  "id": "noise_gate",
+  "name": "Noise gate",
+  "status": "implemented",
+  "source": "noise_gate.c",
+  "hardware_qualified": false,
+  "note": "Peak envelope, hysteresis and smoothed opening/closing; fixed 44.1 kHz."
+}

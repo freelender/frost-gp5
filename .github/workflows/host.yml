@@ -1,0 +1,25 @@
+name: Host checks
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  effects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Native compiler prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang cmake
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source layout and documentation
+        run: python tools/check_repository.py --require-empty-build
+      - name: DSP, UI and protocol tests
+        env:
+          CC: clang
+        run: python -m unittest discover -s tests -v
+      - name: Separate-module library
+        run: |
+          cmake -S . -B build/host -DCMAKE_C_COMPILER=clang
+          cmake --build build/host --parallel 2

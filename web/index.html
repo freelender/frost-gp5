@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frost for GP-5</title>
+<meta name="description" content="Install the Frost firmware on a Valeton GP-5, edit effects live, and load AMP models and cabinet IRs from your browser.">
+<meta name="theme-color" content="#080d16">
+<link rel="icon" href="frost_logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=1.3.1">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <img src="frost_logo.png" alt="" width="64" height="32">
+    <div><div class="brandname">FROST</div><div class="brandsub">GP-5 STUDIO</div></div>
+  </div>
+  <div class="navlabel" id="navlabel">WORKSPACE</div>
+  <nav class="nav" id="nav" aria-labelledby="navlabel">
+    <a href="#live" data-view="live"><span class="navicon" aria-hidden="true">◉</span>Live editor</a>
+    <a href="#amps" data-view="amps"><span class="navicon" aria-hidden="true">▥</span>AMP models</a>
+    <a href="#cabs" data-view="cabs"><span class="navicon" aria-hidden="true">▤</span>Cabinet IRs</a>
+    <a href="#presets" data-view="presets"><span class="navicon" aria-hidden="true">♬</span>Presets</a>
+    <a href="#setlists" data-view="setlists"><span class="navicon" aria-hidden="true">≡</span>Songs &amp; setlist</a>
+    <a href="#firmware" data-view="firmware"><span class="navicon" aria-hidden="true">⬡</span>Firmware</a>
+    <a href="#about" data-view="about"><span class="navicon" aria-hidden="true">ⓘ</span>About &amp; credits</a>
+  </nav>
+  <div class="sidebarfoot">
+    <a class="btn donate" href="https://streamelements.com/fret_lex/tip" target="_blank" rel="noopener">♥ Support Frost</a>
+    <div>Independent community firmware</div>
+    <span class="version">WEB <span id="version"></span></span>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="breadcrumb" id="breadcrumb">STUDIO / LIVE EDITOR</div>
+    <div class="topright">
+      <div class="status" id="status" data-kind="off" role="status" aria-live="polite"><span class="dot"></span><span id="status-text">Not connected</span></div>
+      <button class="btn primary" id="connect">Connect GP-5</button>
+    </div>
+  </header>
+
+  <main class="container" id="content" tabindex="-1">
+    <div id="notice" class="banner bad" role="alert" hidden><div><strong>Something went wrong</strong><span id="notice-text"></span></div><button class="btn ghost small" id="notice-close">Dismiss</button></div>
+
+    <!-- Live editor -->
+    <section id="view-live" class="view" aria-labelledby="h-live">
+      <div class="heading">
+        <div><div class="eyebrow">Live editor</div><h1 id="h-live">Shape your tone.</h1><p>Pick an effect for each slot, switch it on and turn its knobs. The pedal follows instantly.</p></div>
+        <div class="headingbuttons"><span id="edit-state" class="pill" hidden></span></div>
+      </div>
+
+      <div id="live-empty" class="panel emptystate">
+        <div class="emptyicon" aria-hidden="true">❄</div>
+        <h2>Connect your GP-5</h2>
+        <p>Plug the pedal in over USB, switch it on and press Connect. Needs Frost 31y18 or later and Chrome, Edge or Opera on a computer.</p>
+        <div class="actions center"><button class="btn primary" data-connect>Connect GP-5</button><button class="btn ghost" id="demo">Try the demo</button></div>
+      </div>
+
+      <div id="live-panel" hidden>
+        <div class="panel">
+          <div class="panelhead">
+            <div><div class="paneltitle">Signal chain</div><div class="micro" id="live-state">Select a block to edit it.</div></div>
+            <div class="pill">6 SLOTS</div>
+          </div>
+          <div class="signal"><div class="chainstrip" id="chain-strip" role="group" aria-label="Signal chain, input to output"></div></div>
+          <div class="chainbottom"><span><strong>INPUT</strong> → slots 1–6 → <strong>OUTPUT</strong></span><span>Use ← → to move between blocks</span></div>
+        </div>
+
+        <div class="workspace">
+          <div class="panel inspector" id="inspector" aria-live="polite"></div>
+          <div class="panel side">
+            <div class="paneltitle">Live vs saved</div>
+            <p class="hint">Changes here play on the pedal at once, exactly like turning PARA. They are <b>not saved</b>: switching presets or powering off discards them.</p>
+            <div class="savebox" id="savebox">
+              <div class="savestate" id="save-state">No changes from this page yet.</div>
+              <ol class="steps">
+                <li>On the pedal, open <b>PRESETS</b>.</li>
+                <li>Choose <b>SAVE</b> and pick a preset number.</li>
+              </ol>
+            </div>
+            <p class="hint">Some combinations are refused by the pedal (for example a second AMP, or a chain that would not fit the DSP). The block then stays as it was.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-setlists" class="view" aria-labelledby="h-setlists" hidden>
+      <div class="heading"><div><div class="eyebrow">Performance</div><h1 id="h-setlists">Songs &amp; setlist.</h1><p>Build songs from saved presets, arrange your set and play it with one footswitch. Drafts stay in this browser until you save to the pedal.</p></div></div>
+      <div id="setlist-editor"></div>
+    </section>
+
+    <!-- AMP models -->
+    <section id="view-amps" class="view" aria-labelledby="h-amps" hidden>
+      <div class="heading"><div><div class="eyebrow">NAM captures</div><h1 id="h-amps">AMP models.</h1><p>Convert a NAM A2 capture in this page and write it to a MODEL number. The capture never leaves your computer.</p></div></div>
+      <div class="grid2">
+        <div class="panel pad">
+          <div class="paneltitle">Add a model</div>
+          <label class="drop" id="amp-drop"><input id="amp-file" type="file" accept=".nam,.fcm"><span class="symbol" aria-hidden="true">⇧</span><b id="amp-dropname">Drop a .nam or .fcm file</b><small>NAM A2 capture, or a ready-made Frost model · or click to choose</small></label>
+          <p id="amp-info" class="hint" hidden></p>
+          <div class="inputrow">
+            <label><span class="inputlabel">Name</span><input id="amp-name" maxlength="15" placeholder="e.g. JCM800" autocomplete="off"></label>
+            <label><span class="inputlabel">MODEL number</span><select id="amp-slot"></select></label>
+          </div>
+          <div class="trainbox">
+            <div class="traintop">
+              <div><span class="inputlabel">Training audio <span class="tag">recommended</span></span><span id="train-state" class="trainstate">Not chosen · built-in test audio is used</span></div>
+              <div class="trainbtns"><label class="btn ghost small" id="train-pick">Choose input.wav<input id="train-file" type="file" accept=".wav,audio/wav" hidden></label><button class="btn ghost small" id="train-clear" hidden>Clear</button></div>
+            </div>
+            <p class="hint">Use the official NAM <b>input.wav</b>: real guitar and bass recordings, the same file NAM captures are trained on. In our tests it gave clearly closer models on crunch and high-gain amps. Download it free from the <a href="https://neural-amp-modeler.readthedocs.io/en/latest/tutorials/full.html" target="_blank" rel="noopener">Neural Amp Modeler website</a> (the "input.wav" link), then choose it here. Frost can't include it. The file stays on your computer; conversion takes about 30% longer with it.</p>
+          </div>
+          <div class="progress" id="amp-progress" hidden><div class="meter"><i id="amp-bar"></i></div><span id="amp-stage" class="micro"></span></div>
+          <p id="amp-quality" class="hint" hidden></p>
+          <div class="actions">
+            <button id="amp-convert" class="btn primary" disabled>Convert</button>
+            <button id="amp-cancel" class="btn ghost" hidden>Cancel</button>
+            <button id="amp-write" class="btn primary" disabled>Write to pedal</button>
+          </div>
+          <p id="amp-why" class="why"></p>
+          <p class="hint">Conversion takes a few minutes. A converted model is an approximation of the capture.</p>
+        </div>
+        <div class="panel pad">
+          <div class="panelhead flat"><div><div class="paneltitle">On the pedal</div><div class="micro" id="amps-summary">Connect to read the pedal.</div></div></div>
+          <ul id="amp-list" class="library"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cabinets -->
+    <section id="view-cabs" class="view" aria-labelledby="h-cabs" hidden>
+      <div class="heading"><div><div class="eyebrow">Impulse responses</div><h1 id="h-cabs">Cabinet IRs.</h1><p>Load a .wav impulse response into a CAB number. On the pedal: IR block → CAB. CAB 00 is the built-in cabinet.</p></div></div>
+      <div class="grid2">
+        <div class="panel pad">
+          <div class="paneltitle">Add a cabinet</div>
+          <label class="drop" id="cab-drop"><input id="cab-file" type="file" accept=".wav,audio/wav"><span class="symbol" aria-hidden="true">≋</span><b id="cab-dropname">Drop a .wav impulse response</b><small>Any sample rate, mono or stereo · or click to choose</small></label>
+          <p id="cab-info" class="hint" hidden></p>
+          <div class="inputrow">
+            <label><span class="inputlabel">Name</span><input id="cab-name" maxlength="15" placeholder="e.g. V30 4X12" autocomplete="off"></label>
+            <label><span class="inputlabel">CAB number</span><select id="cab-slot"></select></label>
+          </div>
+          <div class="actions"><button id="cab-write" class="btn primary" disabled>Write to pedal</button></div>
+          <p id="cab-why" class="why"></p>
+        </div>
+        <div class="panel pad">
+          <div class="panelhead flat"><div><div class="paneltitle">On the pedal</div><div class="micro" id="cabs-summary">Connect to read the pedal.</div></div></div>
+          <ul id="cab-list" class="library"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Presets -->
+    <section id="view-presets" class="view" aria-labelledby="h-presets" hidden>
+      <div class="heading"><div><div class="eyebrow">Saved sounds</div><h1 id="h-presets">Presets.</h1><p>Load a saved sound to play it, reorder, rename or delete presets, and back up everything on the pedal to a file. Loading replaces unsaved live edits. Song parts reference preset numbers: moving, replacing or deleting a preset changes what those parts play.</p></div></div>
+      <div class="grid2 wide">
+        <div class="panel pad">
+          <div class="panelhead flat"><div><div class="paneltitle">On the pedal</div><div class="micro" id="presets-summary">Connect to read the pedal.</div></div></div>
+          <ul id="preset-list" class="library"></ul>
+        </div>
+        <div class="panel pad">
+          <div class="paneltitle">Backup</div>
+          <p class="hint">One file with every preset, AMP model and cabinet. Restoring replaces them all on the pedal.</p>
+          <div class="actions">
+            <button id="backup" class="btn primary" disabled>Back up everything</button>
+            <label class="btn ghost" id="restore-label">Restore backup<input id="restore-file" type="file" accept=".frostbackup,application/json" hidden></label>
+          </div>
+          <p id="backup-state" class="why"></p>
+          <div class="help">To save a new preset, edit the chain (here or on the pedal), then on the pedal: <b>PRESETS → SAVE</b>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Firmware -->
+    <section id="view-firmware" class="view" aria-labelledby="h-firmware" hidden>
+      <div class="heading"><div><div class="eyebrow">Install &amp; recover</div><h1 id="h-firmware">Firmware.</h1><p>Install Frost, or go back to Valeton's firmware. Nothing is installed until you confirm.</p></div></div>
+      <div class="banner warn"><div><strong>⚠ Keep the pedal connected and powered</strong><span>Installing replaces the pedal's firmware and takes about 90 seconds. The pedal enters update mode by itself. The factory loader is never overwritten, so an interrupted install can always be repeated.</span></div></div>
+      <div class="grid2">
+        <div class="panel pad">
+          <div class="paneltitle">Install Frost</div>
+          <div class="step"><div class="stepindex">1</div><div><strong>Connect the GP-5</strong><p>USB cable, pedal switched on. Close other editors that use the pedal.</p></div></div>
+          <div class="step"><div class="stepindex">2</div><div><strong>Confirm the install</strong><p id="fw-frost-info">Checking for the bundled Frost firmware…</p></div></div>
+          <div class="step last"><div class="stepindex">3</div><div><strong>Wait for the restart</strong><p>Progress shows below. The pedal restarts by itself when it is done.</p></div></div>
+          <div class="actions"><button id="fw-frost" class="btn primary" disabled>Install Frost</button></div>
+          <p id="fw-frost-why" class="why"></p>
+        </div>
+        <div class="panel pad">
+          <div class="paneltitle">Install from a file</div>
+          <p class="hint">Choose a Frost firmware file (<b>.bin</b> from a Frost release) to install or update Frost, or the official GP-5 firmware downloaded from Valeton to go back to stock. The page checks the file and tells you what it is before anything is installed. Frost cannot ship Valeton's firmware.</p>
+          <label class="drop small" id="fw-drop"><input id="fw-file" type="file" accept=".bin"><span class="symbol" aria-hidden="true">⬡</span><b id="fw-file-name">Drop a firmware .bin</b><small>Frost or Valeton GP-5 firmware · or click to choose</small></label>
+          <p id="fw-file-info" class="hint" hidden></p>
+          <div class="actions"><button id="fw-file-install" class="btn" hidden>Install this file</button></div>
+        </div>
+      </div>
+      <div class="panel pad" id="fw-run" hidden>
+        <div class="paneltitle">Progress</div>
+        <div class="progress"><div class="meter"><i id="fw-bar"></i></div><span id="fw-stage"></span></div>
+        <pre id="fw-log" class="log"></pre>
+      </div>
+      <div class="help"><b>If an install fails:</b> unplug the pedal, hold the foot switch and the PARA knob, plug it back in (update mode), then install again.</div>
+    </section>
+
+    <!-- About -->
+    <section id="view-about" class="view" aria-labelledby="h-about" hidden>
+      <div class="heading"><div><div class="eyebrow">Open, experimental, community-driven</div><h1 id="h-about">About Frost.</h1><p>Custom firmware for the Valeton GP-5: a six-slot effects chain with AMP models, cabinet IRs, presets, tuner and drop tune.</p></div></div>
+      <div class="grid2">
+        <div class="panel pad support">
+          <div class="paneltitle">Support Frost</div>
+          <p class="hint">Frost is free. If it makes your GP-5 better, you can support its development.</p>
+          <a class="btn primary" href="https://streamelements.com/fret_lex/tip" target="_blank" rel="noopener">♥ Donate</a>
+        </div>
+        <div class="panel pad">
+          <div class="paneltitle">Credits</div>
+          <ul class="credits">
+            <li><a href="https://github.com/OpenGP5/OpenGP5" target="_blank" rel="noopener">OpenGP5</a><span>The open platform Frost runs on, its audio link, and the web flasher used on this page (MIT, the OpenGP5 contributors).</span></li>
+            <li><a href="https://github.com/sdatkinson/NeuralAmpModelerCore" target="_blank" rel="noopener">Neural Amp Modeler</a><span>The A2 model format the converter reads (MIT).</span></li>
+            <li><b>Capture authors</b><span>Captures you convert belong to their authors: respect their terms.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">Experimental software. Not affiliated with or endorsed by Valeton. "Valeton" and "GP-5" are Valeton's trademarks. Needs Chrome, Edge or Opera on a computer (Web MIDI).</footer>
+  </main>
+</div>
+</div>
+
+<dialog id="confirm" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title"></h2>
+    <p id="confirm-text"></p>
+    <label id="confirm-input-label" hidden><span class="inputlabel" id="confirm-input-name"></span><input id="confirm-input" maxlength="16" autocomplete="off"></label>
+    <div class="actions end"><button class="btn ghost" value="cancel" id="confirm-cancel">Cancel</button><button class="btn primary" value="ok" id="confirm-ok">OK</button></div>
+  </form>
+</dialog>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script type="module" src="app.js?v=1.3.1"></script>
+</body>
+</html>

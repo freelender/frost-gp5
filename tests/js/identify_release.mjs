@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createHash, webcrypto } from 'node:crypto';
+import { identifyVerified } from '../../web/firmware.js';
+globalThis.crypto ??= webcrypto;
+const bytes = new Uint8Array(readFileSync(process.argv[2]));
+const { id, sha } = await identifyVerified(bytes);
+assert.equal(id.kind, 'frost');
+assert.equal(id.version, process.argv[3] || '31zc');
+assert.equal(sha, createHash('sha256').update(bytes).digest('hex'));
+assert.deepEqual(id.lines.map(x => x.name), ['dsp', 'dsp-data', 'app']);
+const corrupt = bytes.slice();
+corrupt[corrupt.length - 1] ^= 1;
+await assert.rejects(identifyVerified(corrupt), /CRC/);
+console.log(JSON.stringify({ kind: id.kind, version: id.version, sha, corruptRejected: true }));

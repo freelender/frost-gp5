@@ -1,0 +1,9 @@
+{
+  "id": "drop_tune",
+  "name": "Drop tune",
+  "status": "implemented",
+  "source": "drop_tune.c",
+  "type_id": 34,
+  "hardware_qualified": false,
+  "note": "Stage 5: pitch down 1/2..3 steps with correlation-spliced cubic read head; see docs/User%20Guide.md."
+}

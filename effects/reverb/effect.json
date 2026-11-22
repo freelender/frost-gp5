@@ -1,0 +1,11 @@
+{
+  "id": "reverb",
+  "name": "Reverb",
+  "status": "implemented-experimental",
+  "source": "reverb.c",
+  "type_id": 8,
+  "workspace_bytes": 21000,
+  "max_instances_per_chain": 1,
+  "hardware_qualified": false,
+  "note": "Mono four damped-comb/two-allpass network with normalized decay/damp/mix, external static storage and logical reset. Host/reference/WAV/editor tested; physical CPU/latency/audio quality unqualified."
+}

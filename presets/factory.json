@@ -1,0 +1,875 @@
+{
+  "format": "frost-factory-presets",
+  "version": 2,
+  "reverb_mix_limit": 25,
+  "presets": [
+    {
+      "number": 1,
+      "name": "Acoustic",
+      "description": "Clean acoustic-style body, gentle compression and small room.",
+      "chain": [
+        {
+          "type": 30,
+          "params": {
+            "SUSTAIN": 20,
+            "LEVEL": 48,
+            "BLEND": 58,
+            "TONE": 48,
+            "PICKUP": 0
+          }
+        },
+        {
+          "type": 44,
+          "params": {
+            "BODY": 52,
+            "TOP": 48,
+            "MODE": 0,
+            "MIX": 100,
+            "LEVEL": 41
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 12,
+            "TONE": 43,
+            "TIME": 28,
+            "MODE": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Deluxe Clean",
+      "description": "Warm clean with a little spring depth.",
+      "chain": [
+        {
+          "type": 30,
+          "params": {
+            "SUSTAIN": 23,
+            "LEVEL": 48,
+            "BLEND": 58,
+            "TONE": 48,
+            "PICKUP": 0
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 26,
+            "MASTER": 60,
+            "LEVEL": 57,
+            "BASS": 48,
+            "MID": 52,
+            "TREBLE": 48,
+            "BRIGHT": 32
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 20,
+          "params": {
+            "DWELL": 28,
+            "MIX": 10,
+            "TONE": 46
+          }
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Twin Sparkle",
+      "description": "Open clean with rounded highs and a small room.",
+      "chain": [
+        {
+          "type": 46,
+          "params": {
+            "GAIN": 27,
+            "MASTER": 60,
+            "LEVEL": 78,
+            "BASS": 46,
+            "MID": 49,
+            "TREBLE": 53,
+            "BRIGHT": 35
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 10,
+            "TONE": 43,
+            "TIME": 25,
+            "MODE": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Jazz Club",
+      "description": "Rounded clean with gentle room ambience.",
+      "chain": [
+        {
+          "type": 48,
+          "params": {
+            "GAIN": 25,
+            "MASTER": 60,
+            "LEVEL": 62,
+            "BASS": 53,
+            "MID": 56,
+            "TREBLE": 35,
+            "BRIGHT": 15
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 9,
+            "TONE": 36,
+            "TIME": 26,
+            "MODE": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Nashville Snap",
+      "description": "Light country squeeze and quiet slapback.",
+      "chain": [
+        {
+          "type": 29,
+          "params": {
+            "OUTPUT": 48,
+            "SENS": 32
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 28,
+            "MASTER": 60,
+            "LEVEL": 58,
+            "BASS": 43,
+            "MID": 51,
+            "TREBLE": 53,
+            "BRIGHT": 34
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 18,
+          "params": {
+            "RATE": 105,
+            "ECHO": 12,
+            "INTENS": 13
+          }
+        },
+        {
+          "type": 20,
+          "params": {
+            "DWELL": 24,
+            "MIX": 9,
+            "TONE": 46
+          }
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "name": "Brit Jangle",
+      "description": "Lightly compressed chime with restrained brightness.",
+      "chain": [
+        {
+          "type": 30,
+          "params": {
+            "SUSTAIN": 17,
+            "LEVEL": 48,
+            "BLEND": 58,
+            "TONE": 48,
+            "PICKUP": 0
+          }
+        },
+        {
+          "type": 47,
+          "params": {
+            "GAIN": 29,
+            "MASTER": 60,
+            "LEVEL": 50,
+            "BASS": 43,
+            "MID": 52,
+            "TREBLE": 51,
+            "CUT": 57
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 10,
+            "TONE": 43,
+            "TIME": 27,
+            "MODE": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "name": "Edge of Chime",
+      "description": "Low-gain boost into touch-sensitive chime and quiet echo.",
+      "chain": [
+        {
+          "type": 11,
+          "params": {
+            "GAIN": 14,
+            "TREBLE": 43,
+            "OUTPUT": 49
+          }
+        },
+        {
+          "type": 47,
+          "params": {
+            "GAIN": 36,
+            "MASTER": 60,
+            "LEVEL": 32,
+            "BASS": 42,
+            "MID": 56,
+            "TREBLE": 48,
+            "CUT": 60
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 42,
+          "params": {
+            "TIME": 260,
+            "MIX": 11,
+            "REPEAT": 19,
+            "WOW": 14,
+            "AGE": 36,
+            "DRIVE": 10
+          }
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "name": "Blues Breakup",
+      "description": "Soft blues overdrive with short spring ambience.",
+      "chain": [
+        {
+          "type": 10,
+          "params": {
+            "GAIN": 24,
+            "TONE": 40,
+            "LEVEL": 48
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 33,
+            "MASTER": 60,
+            "LEVEL": 18,
+            "BASS": 46,
+            "MID": 56,
+            "TREBLE": 46,
+            "BRIGHT": 25
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 20,
+          "params": {
+            "DWELL": 31,
+            "MIX": 11,
+            "TONE": 46
+          }
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "name": "Texas Drive",
+      "description": "Mid-forward blues lead with restrained drive.",
+      "chain": [
+        {
+          "type": 9,
+          "params": {
+            "DRIVE": 24,
+            "TONE": 43,
+            "LEVEL": 50,
+            "MODEL": 0
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 35,
+            "MASTER": 60,
+            "LEVEL": 29,
+            "BASS": 43,
+            "MID": 60,
+            "TREBLE": 45,
+            "BRIGHT": 24
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 20,
+          "params": {
+            "DWELL": 32,
+            "MIX": 12,
+            "TONE": 46
+          }
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "name": "Vintage Trem",
+      "description": "Slow, shallow tremolo over mild breakup.",
+      "chain": [
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 34,
+            "MASTER": 60,
+            "LEVEL": 57,
+            "BASS": 48,
+            "MID": 54,
+            "TREBLE": 46,
+            "BRIGHT": 25
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 27,
+          "params": {
+            "RATE": 285,
+            "WAVE": 25,
+            "DEPTH": 32
+          }
+        },
+        {
+          "type": 20,
+          "params": {
+            "DWELL": 31,
+            "MIX": 12,
+            "TONE": 46
+          }
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "name": "Classic Crunch",
+      "description": "Articulate rhythm crunch with a quiet room.",
+      "chain": [
+        {
+          "type": 49,
+          "params": {
+            "GAIN": 42,
+            "MASTER": 45,
+            "LEVEL": 21,
+            "BASS": 43,
+            "MID": 58,
+            "TREBLE": 47,
+            "PRESENCE": 36
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 8,
+            "TONE": 40,
+            "TIME": 22,
+            "MODE": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "name": "Arena Rock",
+      "description": "Fuller crunch with discreet digital echoes.",
+      "chain": [
+        {
+          "type": 49,
+          "params": {
+            "GAIN": 49,
+            "MASTER": 45,
+            "LEVEL": 19,
+            "BASS": 43,
+            "MID": 57,
+            "TREBLE": 46,
+            "PRESENCE": 34
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 17,
+          "params": {
+            "TIME": 320,
+            "E.LEVEL": 12,
+            "F.BACK": 21,
+            "HOLD": 0,
+            "FOOT": 0
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 10,
+            "TONE": 40,
+            "TIME": 34,
+            "MODE": 2
+          }
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "name": "Brown Crunch",
+      "description": "Slow phase into moderate high gain and short tape echo.",
+      "chain": [
+        {
+          "type": 21,
+          "params": {
+            "SPEED": 42,
+            "VOICE": 0
+          }
+        },
+        {
+          "type": 51,
+          "params": {
+            "GAIN": 34,
+            "MASTER": 45,
+            "LEVEL": 18,
+            "BASS": 42,
+            "MID": 58,
+            "TREBLE": 45,
+            "PRESENCE": 31
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 42,
+          "params": {
+            "TIME": 235,
+            "MIX": 10,
+            "REPEAT": 17,
+            "WOW": 14,
+            "AGE": 36,
+            "DRIVE": 10
+          }
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "name": "Modern Rhythm",
+      "description": "Controlled modern rhythm, gentle gate and low-end cleanup.",
+      "chain": [
+        {
+          "type": 32,
+          "params": {
+            "THRESH": 28,
+            "DECAY": 48,
+            "MODE": 0
+          }
+        },
+        {
+          "type": 50,
+          "params": {
+            "GAIN": 44,
+            "MASTER": 45,
+            "LEVEL": 19,
+            "BASS": 40,
+            "MID": 54,
+            "TREBLE": 44,
+            "PRESENCE": 30
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 31,
+          "params": {
+            "100": -20,
+            "200": -10,
+            "400": 0,
+            "800": 5,
+            "1.6K": 0,
+            "3.2K": -10,
+            "6.4K": -25,
+            "LEVEL": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "name": "Tight Metal",
+      "description": "Low-drive boost and restrained 5150 gain for tight rhythm.",
+      "chain": [
+        {
+          "type": 35,
+          "params": {
+            "THRESH": 28,
+            "DECAY": 42,
+            "DAMP": 75,
+            "MODE": 0
+          }
+        },
+        {
+          "type": 9,
+          "params": {
+            "DRIVE": 7,
+            "TONE": 43,
+            "LEVEL": 52,
+            "MODEL": 0
+          }
+        },
+        {
+          "type": 51,
+          "params": {
+            "GAIN": 43,
+            "MASTER": 45,
+            "LEVEL": 15,
+            "BASS": 38,
+            "MID": 54,
+            "TREBLE": 43,
+            "PRESENCE": 28
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "name": "Singing Lead",
+      "description": "Mid-focused lead, quiet repeats and short plate.",
+      "chain": [
+        {
+          "type": 9,
+          "params": {
+            "DRIVE": 18,
+            "TONE": 43,
+            "LEVEL": 51,
+            "MODEL": 0
+          }
+        },
+        {
+          "type": 49,
+          "params": {
+            "GAIN": 46,
+            "MASTER": 45,
+            "LEVEL": 15,
+            "BASS": 40,
+            "MID": 63,
+            "TREBLE": 42,
+            "PRESENCE": 30
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 17,
+          "params": {
+            "TIME": 365,
+            "E.LEVEL": 15,
+            "F.BACK": 25,
+            "HOLD": 0,
+            "FOOT": 0
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 13,
+            "TONE": 39,
+            "TIME": 38,
+            "MODE": 2
+          }
+        }
+      ]
+    },
+    {
+      "number": 17,
+      "name": "Fuzz Sunset",
+      "description": "Rounded vintage fuzz with a little tape depth.",
+      "chain": [
+        {
+          "type": 43,
+          "params": {
+            "FUZZ": 48,
+            "VOL": 46,
+            "BIAS": 50
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 29,
+            "MASTER": 60,
+            "LEVEL": 17,
+            "BASS": 43,
+            "MID": 57,
+            "TREBLE": 40,
+            "BRIGHT": 20
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 42,
+          "params": {
+            "TIME": 270,
+            "MIX": 11,
+            "REPEAT": 22,
+            "WOW": 14,
+            "AGE": 36,
+            "DRIVE": 10
+          }
+        }
+      ]
+    },
+    {
+      "number": 18,
+      "name": "Liquid Vibe",
+      "description": "Slow, moderate vibe, warm echo and light hall.",
+      "chain": [
+        {
+          "type": 25,
+          "params": {
+            "SPEED": 110,
+            "INTENS": 38,
+            "MODE": 0,
+            "VOLUME": 48
+          }
+        },
+        {
+          "type": 45,
+          "params": {
+            "GAIN": 35,
+            "MASTER": 60,
+            "LEVEL": 65,
+            "BASS": 45,
+            "MID": 57,
+            "TREBLE": 42,
+            "BRIGHT": 22
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 42,
+          "params": {
+            "TIME": 340,
+            "MIX": 13,
+            "REPEAT": 27,
+            "WOW": 14,
+            "AGE": 36,
+            "DRIVE": 10
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 12,
+            "TONE": 38,
+            "TIME": 43,
+            "MODE": 1
+          }
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "name": "Funk Filter",
+      "description": "Percussive clean with controlled envelope filtering.",
+      "chain": [
+        {
+          "type": 30,
+          "params": {
+            "SUSTAIN": 17,
+            "LEVEL": 48,
+            "BLEND": 58,
+            "TONE": 48,
+            "PICKUP": 0
+          }
+        },
+        {
+          "type": 39,
+          "params": {
+            "SENS": 36,
+            "MANUAL": 30,
+            "DECAY": 160,
+            "MODE": 0,
+            "VOWEL 1": 0,
+            "VOWEL 2": 3,
+            "RATE": 100,
+            "MIX": 62
+          }
+        },
+        {
+          "type": 48,
+          "params": {
+            "GAIN": 25,
+            "MASTER": 60,
+            "LEVEL": 95,
+            "BASS": 40,
+            "MID": 51,
+            "TREBLE": 48,
+            "BRIGHT": 27
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        }
+      ]
+    },
+    {
+      "number": 20,
+      "name": "Ambient Bloom",
+      "description": "Soft chorus, longer dark echo and restrained hall.",
+      "chain": [
+        {
+          "type": 46,
+          "params": {
+            "GAIN": 25,
+            "MASTER": 60,
+            "LEVEL": 90,
+            "BASS": 44,
+            "MID": 51,
+            "TREBLE": 43,
+            "BRIGHT": 24
+          }
+        },
+        {
+          "type": 3,
+          "params": {
+            "VOL": 80
+          }
+        },
+        {
+          "type": 22,
+          "params": {
+            "RATE": 42,
+            "DEPTH": 23
+          }
+        },
+        {
+          "type": 42,
+          "params": {
+            "TIME": 520,
+            "MIX": 20,
+            "REPEAT": 34,
+            "WOW": 14,
+            "AGE": 36,
+            "DRIVE": 10
+          }
+        },
+        {
+          "type": 19,
+          "params": {
+            "E.LEVEL": 20,
+            "TONE": 36,
+            "TIME": 60,
+            "MODE": 1
+          }
+        }
+      ]
+    }
+  ]
+}
