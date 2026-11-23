@@ -272,10 +272,12 @@ export async function flash(ports, sections, say, progress) {
         if (!started && e instanceof Problem)
           throw Object.assign(new Problem(e.message + "\nNothing was written: unplug the pedal and plug it back in, and it " +
             "runs its current firmware. " + (e.status != null
-              ? "The pedal refused the erase. If this happens every time, the pedal may be a newer unit whose bootloader " +
-                "is locked; those reportedly refuse every update, Valeton's own updater included. See the Installation Guide."
+              ? "The pedal refused the erase. If this happens every time, Valeton's own updater included, the pedal most " +
+                "likely has the known GP-5 DSP updater fault. It can be fixed with a USB debug adapter: see \"DSP updater " +
+                "fault\" in the Installation Guide."
               : "The pedal did not answer the erase. Check the USB cable, connect without a hub, close other MIDI " +
-                "applications and try again. If this happens every time, see the Installation Guide.")), { status: e.status });
+                "applications and try again. If this happens every time, see \"DSP updater fault\" in the Installation " +
+                "Guide.")), { status: e.status });
         throw e;
       }
       started = true;

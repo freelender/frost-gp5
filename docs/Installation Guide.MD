@@ -120,8 +120,37 @@ into Valeton presets by changing firmware.
 | File rejected | Extract the ZIP and select its GP-5 `.bin`; copy/download again if corrupted |
 | Old website information | Hard reload with Ctrl+Shift+R and select the file again |
 | Interrupted update | Use the factory update-mode procedure above |
-| "Refused the erase" (error code 01) every time, nothing written | Unplug and reconnect: the pedal keeps its current firmware. Newer units with a locked bootloader reportedly refuse every update, Valeton's own updater included; Frost cannot be installed on them |
-| "Did not answer the erase" (no answer), nothing written | Unplug and reconnect, then retry with another data cable, no hub and other MIDI applications closed |
+| "Refused the erase" (error code 01) every time, nothing written | Unplug and reconnect: the pedal keeps its current firmware. If Valeton's own updater also fails (Valeton Suite stays at 0 %), see [DSP updater fault](#dsp-updater-fault) |
+| "Did not answer the erase" (no answer), nothing written | Unplug and reconnect, then retry with another data cable, no hub and other MIDI applications closed. If it happens every time, see [DSP updater fault](#dsp-updater-fault) |
 | Transfer finished, reconnect failed | Check the pedal, reconnect USB and reload before considering another update |
+
+## DSP updater fault
+
+Some GP-5s have a fault in the updater of their audio processor (the DSP).
+It blocks **every** firmware update, Valeton's included. It is a fault of
+the pedal, not of Frost, and it was found and fixed by the OpenGP5 project.
+
+**Symptoms** (all of them):
+
+- The install stops at the erase of the first DSP section (`dsp`), before
+  anything is written: "refused the erase" or "did not answer the erase".
+- It happens every time, with every tool. Valeton Suite stays at 0 %.
+- Unplugging and reconnecting the pedal starts its current firmware again.
+
+**Fix:** follow OpenGP5's [J7 recovery](https://opengp5.github.io/docs/platform/j7-recovery/).
+In short:
+
+1. Open the pedal and connect an **FT232H** USB board to the **J7** header
+   next to the DSP chip (three wires).
+2. Get the stalled updater moving for one session with OpenGP5's tools.
+3. Install an OpenGP5 build that supports `tickfix` (for example its tremolo).
+4. Apply the permanent four-byte fix with `gp5tool.py tickfix --apply`.
+5. Install Frost through the website as usual. Later updates, Frost's and
+   Valeton's, then work without the adapter.
+
+Opening the pedal and wiring J7 is at your own risk: a wiring mistake can
+damage it. Frost cannot apply the fix itself. If you are not comfortable
+with this, keep Valeton's firmware. Please report the result, and the
+pedal's purchase date, so we can track which units are affected.
 
 Next: [User Guide](User%20Guide.md) · [Website Guide](Website%20Guide.md).

@@ -39,5 +39,5 @@ class WebFlasherEraseTests(unittest.TestCase):
         for c in (ref,sil):
             self.assertIn('Nothing was written',c['error']);self.assertEqual(c['written'],0)
             self.assertIn('Installation Guide',c['error']);self.assertNotIn('GETTING-STARTED',c['error'])
-        self.assertEqual(ref['status'],1);self.assertIn('error code 01',ref['error']);self.assertIn('locked',ref['error'])
-        self.assertIsNone(sil['status']);self.assertIn('no answer',sil['error']);self.assertNotIn('locked',sil['error'])
+        self.assertEqual(ref['status'],1);self.assertIn('error code 01',ref['error']);self.assertIn('DSP updater fault',ref['error']);self.assertNotIn('locked',ref['error'])
+        self.assertIsNone(sil['status']);self.assertIn('no answer',sil['error']);self.assertIn('DSP updater fault',sil['error']);self.assertNotIn('locked',sil['error'])

@@ -1,5 +1,5 @@
 // The installer's message when the first erase fails: a refusal (non-zero
-// status, e.g. a reportedly locked newer unit) versus no answer. Offline, with
+// status) versus no answer; both point to the DSP updater fault if it repeats. Offline, with
 // the simulated pedal; prints one JSON line.
 import * as F from '../../web/flasher/gp5flash.js';
 import { FakePedal } from './flasher/fakepedal.mjs';
