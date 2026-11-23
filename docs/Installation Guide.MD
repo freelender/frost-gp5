@@ -14,6 +14,11 @@ Open [Frost Studio](https://frost.fretlexwins.workers.dev/).
 Frost replaces the pedal's application firmware. Keep your sounds backed up
 and read the recovery steps below before installing.
 
+**Before you switch:** Frost does not support the GP-5's **USB audio
+interface** or **Bluetooth** yet. While Frost is installed you cannot record
+or play audio over USB, or stream backing tracks over Bluetooth. Reinstall
+Valeton's firmware to use them again.
+
 ## 2. Back up your sounds
 
 1. For stock Valeton firmware, use Valeton's editor to back up stock presets.

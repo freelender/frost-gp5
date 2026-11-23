@@ -10,6 +10,12 @@ Frost provides a six-slot signal chain, amp heads, converted capture models,
 cabinet IRs, editable presets, a tuner, and songs/setlist navigation. Once your
 sounds and setlist are saved, the pedal works without the website connected.
 
+**Not supported yet:** with Frost installed, the GP-5 does **not** work as a
+USB audio interface (no recording or playback over USB) and **Bluetooth is
+off** (no streaming of backing tracks from a phone). USB carries only MIDI for
+the website and controllers. Valeton's own firmware keeps both features;
+reinstall it if you need them.
+
 ## 1. Get started
 
 Install the supplied firmware using the [Installation Guide](Installation%20Guide.MD). Connect your
@@ -395,6 +401,8 @@ not a firmware image.
 | Overload or repeated cuts | Select a lighter preset; report the exact chain and reproduction steps |
 | CHAIN TOO BIG | The chosen effects do not fit together; replace one of the larger effects (see section 3) |
 | DSP LIMIT | The chain would overload the audio processor; replace a heavy effect (see section 3) |
+| The computer or phone sees no GP-5 audio device | Not supported yet: Frost does not provide USB audio (recording or playback) |
+| A phone cannot find the GP-5 over Bluetooth | Not supported yet: Bluetooth is off in Frost |
 
 This is beta firmware. Not every hardware setup and heavy chain has been
 qualified. Report firmware version, OS/browser, guitar/pickups, audio

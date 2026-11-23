@@ -22,7 +22,8 @@ and read the pedal again. Hard reload with Ctrl+Shift+R after a website update.
 It is useful for exploring the interface, not for judging the sound or testing
 real hardware compatibility. Use the connection control to disconnect when
 finished. Listen through the GP-5's normal audio output; this editor is not a
-USB audio recorder.
+USB audio recorder. Frost does not support the GP-5's USB audio interface or
+Bluetooth yet: USB carries only MIDI, for this website and for controllers.
 
 <p align="center"><img src="../assets/docs/website-connect.webp" alt="Frost Studio before connecting: Connect GP-5 or Try the demo" width="760"><br><sub>Frost Studio before connecting: Connect GP-5 or Try the demo</sub></p>
 
