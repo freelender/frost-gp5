@@ -9,13 +9,17 @@ static uint32_t gp5_get32(const uint8_t *p)
 static void gp5_ack(void){++reply_count;}
 static void gp5_reply(const uint8_t *p,uint32_t n)
 { unsigned i;response_bytes=n;++reply_count;for(i=0;i<n && i<sizeof(response);++i)response[i]=p[i]; }
+/* The DSP firmware's fw_init is static; gp5_firmware.h (controller side)
+ * declares a global fw_init. Rename the DSP one, as slot_editor_host.c does. */
+#define fw_init dsp_init
 #include "../firmware/dsp/firmware.h"
+#undef fw_init
 #if defined(_WIN32)
 #define API __declspec(dllexport)
 #else
 #define API __attribute__((visibility("default")))
 #endif
-API void protocol_init(void){fw_init();response_bytes=reply_count=0;}
+API void protocol_init(void){dsp_init();response_bytes=reply_count=0;}
 API int protocol_send(uint32_t cmd,const uint8_t *p,unsigned n)
 { response_bytes=0;return fw_command(cmd,p,n); }
 API unsigned protocol_reply(unsigned i){return i<response_bytes?response[i]:0;}
