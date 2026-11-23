@@ -2,7 +2,7 @@
 
 # Frost for Valeton GP-5 — User Guide
 
-Beta: **0.1.0-beta.8** · Website: **1.4.0** · Updated: 23 November 2026
+Beta: **0.1.0-beta.9** · Website: **1.5.0** · Updated: 24 November 2026
 
 Website: [Frost GP-5 Studio](https://frost.fretlexwins.workers.dev/)
 
@@ -344,7 +344,7 @@ and exits.
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
 | DISPLAY | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set its tempo and a hold switches it on/off; the light flashes on the beat |
-| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.8 |
+| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.9 |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 
