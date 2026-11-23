@@ -43,6 +43,8 @@ export class LiveChain {
       const s = await this.presetStatus();
       if (!s) throw new Error('Lost contact during preset loading. Reconnect to check the current sound.');
       if (s.queued === 255 && !s.busy) {
+        if (s.error === 3) throw new Error('The pedal refused this preset: together its effects would overload the audio processor (DSP LIMIT). Replace a heavy effect (POG, NAM capture, a high-gain amp head, a reverb) and save it again.');
+        if (s.error === 2) throw new Error('The pedal refused this preset: its effects do not fit together in the effect memory of the pedal. Replace one of the larger effects (NAM capture, OCD, POG, amp head, AW-3, RAT) and save it again.');
         if (s.error) throw new Error('Preset loading failed on the pedal.');
         if (s.current === index && s.ready) return s;
         if (s.current !== index) throw new Error('Another controller changed the preset. Read the pedal again.');

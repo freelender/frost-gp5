@@ -120,7 +120,7 @@
       "id": "rv6",
       "type_id": 19,
       "folder": "effects/reverbs",
-      "status": "implemented; SHIMMER mode experimental",
+      "status": "implemented; SHIMMER mode experimental (compact build: steady-loop octave with phase-aligned splices, host- and emulator-checked)",
       "physical": "not qualified"
     },
     {

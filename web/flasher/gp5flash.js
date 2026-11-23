@@ -244,7 +244,8 @@ async function sendReliably(link, raw, timeout, what) {
     st = await sendAcked(link, raw, timeout);
     if (st === 0) return attempt;
   }
-  throw new Problem(`The pedal stopped acknowledging at ${what} (${st === null ? "no answer" : "error code " + hex2(st)}).`);
+  throw Object.assign(new Problem(`The pedal stopped acknowledging at ${what} (${st === null ? "no answer" : "error code " + hex2(st)}).`),
+                      { status: st });
 }
 
 // Find the pedal (in any mode), returning [name, mode] or [null, null].
@@ -267,9 +268,14 @@ export async function flash(ports, sections, say, progress) {
       try {
         await sendReliably(link, body[0][1], Timing.begin, `the erase of the ${NAMES[t]} section`);
       } catch (e) {
+        // Frost: a refusal (non-zero status) and silence have different likely causes.
         if (!started && e instanceof Problem)
-          throw new Problem(e.message + "\nNothing was written. If this happens every time, the audio processor's updater is " +
-                            "stalling (a known fault on at least one unit; see 'Known limits' in GETTING-STARTED.md).");
+          throw Object.assign(new Problem(e.message + "\nNothing was written: unplug the pedal and plug it back in, and it " +
+            "runs its current firmware. " + (e.status != null
+              ? "The pedal refused the erase. If this happens every time, the pedal may be a newer unit whose bootloader " +
+                "is locked; those reportedly refuse every update, Valeton's own updater included. See the Installation Guide."
+              : "The pedal did not answer the erase. Check the USB cable, connect without a hub, close other MIDI " +
+                "applications and try again. If this happens every time, see the Installation Guide.")), { status: e.status });
         throw e;
       }
       started = true;

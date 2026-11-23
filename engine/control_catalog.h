@@ -67,6 +67,7 @@ static inline float frost_control_to_dsp(unsigned type,unsigned p,int knob)
     if(type>=FROST_LEGACY_EFFECTS)return (float)knob/(float)c->scale;
     if(type==FROST_GATE)return frost_gate_knob[knob];
     if(type==FROST_DELAY && p==0)return (float)knob;
+    if(type==FROST_IR && p)return (float)knob;       /* LOW/HIGH CUT: Hz */
     if((type==FROST_CHORUS || type==FROST_FLANGER) && p==0)return (float)knob/100.0f;
     t=(float)(knob-c->minimum)/(float)(c->maximum-c->minimum);
     if(type==FROST_REVERB && p==1)t=1.0f-t; /* tone clockwise = brighter */
@@ -80,7 +81,9 @@ static inline int frost_control_from_dsp(unsigned type,unsigned p,float value)
     const FrostControlEffect *d=frost_control_find(type);const FrostControlParameter *c;float t,x;
     if(!d || p>=d->count)return 0;
     c=&d->p[p];if(type==FROST_GATE)return frost_human_gate_value(value);
-    if(type>=FROST_LEGACY_EFFECTS){
+    /* HIGH CUT stored as 0 (older presets) or below 1 kHz is off: show 20000. */
+    if(type==FROST_IR && p==2 && !(value>=1000.0f))return c->maximum;
+    if(type>=FROST_LEGACY_EFFECTS || (type==FROST_IR && p)){
         x=value*(float)c->scale;
         if(!(x>c->minimum))return c->minimum;
         if(x>=c->maximum)return c->maximum;

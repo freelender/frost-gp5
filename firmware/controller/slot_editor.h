@@ -72,7 +72,8 @@ static unsigned preset_choice,preset_action;
 static void preset_label(unsigned i,char out[24]);
 static unsigned selected,view,parameter,choice,changed,generation,draw_generation,band;
 static unsigned pick_category,pick_model,foot_held;
-static uint32_t last_foot,last_para;
+static uint32_t last_para,foot_edge_ms,foot_raw_ms;
+static unsigned foot_raw,foot_state;   /* footswitch debounce (foot_debounce) */
 static uint16_t framebuffer[160*80];
 #include "draw.h"
 #ifdef FROST_DSP_USAGE
@@ -131,6 +132,8 @@ static const char *editor_message(void)
     if(capture_client.state)return "SAVING / WAIT";
     if(capture_client.error)return "SAVE FAILED";
     if(preset_client.state)return "LOADING / WAIT";
+    if(preset_client.error==2)return "CHAIN TOO BIG";
+    if(preset_client.error==3)return "DSP LIMIT";
     if(preset_client.error)return "LOAD FAILED";
     if(editor.error==1)return "DSP ERROR";
     if(editor.busy)return "SYNC BUSY";
@@ -138,8 +141,26 @@ static const char *editor_message(void)
     if(!editor.ready)return "SYNC WAIT";
     if(editor.error==2)return "ROUTE CHANGED";
     if(editor.error==3)return "EDIT REJECTED";
+    if(editor.error==4)return "CHAIN TOO BIG";
+    if(editor.error==5)return "DSP LIMIT";
     if(editor.revision==UINT32_MAX)return "DSP READ ONLY";
     return 0;
+}
+/* 32i: a refused chain (effect memory or DSP load) also shows a popup over
+ * the screen for FROST_POPUP_MS. 1 = CHAIN TOO BIG, 2 = DSP LIMIT. */
+#ifndef FROST_POPUP_MS
+#define FROST_POPUP_MS 2500u
+#endif
+static unsigned popup_kind,popup_seen;   /* popup_seen: editor.refusals already shown */
+static uint32_t popup_until;
+static unsigned refusal_code(void)
+{return editor.error==4 || preset_client.error==2?1u:editor.error==5 || preset_client.error==3?2u:0u;}
+static void popup_tick(uint32_t now)
+{
+    unsigned code=refusal_code();
+    if(editor.refusals!=popup_seen && code){popup_kind=code;popup_until=now+FROST_POPUP_MS;++generation;}
+    popup_seen=editor.refusals;
+    if(popup_kind && (int32_t)(now-popup_until)>=0){popup_kind=0;++generation;}
 }
 /* MODEL row of an AMP block: "NN NAME" from its file, "NN DEFAULT" without one.
  * Uppercase; characters the font lacks become '*'. */
@@ -292,9 +313,18 @@ static void render_stage2b(const char *message)
         text(5,72,message?message:"PARA: FX  FOOT: BYPASS",INK);
     }
 }
+static void render_popup(void)
+{
+    const char *title=popup_kind==1?"CHAIN TOO BIG":"DSP LIMIT",*hint="REMOVE AN EFFECT";
+    if(!popup_kind)return;
+    rect(8,20,144,40,FOCUS);rect(10,22,140,36,BG);
+    text(80-(int)length(title)*3,29,title,FOCUS);text(80-(int)length(hint)*3,43,hint,INK);
+}
 static void render(void)
 {
-    static const unsigned xy[6][2]={{5,16},{59,16},{113,16},{113,46},{59,46},{5,46}};
+    /* 32j: 46 px blocks (was 42) so a 6-letter bold name (41 px) clears the frame;
+     * 8 px arrow gaps, 3 px left for the selection ring at both screen edges. */
+    static const unsigned xy[6][2]={{3,16},{57,16},{111,16},{111,46},{57,46},{3,46}};
     const FrostControlEffect *e=frost_control_find(editor.types[selected]);
     unsigned i;const char *message=editor_message();
     rect(0,0,160,80,BG);
@@ -315,18 +345,18 @@ static void render(void)
 #else
         text(119,3,count,INK);
 #endif
-        arrow(47,27,58,27);arrow(101,27,112,27);arrow(134,38,134,45);arrow(113,57,102,57);arrow(59,57,48,57);
+        arrow(49,27,56,27);arrow(103,27,110,27);arrow(134,38,134,45);arrow(110,57,103,57);arrow(56,57,49,57);
         for(i=0;i<6;++i){
             unsigned slot=editor.order[i];const FrostControlEffect *d=frost_control_find(editor.types[slot]);
             unsigned empty=editor.types[slot]==FROST_EMPTY,on=!empty && editor.desired_enabled[slot];
             int x=(int)xy[i][0],y=(int)xy[i][1];uint16_t color=empty?WIRE:effect_color(editor.types[slot]);
-            rect(x,y,42,22,on?color:BG);
-            line(x,y,x+41,y,color);line(x,y+21,x+41,y+21,color);line(x,y,x,y+21,color);line(x+41,y,x+41,y+21,color);
+            rect(x,y,46,22,on?color:BG);
+            line(x,y,x+45,y,color);line(x,y+21,x+45,y+21,color);line(x,y,x,y+21,color);line(x+45,y,x+45,y+21,color);
             if(slot==selected){int r;for(r=2;r<=3;++r){
-                line(x-r,y-r,x+41+r,y-r,FOCUS);line(x-r,y+21+r,x+41+r,y+21+r,FOCUS);
-                line(x-r,y-r,x-r,y+21+r,FOCUS);line(x+41+r,y-r,x+41+r,y+21+r,FOCUS);
+                line(x-r,y-r,x+45+r,y-r,FOCUS);line(x-r,y+21+r,x+45+r,y+21+r,FOCUS);
+                line(x-r,y-r,x-r,y+21+r,FOCUS);line(x+45+r,y-r,x+45+r,y+21+r,FOCUS);
             }}
-            text_bold(x+(42-(int)length(d->short_name)*7+1)/2,y+7,d->short_name,on?BG:MUTED);
+            text_bold(x+(46-(int)length(d->short_name)*7+1)/2,y+7,d->short_name,on?BG:MUTED);
         }
         text(5,72,message?message:e->name,INK);
     }else if(view==TYPE_CATEGORY || view==TYPE_MODEL){
@@ -421,7 +451,7 @@ void fw_init(void)
     ram_bank_init();capture_client_init(&capture_client);
     {unsigned i;for(i=0;i<6;++i)ir_cabs[i]=0;}ir_file_client_init(&editor);
     fcm_client_init(&fcm_client,gp5_ms());
-    generation=1;draw_generation=0;band=80;last_foot=last_para=gp5_ms()-50u;
+    generation=1;draw_generation=0;band=80;last_para=gp5_ms()-50u;foot_raw=foot_state=0;foot_edge_ms=foot_raw_ms=gp5_ms()-50u;popup_kind=0;popup_seen=editor.refusals;popup_until=0;
 #ifdef FROST_IR_LINK
     if(!irl.started)irl_start();
 #endif
@@ -651,16 +681,32 @@ int fw_editor_reply(const uint8_t *p,unsigned n)
     if(had_snapshot && editor.ready && editor.revision!=old_revision)changed=1;
     ++generation;return result;
 }
-void fw_foot(void)
+static void settings_leave(void);
+/* Footswitch outside the home screens and tuner: one level back, like the
+ * BACK rows. A parameter value is already applied while turning; a pending
+ * TYPE/POSITION/CAB/REMOVE choice or a confirmation is cancelled. Leaving
+ * Global settings saves them, as its BACK row does. */
+static void foot_back(void)
+{
+    switch(view){
+    case SETTINGS:settings_leave();break;
+    case SETTINGS_VALUE:case SETTINGS_CONFIRM:view=SETTINGS;settings_confirm=0;factory_stage=0;break;
+    case VALUE:case TYPE_CATEGORY:case PRESETS:view=PARAMETERS;break;
+    case TYPE_MODEL:view=TYPE_CATEGORY;break;
+    case PRESET_CONFIRM:view=PRESETS;break;
+    default:view=home_view();break;                        /* PARAMETERS */
+    }
+}
+static void foot_press(uint32_t now)
 {
     unsigned mode;
 #ifdef FROST_BOOT_SPLASH
     if(!boot_complete)return;
 #endif
-    uint32_t now=gp5_ms();if(now-last_foot<35u)return;last_foot=now;
     if(ir_file_client.state || preset_client.state || capture_client.state)return;
     last_input_ms=now;
     if(view==TUNER){view=tuner_home;tuner_client.want=0;if(tuner_ref_dirty && globals_save(now))tuner_ref_dirty=0;++generation;return;}
+    if(!is_home_view(view)){foot_back();++generation;return;}
     if(view==SETLIST_HOME){foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;return;}
     mode=foot_mode();foot_held=0;
     if(is_home_view(view) && !(view!=PRESET_HOME && mode)){        /* hold opens the tuner */
@@ -674,7 +720,7 @@ void fw_foot(void)
     if(editor_queue_enable(&editor,selected,!editor.desired_enabled[selected])){changed=1;++generation;}
 }
 /* Release only ends a momentary action started by fw_foot on the same block. */
-void fw_foot_release(void)
+static void foot_release(void)
 {
     unsigned slot;
     if(foot_down){
@@ -689,6 +735,32 @@ void fw_foot_release(void)
     else if(editor.types[slot]==FROST_VB2)(void)editor_queue_enable(&editor,slot,0);
     changed=1;++generation;
 }
+/* Footswitch debounce. The platform reports every raw level change of the
+ * switch, contact bounce included. The old filter only spaced presses 35 ms
+ * apart, so a bounce on RELEASE (press, hold > 35 ms, release, bounce-press)
+ * was a second press: the block toggled twice and went back to its previous
+ * state, mostly with fast repeated presses. Now each edge acts at once, then
+ * the switch is locked for FROST_FOOT_DEBOUNCE_MS; a level that differs when
+ * the lock ends (a very short tap's release) is applied from fw_draw. */
+#ifndef FROST_FOOT_DEBOUNCE_MS
+#define FROST_FOOT_DEBOUNCE_MS 35u
+#endif
+static void foot_debounce(uint32_t now)
+{
+    uint32_t open;
+    if(foot_raw==foot_state || (uint32_t)(now-foot_edge_ms)<FROST_FOOT_DEBOUNCE_MS)return;
+    open=foot_edge_ms+FROST_FOOT_DEBOUNCE_MS;                   /* a held-back edge counts from when it could act */
+    foot_state=foot_raw;foot_edge_ms=(int32_t)(foot_raw_ms-open)>0?foot_raw_ms:open;
+    if(foot_state)foot_press(now);else foot_release();
+}
+void fw_foot(void)
+{
+    uint32_t now=gp5_ms();
+    foot_debounce(now);                                             /* a held-back edge first */
+    if(foot_raw && foot_state){foot_state=0;foot_release();}   /* no release reported (host benches) */
+    foot_raw=1;foot_raw_ms=now;foot_debounce(now);
+}
+void fw_foot_release(void){uint32_t now=gp5_ms();foot_debounce(now);foot_raw=0;foot_raw_ms=now;foot_debounce(now);}
 static void settings_open(void){view=SETTINGS;settings_row=0;settings_confirm=0;factory_stage=0;}
 static void settings_leave(void)
 {
@@ -869,6 +941,7 @@ int fw_draw(unsigned knob,int force)
             factory_checked=1;
         }
 #endif
+        foot_debounce(now);
         if(para_down && !para_long && is_home_view(view) && (uint32_t)(now-para_down_ms)>=FROST_LONG_PRESS_MS){para_long=1;settings_open();++generation;}
         if(foot_down && !foot_long && is_home_view(view) && (uint32_t)(now-foot_down_ms)>=FROST_LONG_PRESS_MS){
             foot_long=1;
@@ -904,7 +977,8 @@ int fw_draw(unsigned knob,int force)
 #ifdef FROST_DSP_USAGE
     if(frost_dsp_usage_tick(&dsp_usage,gp5_ms()))dsp_usage_dirty=1;
 #endif
-    if(force || draw_generation!=generation){render();draw_generation=generation;band=0;
+    popup_tick(gp5_ms());
+    if(force || draw_generation!=generation){render();render_popup();draw_generation=generation;band=0;
 #ifdef FROST_DSP_USAGE
         dsp_usage_dirty=0;dsp_usage_band=16;
 #endif

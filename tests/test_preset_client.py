@@ -36,6 +36,74 @@ class PresetClientTests(unittest.TestCase):
         a=(ct.c_uint8*len(p))(*p);self.assertEqual(self.lib.ge_wire(int.from_bytes(p[:2],'little'),a,len(p)),1)
     def words(self,profile):return [self.lib.ge_bank_word(profile,i) for i in range(1071)]
     def prepared(self):return tuple(self.lib.ge_prepared_word(i) for i in range(12))
+    def test_chain_too_big_refuses_route_and_preset(self):
+        """32h: the DSP refuses a route or preset whose effects do not fit its
+        effect (overlay) memory; the old chain stays and the screen says why."""
+        c=self.lib;c.ge_message.restype=ct.c_char_p
+        try:
+            before=[c.ge_actual_type(i) for i in range(6)];rev=c.ge_actual_revision()
+            c.ge_full_type(5)                                   # "does not fit"
+            self.assertEqual(c.ge_type_change(4,5),1);self.settle()
+            self.assertEqual([c.ge_actual_type(i) for i in range(6)],before);self.assertEqual(c.ge_actual_revision(),rev)
+            self.assertEqual(c.ge_error(),4);self.assertEqual(c.ge_message(),b'CHAIN TOO BIG')
+            self.assertEqual(c.ge_preset_start(1),1)            # profile 1 holds type 5
+            for _ in range(400):
+                c.ge_pump(1)
+                if not c.ge_preset_state() and c.ge_ready():break
+            self.assertEqual(c.ge_preset_error(),2);self.assertEqual(c.ge_message(),b'CHAIN TOO BIG')
+            self.assertEqual([c.ge_actual_type(i) for i in range(6)],before)
+            c.ge_full_type(255)                                 # fits again: the same preset loads
+            self.assertEqual(c.ge_preset_start(1),1);self.settle()
+            self.assertFalse(c.ge_preset_error());self.assertEqual([c.ge_actual_type(i) for i in range(6)],[0,6,5,8,3,255])
+        finally:c.ge_full_type(255)
+    def draw(self,ms=0):
+        c=self.lib;c.ge_advance(ms)
+        for _ in range(12):c.ge_tick_draw()
+    def test_dsp_limit_refuses_route_and_preset_with_popup(self):
+        """32i: a chain whose measured-cost estimate exceeds the DSP budget is
+        refused before it plays; the screen shows a DSP LIMIT popup for about
+        2.5 s and the previous chain keeps running."""
+        c=self.lib;c.ge_message.restype=ct.c_char_p
+        try:
+            before=[c.ge_actual_type(i) for i in range(6)];rev=c.ge_actual_revision()
+            c.ge_load_budget(c.ge_load_chain()+1000)          # current chain fits, POG (110k) does not
+            self.assertEqual(c.ge_type_change(4,28),1);self.settle()
+            self.assertEqual([c.ge_actual_type(i) for i in range(6)],before);self.assertEqual(c.ge_actual_revision(),rev)
+            self.assertEqual(c.ge_error(),5);self.assertEqual(c.ge_message(),b'DSP LIMIT')
+            self.draw();self.assertEqual(c.ge_popup(),2)
+            border=c.ge_pixel(20*160+8);inside=c.ge_pixel(23*160+11)
+            self.assertNotEqual(border,inside)                 # framed box over the screen
+            self.draw(2000);self.assertEqual(c.ge_popup(),2)   # still up after 2 s
+            self.draw(700);self.assertEqual(c.ge_popup(),0)    # gone after ~2.5 s
+            c.ge_load_budget(50000)                             # profile 1 cannot fit
+            self.assertEqual(c.ge_preset_start(1),1)
+            for _ in range(400):
+                c.ge_pump(1)
+                if not c.ge_preset_state() and c.ge_ready():break
+            self.assertEqual(c.ge_preset_error(),3);self.assertEqual(c.ge_message(),b'DSP LIMIT')
+            self.draw();self.assertEqual(c.ge_popup(),2)
+            self.assertEqual([c.ge_actual_type(i) for i in range(6)],before)
+        finally:c.ge_load_budget(0xffffffff)
+    def test_chain_too_big_popup(self):
+        c=self.lib
+        try:
+            c.ge_full_type(5);self.assertEqual(c.ge_type_change(4,5),1);self.settle()
+            self.draw();self.assertEqual(c.ge_popup(),1)
+        finally:c.ge_full_type(255)
+    def test_load_table_matches_pedal_and_factory_bank(self):
+        """Estimates from the pedal-measured table: the regular patch and every
+        factory preset fit the default budget; NAM+POG+OCD+DELUXE (120% on the
+        pedal) does not."""
+        import json
+        c=self.lib;c.ge_load_estimate.argtypes=[ct.POINTER(ct.c_uint)]
+        def est(types):
+            a=(ct.c_uint*6)(*(list(types)+[255]*(6-len(types))));return c.ge_load_estimate(a)
+        budget=c.ge_load_default()
+        self.assertLessEqual(est([30,45,3,20]),budget)
+        self.assertGreater(est([33,28,13,45]),budget)
+        self.assertGreater(est([33,28,13,45])/278494,1.1)
+        for row in json.loads((ROOT/'presets/factory.json').read_text())['presets']:
+            self.assertLessEqual(est([b['type'] for b in row['chain']]),budget,row['name'])
     def open_bank(self):
         c=self.lib;c.ge_press();c.ge_turn(-1);c.ge_press();self.assertEqual(c.ge_view(),3)
     def test_all_profiles_reach_real_dsp_assets_policies_parameters_and_mute(self):

@@ -1,5 +1,8 @@
 #include "slots.h"
 #include "engine/hot_code.h"
+#ifdef FROST_LOAD_ADMIT
+#include "engine/load_budget.h"
+#endif
 /* Cold control path (between audio blocks, never per sample): size-optimized
  * on the GCC target to bound DSP flash; host/clang builds unchanged. */
 #if defined(__GNUC__) && !defined(__clang__) && defined(__arm__)
@@ -16,6 +19,12 @@ FROST_COLD unsigned frost_slots_request_route(FrostSlotProtocol *s,FrostChain *c
     if(frost_chain_transition(chain))return FROST_SLOT_BUSY;
     if(expected_revision!=s->revision)return FROST_SLOT_STALE_REVISION;
     if(s->revision==UINT32_MAX)return FROST_SLOT_REVISION_EXHAUSTED;
+#ifdef FROST_ROUTE_ADMIT
+    if(!FROST_ROUTE_ADMIT(types))return FROST_SLOT_CHAIN_FULL;
+#endif
+#ifdef FROST_LOAD_ADMIT
+    if(!frost_load_fits(types))return FROST_SLOT_DSP_LIMIT;
+#endif
     if(!frost_chain_request_route(chain,types,order,pre_count))return FROST_SLOT_BAD_ROUTE;
     frost_slots_legacy_changed(s);return FROST_SLOT_APPLIED;
 }
@@ -24,6 +33,16 @@ FROST_COLD unsigned frost_slots_request_preset(FrostSlotProtocol *s,FrostChain *
     if(frost_chain_transition(chain))return FROST_SLOT_BUSY;
     if(expected_revision!=s->revision)return FROST_SLOT_STALE_REVISION;
     if(s->revision==UINT32_MAX)return FROST_SLOT_REVISION_EXHAUSTED;
+#if defined(FROST_ROUTE_ADMIT) || defined(FROST_LOAD_ADMIT)
+    {unsigned i,types[FROST_SLOTS];for(i=0;i<FROST_SLOTS;++i)types[i]=preset->types[i];
+#ifdef FROST_ROUTE_ADMIT
+     if(!FROST_ROUTE_ADMIT(types))return FROST_SLOT_CHAIN_FULL;
+#endif
+#ifdef FROST_LOAD_ADMIT
+     if(!frost_load_fits(types))return FROST_SLOT_DSP_LIMIT;
+#endif
+    }
+#endif
     if(!frost_chain_request_preset(chain,preset))return FROST_SLOT_BAD_ROUTE;
     frost_slots_legacy_changed(s);return FROST_SLOT_ACCEPTED;
 }

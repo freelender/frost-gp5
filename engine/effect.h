@@ -35,6 +35,9 @@ typedef union {
     struct { float low, high_low; } eq;
     FrostOverdrive overdrive;
     FrostIR *ir; /* caller-owned workspace, unique per IR instance */
+    /* 32c: the IR block's LOW/HIGH CUT filter state follows the same
+     * pointer (first member). Fits the union; no size or layout change. */
+    struct { FrostIR *ir; float cut[FROST_IR_CUT_STATE]; } ir_cut;
     FrostDelay *delay; /* separate caller-owned large workspace */
     FrostModulation *modulation;
     FrostReverbWorkspace *reverb;

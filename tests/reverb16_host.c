@@ -88,6 +88,28 @@ API int rv16_block_sample(unsigned kind,unsigned mode,unsigned count)
     }
     return -1;
 }
+/* 32e: SPRING block body vs the per-sample reference, bitwise, from stale
+ * workspaces, chunks 1..64, DWELL/MIX/TONE changing between chunks and the
+ * output and every state word compared at the end. -1 = identical. */
+API int rv16_spring_block_matches(unsigned total,unsigned seed)
+{
+    static FrostReverb16 a,b;FrostReverbModel16 am={&a},bm={&b};
+    unsigned i=0,k,n;uint32_t r=seed*2654435761u+1u;float x[64],y[64],z[64],p[3]={40,20,60};
+    memset(&a,0x5a,sizeof a);memset(&b,0x5a,sizeof b);frost_16_spring_reset(&am);frost_16_spring_reset(&bm);
+    while(i<total){
+        r=r*1664525u+1013904223u;n=1u+(r>>26)%64u;if(n>total-i)n=total-i;
+        if(((r>>8)&15u)==0)p[0]=(float)((r>>12)%101u);
+        if(((r>>9)&15u)==0)p[1]=(float)((r>>14)%101u);
+        if(((r>>10)&15u)==0)p[2]=(float)((r>>16)%101u)+0.5f;
+        for(k=0;k<n;++k){r=r*1664525u+1013904223u;x[k]=(i+k)%6000u<300u?((int)(r>>16)-32768)*(1.2f/32768.0f):0.0f;}
+        for(k=0;k<n;++k)y[k]=frost_16_spring_sample_reference(&am,x[k],p);
+        if(n&1u)for(k=0;k<n;++k)z[k]=frost_16_spring_sample(&bm,x[k],p);else frost_16_spring_block(&bm,x,z,n,p);
+        if(memcmp(y,z,n*sizeof(float)))return (int)i;
+        i+=n;
+    }
+    if(memcmp(&a,&b,sizeof a))return 2000000000;
+    return -1;
+}
 API int rv16_chain(unsigned type,const float *x,float *out,unsigned count)
 {
     static FrostChain chain;static FrostReverbWorkspace w;unsigned types[]={type};

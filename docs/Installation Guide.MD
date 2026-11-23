@@ -108,6 +108,8 @@ into Valeton presets by changing firmware.
 | File rejected | Extract the ZIP and select its GP-5 `.bin`; copy/download again if corrupted |
 | Old website information | Hard reload with Ctrl+Shift+R and select the file again |
 | Interrupted update | Use the factory update-mode procedure above |
+| "Refused the erase" (error code 01) every time, nothing written | Unplug and reconnect: the pedal keeps its current firmware. Newer units with a locked bootloader reportedly refuse every update, Valeton's own updater included; Frost cannot be installed on them |
+| "Did not answer the erase" (no answer), nothing written | Unplug and reconnect, then retry with another data cable, no hub and other MIDI applications closed |
 | Transfer finished, reconnect failed | Check the pedal, reconnect USB and reload before considering another update |
 
 Next: [User Guide](User%20Guide.md) · [Website Guide](Website%20Guide.md).

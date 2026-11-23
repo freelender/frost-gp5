@@ -11,6 +11,16 @@ static void gp5_reply(const uint8_t *p,uint32_t n){unsigned i;response_bytes=n;+
 #define FROST_CONTROL_SCHEDULER 1
 static void send_frame(const uint8_t *p,unsigned n){gp5_reply(p,n);}
 #endif
+/* 32h: stand-in for the pedal's overlay-pool admission (frost_ovl_fits, ARM
+ * only): a route or preset containing host_full_type does not fit. */
+static unsigned host_full_type=255u;
+static int host_route_admit(const unsigned *t){unsigned i;for(i=0;i<6u;++i)if(host_full_type!=255u && t[i]==host_full_type)return 0;return 1;}
+#define FROST_ROUTE_ADMIT(t) host_route_admit(t)
+/* 32i: the real load table and estimate; the budget is a variable so other
+ * tests keep their chains (default: unlimited). */
+static uint32_t host_load_budget=UINT32_MAX;
+#define FROST_LOAD_ADMIT 1
+#define FROST_LOAD_BUDGET_CYCLES host_load_budget
 #define fw_init dsp_init
 #include "../firmware/dsp/firmware.h"
 #undef fw_init
@@ -118,6 +128,7 @@ API void ge_long_press(void){now+=50;fw_para_push();now+=800;(void)fw_draw(0,0);
 API void ge_foot(void){now+=50;fw_foot();if(!foot_held){now+=40;fw_foot_release();}}   /* a tap; hold-to-play modes stay held */
 API void ge_foot_hold(void){now+=50;fw_foot();now+=800;(void)fw_draw(0,0);now+=40;fw_foot_release();}
 API void ge_foot_release(void){now+=50;fw_foot_release();}
+API void ge_foot_edge(unsigned down,unsigned ms){now+=ms;if(down)fw_foot();else fw_foot_release();}   /* raw switch edge after ms */
 API unsigned ge_pick_category(void){return pick_category;}
 API unsigned ge_pick_model(void){return pick_model;}
 API unsigned ge_human_count(unsigned type){const FrostControlEffect *d=frost_control_find(type);return d?d->count:0;}
@@ -157,6 +168,13 @@ API unsigned ge_prepared_word(unsigned i){return frost_wire_get32(prepared+4*i);
 API unsigned ge_preset_start(unsigned profile){return fw_preset_start(profile);}
 API unsigned ge_preset_state(void){return preset_client.state;}
 API unsigned ge_preset_error(void){return preset_client.error;}
+API void ge_full_type(unsigned type){host_full_type=type;}
+API void ge_load_budget(uint32_t cycles){host_load_budget=cycles;}
+API uint32_t ge_load_default(void){return FROST_LOAD_BUDGET_DEFAULT;}
+API uint32_t ge_load_estimate(const unsigned *types){return frost_load_estimate(types);}
+API uint32_t ge_load_chain(void){unsigned i,t[6];for(i=0;i<6;++i)t[i]=frost_chain.slots[i].type;return frost_load_estimate(t);}
+API unsigned ge_popup(void){return popup_kind;}
+API const char *ge_message(void){const char *m=editor_message();return m?m:"";}
 API unsigned ge_preset_next(void){return preset_client.next;}
 API unsigned ge_preset_bytes(void){return sizeof(FrostPresetClient);}
 API unsigned ge_bank_word(unsigned profile,unsigned i){return frost_bank_word(profile,i);}

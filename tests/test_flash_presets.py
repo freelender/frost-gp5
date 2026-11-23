@@ -56,10 +56,12 @@ class FlashPresetTests(unittest.TestCase):
         self.assertEqual(self.chain(),saved)
     def test_confirm_defaults_to_cancel_load_empty_does_nothing_and_foot_is_selected_only(self):
         c=self.lib;rev=c.ge_actual_revision();self.open_presets();c.ge_press();self.assertEqual(c.ge_view(),CONFIRM)
-        c.ge_foot();self.settle();self.assertEqual(c.ge_actual_enabled(1),0);self.assertEqual(c.ge_actual_enabled(0),1)
+        c.ge_foot();self.settle();self.assertEqual(c.ge_view(),PRESETS)       # footswitch is BACK in menus
+        self.assertEqual(c.ge_actual_enabled(1),1);self.assertEqual(c.ge_actual_enabled(0),1)   # no bypass
+        c.ge_press();self.assertEqual(c.ge_view(),CONFIRM)
         c.ge_press();self.assertEqual(c.ge_view(),PRESETS)                  # CANCEL is the default
         c.ge_press();c.ge_turn(1);c.ge_press();self.settle()                  # LOAD an empty preset: nothing happens
-        self.assertEqual(c.ge_store_preset(0),0);self.assertEqual(c.ge_actual_revision(),rev+1)
+        self.assertEqual(c.ge_store_preset(0),0);self.assertEqual(c.ge_actual_revision(),rev)   # no edit at all
     def test_overwrite_keeps_name_and_other_presets_and_survives_many_writes(self):
         c=self.lib
         for i in (0,1,14,15,59):self.assertEqual(c.ge_flash_save(i),1);self.settle()

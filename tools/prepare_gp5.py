@@ -185,7 +185,7 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
         link=destination/'platform/dsp/link.ld';ltext=link.read_text();needle='  .large (NOLOAD) :'
         if ltext.count(needle)!=1:raise ValueError('Pinned DSP linker .large anchor mismatch')
         ovl=''.join('  .ovl_%s : ALIGN(8) { __ovl_%s_start = .; KEEP(*(.ovl.%s)) . = ALIGN(4); __ovl_%s_end = .; } > XFLASH\n'%(i,i,i,i) for i in ['ts', 'bd2', 'klon', 'bb', 'ocd', 'rat', 'distplus', 'dynacomp', 'compplus', 'ge7', 'ns2', 'phase90', 'univibe', 'tr2', 'mistress', 'm117', 'vb2', 'dd3', 'dm2', 'pog', 'fcm', 'drop', 'ns1x', 'multiband', 'highpass', 'lowpass', 'autowah', 'treble_boost', 'foxx', 'tape', 'vintage_fuzz', 'acoustic', 'ampheads'])
-        link.write_text(ltext.replace(needle,ovl+'  .frost_global_eq : ALIGN(4) { *(.frost_global_eq) } > XFLASH\n'+needle))
+        link.write_text(ltext.replace(needle,ovl+'  .frost_global_eq : ALIGN(4) { *(.frost_global_eq) *(.frost_xcode) *(.frost_xdata) } > XFLASH\n'+needle))
         builder=destination/'platform/dsp/build.py';btext=builder.read_text();n5='"--only-section=.lcode", str(elf), str(xbin)'
         if btext.count(n5)!=1:raise ValueError('Pinned dsp-data objcopy mismatch')
         builder.write_text(btext.replace(n5,'"--only-section=.lcode", "--only-section=.ovl_*", "--only-section=.frost_global_eq", str(elf), str(xbin)'))

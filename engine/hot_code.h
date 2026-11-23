@@ -131,6 +131,16 @@
 #else
 #define FROST_OVL(id)
 #endif
+/* FROST_XCODE (32a, FROST_OVERLAYS staged target): rarely run code executes
+ * directly from dsp-data flash, beside the global EQ, instead of occupying
+ * LARGE RAM. Placement only. Other builds: FROST_LARGE_ONLY. */
+#if defined(FROST_OVERLAYS) && defined(FROST_LARGE_CODE) && defined(__arm__) && defined(GP5_FIRMWARE)
+#define FROST_XCODE __attribute__((section(".frost_xcode")))
+#define FROST_XDATA __attribute__((section(".frost_xdata")))   /* 32i: read-only tables beside it */
+#else
+#define FROST_XCODE FROST_LARGE_ONLY
+#define FROST_XDATA
+#endif
 /* Keep shared helpers out of line to bound DSP flash; no arithmetic change. */
 #if defined(FROST_REVERB_INT16) && defined(__arm__) && defined(GP5_FIRMWARE)
 /* The compact backend retains the old callers of boot-region statics. Their

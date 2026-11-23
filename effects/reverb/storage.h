@@ -14,6 +14,7 @@ typedef FrostReverbModel16 FrostReverbActiveModel;
 #define frost_active_rv6_block frost_16_rv6_block
 #define frost_active_spring_reset frost_16_spring_reset
 #define frost_active_spring_sample frost_16_spring_sample
+#define frost_active_spring_block frost_16_spring_block   /* 32e */
 #else
 typedef FrostReverb FrostReverbWorkspace;
 typedef FrostReverbModel FrostReverbActiveModel;

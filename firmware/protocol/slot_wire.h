@@ -40,7 +40,9 @@ enum {
     FROST_SLOT_BAD_PARAMETER, FROST_SLOT_BAD_VALUE, FROST_SLOT_REVISION_EXHAUSTED,
     FROST_SLOT_BUSY, FROST_SLOT_BAD_ROUTE, FROST_SLOT_BAD_SETTING,
     FROST_SLOT_ACCEPTED, FROST_SLOT_BAD_SESSION, FROST_SLOT_BAD_CHECKSUM,
-    FROST_SLOT_INCOMPLETE, FROST_SLOT_BAD_OFFSET
+    FROST_SLOT_INCOMPLETE, FROST_SLOT_BAD_OFFSET,
+    FROST_SLOT_CHAIN_FULL,     /* 32h: the chain's effects do not fit the DSP's effect memory */
+    FROST_SLOT_DSP_LIMIT       /* 32i: the chain's estimated DSP load exceeds the budget (engine/load_budget.h) */
 };
 static inline FROST_CTL_INLINE uint32_t frost_wire_get32(const uint8_t *p)
 { return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24); }

@@ -29,3 +29,15 @@ class WebFlasherTests(unittest.TestCase):
         d=json.loads((ROOT/'web/effects.json').read_text())
         self.assertEqual(len(d['effects']),52);self.assertEqual(d['effects']['34']['short'],'DROP')
 if __name__=='__main__':unittest.main()
+
+@unittest.skipUnless(shutil.which('node'),'Node.js needed')
+class WebFlasherEraseTests(unittest.TestCase):
+    def test_refused_and_silent_erase_messages(self):
+        r=subprocess.run(['node',str(ROOT/'tests/js/flasher_erase_refused.mjs')],cwd=ROOT,capture_output=True,text=True,timeout=120)
+        self.assertEqual(r.returncode,0,r.stderr);d=json.loads(r.stdout.strip().splitlines()[-1])
+        ref,sil=d['refused'],d['silent']
+        for c in (ref,sil):
+            self.assertIn('Nothing was written',c['error']);self.assertEqual(c['written'],0)
+            self.assertIn('Installation Guide',c['error']);self.assertNotIn('GETTING-STARTED',c['error'])
+        self.assertEqual(ref['status'],1);self.assertIn('error code 01',ref['error']);self.assertIn('locked',ref['error'])
+        self.assertIsNone(sil['status']);self.assertIn('no answer',sil['error']);self.assertNotIn('locked',sil['error'])

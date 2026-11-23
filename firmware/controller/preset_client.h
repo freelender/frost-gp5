@@ -77,6 +77,7 @@ static void preset_client_quick_adopt(FrostPresetClient *c,FrostEditor *e,uint32
 static void preset_client_finish(FrostPresetClient *c,FrostEditor *e,uint32_t now,unsigned error)
 {
     c->pending=c->awaiting=0;c->error=error;c->state=PRESET_REFRESH;
+    if(error==2u || error==3u)++e->refusals;   /* 32i popup */
     /* Import actual state, with no pre-recall dirty intent rebased over it. */
     editor_reconnect(e,now);
 }
@@ -141,7 +142,7 @@ static int preset_client_reply(FrostPresetClient *c,FrostEditor *e,const uint8_t
             c->quick_known=1;c->state=PRESET_QUICK;return 1;
         }
         if(status==FROST_SLOT_BUSY && c->state==PRESET_QUICK){c->quick=0;c->state=PRESET_DISCOVER;c->pending=0;return 1;}
-        if((status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED) || revision!=c->revision+1u || phase>3u){preset_client_finish(c,e,now,1);return 0;}
+        if((status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED) || revision!=c->revision+1u || phase>3u){preset_client_finish(c,e,now,status==FROST_SLOT_CHAIN_FULL?2u:status==FROST_SLOT_DSP_LIMIT?3u:1u);return 0;}
         if(!phase)preset_client_quick_adopt(c,e,revision,now);else c->state=PRESET_QUICK_WAIT;
         return 1;
     }
@@ -156,7 +157,7 @@ static int preset_client_reply(FrostPresetClient *c,FrostEditor *e,const uint8_t
        (state==FROST_TRANSFER_EMPTY?(session || next || committed || crc):(!session || !floor)) ||
        (state==FROST_TRANSFER_COMPLETE && (phase || !committed || revision!=committed)))return 0;
     if(status!=FROST_SLOT_APPLIED && status!=FROST_SLOT_REPLAYED && status!=FROST_SLOT_ACCEPTED){
-        preset_client_finish(c,e,now,1);return 0;
+        preset_client_finish(c,e,now,status==FROST_SLOT_CHAIN_FULL?2u:status==FROST_SLOT_DSP_LIMIT?3u:1u);return 0;   /* 2 CHAIN TOO BIG, 3 DSP LIMIT */
     }
     if(c->state==PRESET_DISCOVER){
         if(status!=FROST_SLOT_APPLIED)return 0;

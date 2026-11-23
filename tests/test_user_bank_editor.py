@@ -56,7 +56,7 @@ class UserBankEditorTests(unittest.TestCase):
             self.assertLessEqual(len(c.ge_bank_label(i)),23)
         self.assertTrue(c.ge_bank_label(3).endswith(b'>'))
         self.assertEqual(c.ge_bank_label(4),b'*IST * / *QUOTE*')
-        self.assertEqual(c.ge_client_bytes(),792) # eight-parameter mirrors, dirty masks, edit spacing and atomic enable-mask pending flag
+        self.assertEqual(c.ge_client_bytes(),796) # eight-parameter mirrors, dirty masks, edit spacing, atomic enable-mask pending flag and 32i refusal counter
     def test_user_bank_preserves_immutable_retries_for_every_stage(self):
         c=self.lib
         for state in (3,4,5):

@@ -6,7 +6,7 @@
 /* Original behavioral parameters, not extracted weights or component values.
  * Deluxe/Twin blackface, AC30 Top Boost, JC clean, 2203 crunch,
  * Rectifier Modern lead, 5150III 6L6 lead are the intended starting voices. */
-FROST_LARGE_ONLY FROST_COLD void frost_amphead_reset(FrostAmpHead *s,unsigned voice)
+FROST_XCODE FROST_COLD void frost_amphead_reset(FrostAmpHead *s,unsigned voice)
 {
     static const float cfg[7][12]={
         /* HP, inter HP, gain, stage gain, power, bias, sag, mids, low/high, bright, trim */

@@ -56,7 +56,7 @@ class SlotProtocolTests(unittest.TestCase):
     def test_byte_contract_and_default_snapshot(self):
         payload=request(id=0x12345678)
         self.assertEqual(payload[:16],bytes.fromhex('407f2400010000007856341200000000'))
-        for slot,type,count in ((0,0,1),(1,1,1),(2,2,3),(3,3,1),(4,EMPTY,0),(5,EMPTY,0)):
+        for slot,type,count in ((0,0,1),(1,1,1),(2,2,3),(3,3,3),(4,EMPTY,0),(5,EMPTY,0)):
             reply=self.snapshot(slot)
             self.assertEqual((reply['status'],reply['revision'],reply['type'],reply['count']),(OK,1,type,count))
             self.assertEqual(reply['values'][count:],[0.]*(3-count))

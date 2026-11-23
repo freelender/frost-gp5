@@ -52,6 +52,10 @@ class Reverb16Tests(unittest.TestCase):
         rows=[]
         for kind,mode,p in [(0,0,(.9,.5,1)),*[(1,m,(100,50,85)) for m in range(5)],(2,0,(50,100,50))]:
             a=self.render(0,kind,mode,x,p);b=self.render(1,kind,mode,x,p)
+            if (kind,mode)==(1,4):
+                # 32a: compact SHIMMER aligns its grain restarts; the frozen
+                # float legacy copy does not, so only bounds are comparable.
+                self.assertTrue(all(math.isfinite(v) and abs(v)<=16 for v in b));continue
             err=math.sqrt(sum((v-w)**2 for v,w in zip(a,b))/len(a))
             peak=max(abs(v-w) for v,w in zip(a,b))
             tail_a=sum(v*v for v in a[44100:]);tail_b=sum(v*v for v in b[44100:])
@@ -66,6 +70,26 @@ class Reverb16Tests(unittest.TestCase):
             self.assertLess(tail_b/max(tail_a,1e-30),1.03)
         (ROOT/'build/reverb31j').mkdir(exist_ok=True)
         (ROOT/'build/reverb31j/quality.json').write_text(json.dumps(dict(kind='host numerical comparison, not listening or pedal measurement',scenarios=rows),indent=2)+'\n')
+    def test_spring_block_is_bitwise_the_per_sample_reference(self):
+        for seed in (1,2,3):
+            with self.subTest(seed=seed):self.assertEqual(self.lib.rv16_spring_block_matches(150000,seed),-1)
+    def test_shimmer_octave_is_in_tune_for_every_note(self):
+        # 32a: with fixed grain restarts the octave landed up to ~150 cents
+        # off, depending on the note. 32b: held note, wet only, measured 3 s
+        # in, once the tank's own onset ringing has decayed (earlier, that
+        # ringing rather than the shifter dominates the low notes).
+        fs,n=44100,8192
+        hann=[.5-.5*math.cos(2*math.pi*i/n) for i in range(n)]
+        def power(s,f):
+            c=2*math.cos(2*math.pi*f/fs);p=q=0.
+            for v,h in zip(s,hann):p,q=v*h+c*p-q,p
+            return p*p+q*q-c*p*q
+        for f0 in (82,110,147,196,262,330,392,440):
+            with self.subTest(f0=f0):
+                x=[.3*math.sin(2*math.pi*f0*i/fs) for i in range(int(fs*3.2))]
+                y=self.render(1,1,4,x,(100,50,60));s=[a-b for a,b in zip(y,x)][int(3.0*fs):int(3.0*fs)+n]
+                cents=max(range(-150,151,6),key=lambda c:power(s,2*f0*2**(c/1200)))
+                self.assertLessEqual(abs(cents),18)
     def test_high_input_stays_bounded_for_every_network(self):
         x=[16. if i%2 else -16. for i in range(20000)]
         for kind,mode,p in [(0,0,(.95,0,1)),*[(1,m,(100,100,100)) for m in range(5)],(2,0,(100,100,100))]:

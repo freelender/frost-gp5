@@ -83,8 +83,8 @@ FROST_HOT FROST_LARGE_ONLY float frost_fcm_state_sample(FrostEffectState *s,floa
 #else
 FROST_HOT FROST_LARGE_ONLY float frost_fcm_state_sample(FrostEffectState *s,float x,const float *p){return frost_fcm_sample(&s->fcm,x,p);}
 #endif
-FROST_LARGE_ONLY void frost_new_ns1x_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_ns1x_reset(FrostEffectState *s){frost_ns1x_reset(&s->ns1x);}
+FROST_XCODE void frost_new_ns1x_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_ns1x_reset(FrostEffectState *s){frost_ns1x_reset(&s->ns1x);}
 FROST_LARGE_ONLY float frost_new_ns1x_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_ns1x_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -93,8 +93,8 @@ return frost_ovl_call(&s->ns1x,x,p,FROST_NS1X);
 return frost_ns1x_sample(&s->ns1x,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_multiband_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_multiband_reset(FrostEffectState *s){frost_multiband_reset(&s->multiband);}
+FROST_XCODE void frost_new_multiband_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_multiband_reset(FrostEffectState *s){frost_multiband_reset(&s->multiband);}
 FROST_LARGE_ONLY float frost_new_multiband_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_multiband_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -103,8 +103,8 @@ return frost_ovl_call(&s->multiband,x,p,FROST_MULTIBAND);
 return frost_multiband_sample(&s->multiband,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_highpass_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_highpass_reset(FrostEffectState *s){frost_highpass_reset(&s->highpass);}
+FROST_XCODE void frost_new_highpass_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_highpass_reset(FrostEffectState *s){frost_highpass_reset(&s->highpass);}
 FROST_LARGE_ONLY float frost_new_highpass_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_highpass_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -113,8 +113,8 @@ return frost_ovl_call(&s->highpass,x,p,FROST_HIGHPASS);
 return frost_highpass_sample(&s->highpass,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_lowpass_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_lowpass_reset(FrostEffectState *s){frost_lowpass_reset(&s->lowpass);}
+FROST_XCODE void frost_new_lowpass_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_lowpass_reset(FrostEffectState *s){frost_lowpass_reset(&s->lowpass);}
 FROST_LARGE_ONLY float frost_new_lowpass_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_lowpass_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -123,8 +123,8 @@ return frost_ovl_call(&s->lowpass,x,p,FROST_LOWPASS);
 return frost_lowpass_sample(&s->lowpass,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_autowah_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_autowah_reset(FrostEffectState *s){frost_autowah_reset(&s->autowah);}
+FROST_XCODE void frost_new_autowah_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_autowah_reset(FrostEffectState *s){frost_autowah_reset(&s->autowah);}
 FROST_LARGE_ONLY float frost_new_autowah_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_autowah_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -133,8 +133,8 @@ return frost_ovl_call(&s->autowah,x,p,FROST_AUTOWAH);
 return frost_autowah_sample(&s->autowah,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_treble_boost_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_treble_boost_reset(FrostEffectState *s){frost_treble_boost_reset(&s->treble_boost);}
+FROST_XCODE void frost_new_treble_boost_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_treble_boost_reset(FrostEffectState *s){frost_treble_boost_reset(&s->treble_boost);}
 FROST_LARGE_ONLY float frost_new_treble_boost_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_treble_boost_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -143,8 +143,8 @@ return frost_ovl_call(&s->treble_boost,x,p,FROST_TREBLE_BOOST);
 return frost_treble_boost_sample(&s->treble_boost,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_foxx_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_foxx_reset(FrostEffectState *s){frost_foxx_reset(&s->foxx);}
+FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s){frost_foxx_reset(&s->foxx);}
 FROST_LARGE_ONLY float frost_new_foxx_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_foxx_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -153,8 +153,8 @@ return frost_ovl_call(&s->foxx,x,p,FROST_FOXX);
 return frost_foxx_sample(&s->foxx,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_tape_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_tape_reset(FrostEffectState *s){frost_tape_reset(&s->tape);}
+FROST_XCODE void frost_new_tape_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_tape_reset(FrostEffectState *s){frost_tape_reset(&s->tape);}
 FROST_LARGE_ONLY float frost_new_tape_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_tape_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -163,8 +163,8 @@ return frost_ovl_call(&s->tape,x,p,FROST_TAPE);
 return frost_tape_sample(&s->tape,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_vintage_fuzz_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_vintage_fuzz_reset(FrostEffectState *s){frost_vintage_fuzz_reset(&s->vintage_fuzz);}
+FROST_XCODE void frost_new_vintage_fuzz_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_vintage_fuzz_reset(FrostEffectState *s){frost_vintage_fuzz_reset(&s->vintage_fuzz);}
 FROST_LARGE_ONLY float frost_new_vintage_fuzz_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_vintage_fuzz_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -173,8 +173,8 @@ return frost_ovl_call(&s->vintage_fuzz,x,p,FROST_VINTAGE_FUZZ);
 return frost_vintage_fuzz_sample(&s->vintage_fuzz,x,p);
 #endif
 }
-FROST_LARGE_ONLY void frost_new_acoustic_reset(FrostEffectState *s);
-FROST_LARGE_ONLY void frost_new_acoustic_reset(FrostEffectState *s){frost_acoustic_reset(&s->acoustic);}
+FROST_XCODE void frost_new_acoustic_reset(FrostEffectState *s);   /* 32c: cold, flash */
+FROST_XCODE void frost_new_acoustic_reset(FrostEffectState *s){frost_acoustic_reset(&s->acoustic);}
 FROST_LARGE_ONLY float frost_new_acoustic_sample(FrostEffectState *s,float x,const float *p);
 FROST_LARGE_ONLY float frost_new_acoustic_sample(FrostEffectState *s,float x,const float *p){
 #ifdef FROST_OVERLAYS
@@ -466,6 +466,7 @@ FROST_NOINLINE FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_ir_f
     if(instance_settled(s,d)){
         const float wet=s->wet,level=s->current[0];
         frost_ir_fft_block(ir,x,y);
+        (void)frost_ir_cut_block(s->state.ir_cut.cut,s->current[1],s->current[2],y,y);   /* 32c LOW/HIGH CUT */
         s->current[FROST_PARAMETERS]=s->wet_target;s->suspended=0;
         for(n=0;n<FROST_IR_FFT_BLOCK;++n){
             float in=x[n];
@@ -475,6 +476,7 @@ FROST_NOINLINE FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_ir_f
         return FROST_IR_FFT_BLOCK;
     }
     frost_ir_fft_block(ir,x,y);
+    (void)frost_ir_cut_block(s->state.ir_cut.cut,s->current[1],s->current[2],y,y);
     frost_ir_fft_replay=y;
     for(n=0;n<FROST_IR_FFT_BLOCK;++n){
         x[n]=instance_step(s,d,x[n]);
@@ -500,13 +502,14 @@ uint32_t frost_ir_remote_cycles;   /* DSP cycles in remote IR blocks this block 
 unsigned frost_instance_ir_remote(FrostInstance *s,const FrostEffect *d,float *x);
 FROST_NOINLINE FROST_HOT FROST_AUDIO_RAM unsigned frost_instance_ir_remote(FrostInstance *s,const FrostEffect *d,float *x)
 {
-    const float *y=frost_ir_remote_fn?frost_ir_remote_fn(s->state.ir,x):0;unsigned n;
+    const float *y=frost_ir_remote_fn?frost_ir_remote_fn(s->state.ir,x):0;unsigned n;float cut[FROST_IR_FFT_BLOCK];
     if(!y){
         FrostIRFFT *f=frost_ir_fft_of(s->state.ir);
         if(f && f->parts){if(s->suspended && f->dirty)frost_ir_fft_reset(s->state.ir);if(!f->fill)return frost_instance_ir_fft(s,d,x);}
         for(n=0;n<FROST_IR_FFT_BLOCK;++n){x[n]=instance_step(s,d,x[n]);if(!frost_signal_valid(x[n]))return n;}
         return FROST_IR_FFT_BLOCK;
     }
+    y=frost_ir_cut_block(s->state.ir_cut.cut,s->current[1],s->current[2],y,cut);   /* 32c LOW/HIGH CUT */
     if(instance_settled(s,d)){
         const float wet=s->wet,level=s->current[0];
         s->current[FROST_PARAMETERS]=s->wet_target;s->suspended=0;
@@ -554,6 +557,23 @@ FROST_NOINLINE FROST_HOT FROST_CORE FROST_COLD static unsigned rv6_process_settl
     }
     return count;
 }
+#ifdef frost_active_spring_block
+/* 32e: settled SPRING through its block body; mix and validity as the
+ * generic settled loop. External linkage (DSP boot layout rule); the short
+ * per-block loop runs from dsp-data flash (LARGE is full), the block body
+ * from LARGE. */
+unsigned frost_spring_settled(FrostInstance *s,float *x,unsigned count,float wet);
+FROST_NOINLINE FROST_HOT FROST_XCODE unsigned frost_spring_settled(FrostInstance *s,float *x,unsigned count,float wet)
+{
+    float y[64];unsigned base,m,n;
+    for(base=0;base<count;base+=m){
+        m=count-base;if(m>64u)m=64u;
+        frost_active_spring_block(&s->state.reverb_model,x+base,y,m,s->current);
+        for(n=0;n<m;++n){float in=x[base+n];x[base+n]=in+wet*(y[n]-in);if(!frost_signal_valid(x[base+n]))return base+n;}
+    }
+    return count;
+}
+#endif
 /* 28a: settled loops for the simplest/common kernels. Same per-sample
  * arithmetic and order as the generic settled loop (kernel, then
  * in+wet*(y-in), then validity), but the kernel is compiled into the loop
@@ -656,6 +676,9 @@ FROST_NOINLINE FROST_HOT FROST_AUDIO_RAM unsigned frost_instance_edit(FrostInsta
         s->current[FROST_PARAMETERS]=s->wet_target;s->suspended=0;
         if(s->type>=FROST_DELUXE && s->type<=FROST_5150 && frost_amphead_block_kernel)frost_amphead_block_kernel(&s->state,x+base,y,m,s->current,0);
         else if(s->type==FROST_RV6)frost_active_rv6_block(&s->state.reverb_model,x+base,y,m,s->current);
+#ifdef frost_active_spring_block
+        else if(s->type==FROST_SPRING)frost_active_spring_block(&s->state.reverb_model,x+base,y,m,s->current);
+#endif
         else{
 #ifdef FROST_OVERLAYS
             FrostOvlKernel k=s->type<FROST_EFFECTS?frost_ovl_kernel[s->type]:0;
@@ -687,7 +710,7 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstan
     unsigned n;const FrostEffect *d=frost_effect_find(s->type);
     if(!d || (frost_ir_bypass && s->type==FROST_IR))return count;
 #ifdef FROST_IR_LINK
-    if(frost_ir_remote && s->type==FROST_IR && count==FROST_IR_FFT_BLOCK && d->parameter_count==1 &&
+    if(frost_ir_remote && s->type==FROST_IR && count==FROST_IR_FFT_BLOCK && d->parameter_count==FROST_IR_PARAMETER_COUNT &&
        !(s->bypass_policy==FROST_BYPASS_CUT_AND_SUSPEND && s->wet==0.0f && s->wet_target==0.0f))
         {uint32_t t0=FROST_IRL_CLOCK();unsigned r=frost_instance_ir_remote(s,d,x);frost_ir_remote_cycles+=FROST_IRL_CLOCK()-t0;return r;}
 #endif
@@ -696,7 +719,7 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstan
      * step; the direct block/pair kernels are not used. A CUT slot resting dry
      * takes the per-sample path (no FIR work); one resuming from suspension
      * first drops FFT histories left from before its reset. */
-    if(s->type==FROST_IR && d->parameter_count==1){
+    if(s->type==FROST_IR && d->parameter_count==FROST_IR_PARAMETER_COUNT){
         FrostIRFFT *f=frost_ir_fft_of(s->state.ir);
         if(f && f->parts){
             if(s->suspended && f->dirty)frost_ir_fft_reset(s->state.ir);
@@ -706,7 +729,7 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstan
             goto per_sample;
         }
     }
-    if(s->type==FROST_IR && s->bypass_policy==FROST_BYPASS_KEEP_HISTORY && d->parameter_count==1){
+    if(s->type==FROST_IR && s->bypass_policy==FROST_BYPASS_KEEP_HISTORY && d->parameter_count==FROST_IR_PARAMETER_COUNT){
 #if (defined(__arm__) && defined(GP5_FIRMWARE)) || defined(FROST_IR_LINK)
         /* 26a/31a target: an IR without the FFT workspace (a second IR) runs
          * the scalar path (bit-identical to the block/pair kernels); the block
@@ -725,6 +748,9 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstan
         s->current[FROST_PARAMETERS]=s->wet_target;s->suspended=0;
         switch(s->type){
         case FROST_RV6:return rv6_process_settled(s,x,count,wet);
+#ifdef frost_active_spring_block
+        case FROST_SPRING:return frost_spring_settled(s,x,count,wet);
+#endif
         case FROST_GAIN:return gain_settled(s,x,count,wet);
         case FROST_GATE:return gate_settled(s,x,count,wet);
         case FROST_EQ:return eq_settled(s,x,count,wet);

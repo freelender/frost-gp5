@@ -54,3 +54,24 @@ float (*volatile frost_far_log2)(float)=frost_ovl_log2;
 float (*volatile frost_far_sin01)(float)=frost_ovl_sin01;
 float (*volatile frost_far_allpass_coef)(float)=frost_ovl_allpass_coef;
 #endif
+/* 32d: ADAA tails (rare large jumps or mixed regions): F differences, from
+ * flash; the always-inline helpers handle the common cases themselves. */
+FROST_XCODE FROST_NOINLINE FROST_COLD float frost_soft_clip_aa_slow(float x,float p)
+{
+    float d=x-p;
+    if(d>1e-2f || d< -1e-2f)return (frost_soft_clip_af(x)-frost_soft_clip_af(p))/d;
+    return frost_soft_clip(0.5f*(x+p));
+}
+FROST_XCODE FROST_NOINLINE FROST_COLD float frost_germanium_clip_aa_slow(float x,float p)
+{
+    float d=x-p,a=x<0.0f?-x:x;
+    if(d>1e-3f*(1.0f+a) || d< -1e-3f*(1.0f+a))return (frost_germanium_clip_af(x)-frost_germanium_clip_af(p))/d;
+    return frost_germanium_clip(0.5f*(x+p));
+}
+#ifdef FROST_OVERLAYS
+float (*const volatile frost_far_soft_aa_slow)(float,float)=frost_soft_clip_aa_slow;
+float (*const volatile frost_far_germanium_aa_slow)(float,float)=frost_germanium_clip_aa_slow;
+#endif
+/* Out-of-line copies for resident (LARGE) kernels such as DS-1. */
+FROST_HOT FROST_LARGE_ONLY FROST_NOINLINE FROST_COLD float frost_soft_clip_aa_call(float *z,float x){return frost_soft_clip_aa(z,x);}
+FROST_HOT FROST_LARGE_ONLY FROST_NOINLINE FROST_COLD float frost_hard_clip_aa_call(float *z,float x){return frost_hard_clip_aa(z,x);}

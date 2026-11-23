@@ -65,7 +65,7 @@ owners; Frost is an independent project.
 
 If Frost is useful to you, you can help support its development:
 
-**[Support Frost on StreamElements](https://streamelements.com/fret_lex/tip)**
+**[Support Frost on Ko-fi](https://ko-fi.com/freelender)**
 
 ## Credits
 

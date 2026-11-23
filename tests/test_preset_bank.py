@@ -51,7 +51,7 @@ class PresetBankTests(unittest.TestCase):
         self.assertTrue(c.protocol_callback_has_no_reply())
     def test_native_validation_bounds_types_padding_params_ir_and_resource_limits(self):
         bad=[(0,2),(1,48000),(2,7),(3,99),(9,0),(15,2),(21,2),(27,bits(float('nan'))),
-             (28,bits(1.)),(45,0),(45,513),(47,bits(float('inf'))),(47,bits(9.)),(8,5)]
+             (28,bits(401.)),(29,bits(20001.)),(45,0),(45,513),(47,bits(float('inf'))),(47,bits(9.)),(8,5)]
         for i,v in bad:
             words=self.body();words[i]=v
             # Route slot0 is IR: order index9 already3, setting0 duplicates position1.

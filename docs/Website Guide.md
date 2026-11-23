@@ -184,7 +184,7 @@ operation finishes; the progress log reports section writes and restart.
 ## About
 
 The About page describes Frost, credits the project it builds on and provides
-the support/donation link. It does not change pedal data.
+the Ko-fi support link (ko-fi.com/freelender). It does not change pedal data.
 
 ## Quick troubleshooting
 

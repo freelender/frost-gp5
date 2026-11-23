@@ -12,7 +12,7 @@ FROST_NOINLINE FROST_OVL(vintage_fuzz) float frost_vintage_fuzz_sample(FrostVint
      * dependent saturation gives guitar-volume cleanup; no fake digital gate. */
     for(i=0;i<2;++i){float v=i?x:0.5f*(x+s->previous);
         v=frost_germanium_clip(v*drive+bias)-frost_germanium_clip(bias);
-        v=frost_germanium_clip(v*3.0f-bias)+frost_germanium_clip(bias);
+        v=frost_germanium_clip_aa(&s->aa[0],v*3.0f-bias)+frost_germanium_clip(bias);   /* 32d: ADAA1, output curve */
         y=frost_lp(&s->lp,v,0.38f);
     }
     s->previous=x;y=frost_hp(&s->hp,y,frost_onepole(30.0f));

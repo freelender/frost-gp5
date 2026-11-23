@@ -29,12 +29,17 @@ browser tabs using the device.
 | PARA turn | Select a block, menu row, preset or song, depending on the screen |
 | PARA short press | Open the selection or enter/leave a value edit |
 | PARA hold on a home screen | Open Global settings |
-| Footswitch tap | Bypass the selected block, advance a preset, or advance a setlist part, depending on the home screen |
+| Footswitch tap on a home screen | Bypass the selected block, advance a preset, or advance a setlist part, depending on the home screen |
+| Footswitch tap in a menu | Go back one level (same as **BACK**) |
 | Footswitch hold | Open the tuner; Setlist view can instead use Previous Part |
 
 In parameter menus, turn to select a row, press to edit it, turn to change its
-value, then press again to leave the value edit. Use **BACK** to return.
-Some effects have their own momentary footswitch behavior.
+value, then press again to leave the value edit. Use **BACK** or tap the
+footswitch to return one level. A parameter value is kept as you turned it;
+an unconfirmed TYPE, POSITION, CAB or REMOVE choice is cancelled. In Global
+settings the footswitch leaves a value edit, and from the settings list it
+saves and returns home like **BACK**. Bypass the block from its home screen.
+Some effects have their own momentary footswitch behavior on home screens.
 
 ### Choose a home screen
 
@@ -72,6 +77,21 @@ There are six slots, but processing capacity depends on the effects chosen.
 AMP plus five effects is the design target, not a guarantee for every heavy
 combination. A second amp or unsupported combination can be refused. If a chain
 overloads, simplify it or select a lighter preset.
+
+Effects also share a fixed amount of effect memory on the audio processor.
+Most chains fit, but several of the largest effects together (NAM capture,
+OCD, POG, an amp head, AW-3, RAT) may not. The pedal then refuses the change
+and shows **CHAIN TOO BIG**: the previous chain keeps playing, and a preset
+that does not fit is not loaded. Replace one of the larger effects.
+
+The pedal also estimates the processing load of a chain before it plays, from
+costs measured for each effect. A chain estimated above about 90% of the DSP
+is refused with **DSP LIMIT**, so it does not overload and mute. The heaviest
+effects are POG (about 40% on its own), NAM capture (about 31%), the JCM800,
+RECTO and 5150 heads (about 28%) and the reverbs (about 18–21%). Both
+refusals appear as a popup for about 2.5 seconds. Settings that cost more
+than an effect's defaults, such as RV-6 SHIMMER, are not part of this
+estimate; overload protection still covers them.
 
 ### Read the DSP meter
 
@@ -141,6 +161,14 @@ does not replace an amp head. Place IR after the amp for a typical direct tone.
   custom source builds may use a different cabinet or the synthetic diagnostic FIR.
 - **CAB 01–63:** custom cabinets written from the website.
 - **VOL 80:** default for a newly added IR block; adjust by ear for your chain.
+- **LOW CUT:** removes low end below the set frequency (12 dB/octave),
+  10–400 Hz. **0 HZ** is off (the default).
+- **HIGH CUT:** removes treble above the set frequency (12 dB/octave),
+  1,000–19,750 Hz. **20000 HZ** is off (the default).
+
+Presets saved before these controls existed load with both cuts off and sound
+unchanged. LOW CUT and HIGH CUT act on the cabinet sound before VOL and the
+bypass fade.
 
 ### Add and select a cabinet
 
@@ -303,6 +331,8 @@ not a firmware image.
 | Part will not load | Check that its referenced preset exists |
 | Quiet or distorted sound | Check input/output gain, amp/IR levels, physical volume and downstream input level |
 | Overload or repeated cuts | Select a lighter preset; report the exact chain and reproduction steps |
+| CHAIN TOO BIG | The chosen effects do not fit together; replace one of the larger effects (see section 3) |
+| DSP LIMIT | The chain would overload the audio processor; replace a heavy effect (see section 3) |
 
 This is beta firmware. Not every hardware setup and heavy chain has been
 qualified. Report firmware version, OS/browser, guitar/pickups, audio
@@ -355,6 +385,11 @@ one control at a time.
 | DIST+ | Dist+ Style | DIST, OUTPUT |
 | FUZZ | Vintage Fuzz Face Style | FUZZ, VOL, BIAS |
 
+The overdrive, distortion and fuzz models use anti-aliased clipping: high
+notes at high gain stay clean of the inharmonic "fizz" that plain digital
+clipping adds. The clipped sound is a touch softer in the top octave
+(above about 8 kHz), which their own tone stages mostly roll off anyway.
+
 #### Delay
 
 | Label | Sound / function | Controls |
@@ -373,6 +408,16 @@ filters. New RV-6 blocks start at E.LEVEL 25 and TIME 30; new SPRING blocks
 start at MIX 20. Existing presets retain their stored controls, but their
 reverb sound changes with the updated DSP. SPRING has a shorter nominal
 1.8-second tank decay; DWELL controls tank drive, not decay time.
+
+RV-6 SHIMMER is a long hall (about 2 to 10 seconds with TIME) whose tail
+blooms with octave-up overtones: an octave-up copy of the tail is fed back
+into the reverb, so the sparkle builds and climbs as the sound sustains.
+TIME also raises how much octave is fed back; TONE sets the brightness of
+both. In firmware built with the compact reverb (`--reverb-int16`, the
+current line-test build) the octave is spliced in phase with the sound and
+stays in tune from low E upward, and SHIMMER costs about as much DSP as
+HALL plus a third. Builds without that option use the older, heavier
+shimmer, which can sound up to about a semitone out of tune.
 
 
 | Label | Sound / function | Controls |
@@ -415,7 +460,7 @@ reverb sound changes with the updated DSP. SPRING has a shorter nominal
 | GAIN | Input Gain | GAIN |
 | GATE | Noise Gate | THRESH |
 | EQ | Three Band Eq | BASS, MID, TREBLE |
-| IR | Cabinet Ir | VOL |
+| IR | Cabinet Ir | VOL, LOW CUT, HIGH CUT |
 | HPF | High Pass Filter | FREQ, Q, SLOPE |
 | LPF | Low Pass Filter | FREQ, Q, SLOPE |
 | ACOUST | Acoustic Simulator | BODY, TOP, MODE, MIX, LEVEL |

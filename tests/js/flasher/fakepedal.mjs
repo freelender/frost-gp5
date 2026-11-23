@@ -8,7 +8,7 @@ const check = (cond, msg) => { if (!cond) throw new Error("simulated pedal: " + 
 
 export class FakePedal {
   constructor(mode = F.MODE_STOCK, o = {}) {
-    Object.assign(this, { mode, nakEvery: 0, stallBegin: false, dieAt: 0, stayInLoader: false, mute: false, after: null }, o);
+    Object.assign(this, { mode, nakEvery: 0, stallBegin: false, nakBegin: false, dieAt: 0, stayInLoader: false, mute: false, after: null }, o);
     this.present = true; this.written = {}; this.ended = false; this.sentCmds = []; this.sent = []; this.cur = null; this.n = 0;
   }
   async names() {
@@ -37,6 +37,7 @@ export class FakePedal {
       if (is(0x11, 0x60)) return [ACK];
       if (pl[0] === 0x11 && pl[1] === 0x61) {
         if (this.stallBegin) return [];
+        if (this.nakBegin) return [NAK];                 // Frost: a unit that refuses every erase
         const dv = new DataView(Uint8Array.from(pl).buffer);
         this.cur = { type: pl[2], count: dv.getUint32(6, true), length: dv.getUint32(10, true), buf: [], next: 0 };
         return [ACK];

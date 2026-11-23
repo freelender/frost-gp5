@@ -82,4 +82,12 @@ void frost_ir_block(FrostIR *s,const float *input,float *output,unsigned count);
 /* Kernels of frost_ir_block, exposed for instrumentation tests only. */
 void frost_ir_dot8(const float *c,const float *h,unsigned taps,float *out);
 float frost_ir_dot1(const float *c,const float *h,unsigned taps);
+/* 32c: cabinet LOW CUT (12 dB/oct high-pass) then HIGH CUT (12 dB/oct
+ * low-pass) on FROST_IR_FFT_BLOCK raw FIR outputs. low < 20 Hz or high
+ * outside 1000..19999 Hz switches that filter off (state cleared). Returns
+ * in when both are off (in untouched), else out (may equal in). The state
+ * is FROST_IR_CUT_STATE floats; any content is safe (a marker word marks
+ * it initialized). */
+#define FROST_IR_CUT_STATE 5u
+const float *frost_ir_cut_block(float *state,float low,float high,const float *in,float *out);
 #endif

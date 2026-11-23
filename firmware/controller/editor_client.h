@@ -46,6 +46,7 @@ typedef struct {
     uint8_t saved[36];unsigned saved_len;
     uint8_t route_types[6],route_order[6],basis_types[6],basis_order[6];
     unsigned route_pre,basis_pre,route_state;
+    unsigned refusals;   /* 32i: chains refused for memory/DSP load (popup trigger); survives reconnect */
     uint32_t route_revision;
 } FrostEditor;
 static uint32_t editor_bits(float value){union {float f;uint32_t u;} v;v.f=value;return v.u;}
@@ -69,10 +70,10 @@ static void editor_init(FrostEditor *e,uint32_t now)
     }
     e->pre=3;e->scan=EDITOR_ROUTE_READ;e->slot=e->window=e->ready=e->initialized=e->busy=e->error=0;
     e->revision=e->token=e->wait_token=0;e->next_poll=e->next_write=now;
-    e->awaiting=e->kind=e->recover=e->retry_ready=e->saved_len=e->route_state=e->mask_pending=0;
+    e->awaiting=e->kind=e->recover=e->retry_ready=e->saved_len=e->route_state=e->mask_pending=0;e->refusals=0;
 }
 static void editor_reconnect(FrostEditor *e,uint32_t now)
-{uint32_t token=e->token;editor_init(e,now);e->token=token;}
+{uint32_t token=e->token;unsigned refusals=e->refusals;editor_init(e,now);e->token=token;e->refusals=refusals;}
 static int editor_editable(const FrostEditor *e)
 {return e->ready && !e->busy && !e->route_state && e->revision!=UINT32_MAX;}
 static int editor_pending(const FrostEditor *e)
@@ -291,7 +292,7 @@ static int editor_reply(FrostEditor *e,const uint8_t *p,unsigned n,uint32_t now)
     }
     /* Explicit rejection permits a fresh snapshot/rebase; uncertain transport
      * errors retain immutable bytes and recover through a read-only query. */
-    if(cmd==FROST_ROUTE_WRITE_COMMAND && status!=FROST_SLOT_STALE_REVISION && status!=FROST_SLOT_BUSY){e->route_state=0;e->error=3;}
+    if(cmd==FROST_ROUTE_WRITE_COMMAND && status!=FROST_SLOT_STALE_REVISION && status!=FROST_SLOT_BUSY){e->route_state=0;e->error=status==FROST_SLOT_CHAIN_FULL?4:status==FROST_SLOT_DSP_LIMIT?5:3;if(e->error>3)++e->refusals;}
     if(cmd==FROST_SLOT_COMMAND && status!=FROST_SLOT_STALE_REVISION && status!=FROST_SLOT_BUSY && status!=FROST_SLOT_WRONG_TYPE){
         if(frost_wire_get32(e->saved+12)==FROST_SLOT_ENABLE_MASK)e->mask_pending=0;
         unsigned slot=frost_wire_get32(e->saved+20),parameter=frost_wire_get32(e->saved+28);

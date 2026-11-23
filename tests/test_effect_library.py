@@ -66,7 +66,7 @@ class LibraryTests(unittest.TestCase):
     # ---------------- registry/controls ----------------
     def test_registry_appends_ids_and_keeps_original_nine(self):
         c=self.c;self.assertEqual(c.lib_effect_count(),52)
-        self.assertEqual([c.lib_parameter_count(t) for t in range(9)],[1,1,3,1,3,3,3,3,3])
+        self.assertEqual([c.lib_parameter_count(t) for t in range(9)],[1,1,3,3,3,3,3,3,3])
         counts={TS:4,BD2:3,KLON:3,BB:3,OCD:4,DS1:3,RAT:3,DISTPLUS:2,DD3:5,DM2:3,RV6:4,SPRING:3,PH90:2,CE2:2,
                 MISTRESS:4,M117:4,VIBE:4,VB2:4,TR2:3,POG:3,DYNA:2,COMPPLUS:5,GE7:8,NS2:3,FCM:6}
         self.assertEqual({t:c.lib_parameter_count(t) for t in counts},counts)

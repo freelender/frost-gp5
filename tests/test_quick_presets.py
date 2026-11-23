@@ -131,10 +131,10 @@ class QuickPresetTests(unittest.TestCase):
         c=self.lib;self.load(1);base=self.packet();token=struct.unpack_from('<I',base,8)[0]+100
         for count in (2,1,0):
             c.qp_poison_pending_assets();q=bytearray(34)
-            struct.pack_into('<HHIII',q,0,0x7f4d,34+5*count,1,token,c.ge_actual_revision());token+=1
+            struct.pack_into('<HHIII',q,0,0x7f4d,34+11*count,1,token,c.ge_actual_revision());token+=1
             q[16]=3;order=sum(i<<(3*i)for i in range(6));q[17:20]=order.to_bytes(3,'little')
             for slot in range(6):q[22+2*slot]=3 if slot<count else 255;q[23+2*slot]=int(slot<count)
-            q.extend((b'\xfa'+struct.pack('<f',1.6))*count)
+            q.extend((b'\xfa'+struct.pack('<f',1.6)+bytes([100])+b'\xfa'+struct.pack('<f',20000.0))*count)   # IR: LEVEL, LOW CUT 0, HIGH CUT off
             self.assertEqual(self.send(q)[1],15);self.assertEqual(c.qp_unused_assets_zero(),1)
             c.ge_audio(8)
 

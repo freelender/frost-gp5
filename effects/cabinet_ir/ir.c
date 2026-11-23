@@ -1,5 +1,6 @@
 #include "ir.h"
 #include "../../engine/hot_code.h"
+#include "../common/frost_dsp.h"
 #ifndef FROST_IR_SCALAR
 /* Four taps per branch, in the same accumulation order as the reference.
  * No coefficient reduction or additional buffering/algorithmic delay. */
@@ -403,4 +404,30 @@ FROST_IR_FFT_CODE FROST_CORE void frost_ir_fft_block(FrostIR *s,const float *inp
         const float *r=z+2u*frost_ir_rev6(32u+i/2u);
         output[i]=r[0];output[i+1u]=-r[1];
     }
+}
+/* 32c cabinet LOW CUT / HIGH CUT: two Butterworth (Q 0.707) state-variable
+ * filters, trapezoidal (stable while the cutoff moves block to block).
+ * state[0] marks initialized state; [1..2] high-pass, [3..4] low-pass.
+ * Called once per 64-sample block, so it runs from dsp-data flash. */
+#define FROST_IR_CUT_MARK 0x49524354u   /* "IRCT" */
+static inline float frost_ir_cut_g(float hz)
+{float x=hz*(0.5f/FROST_FS);return frost_sin01(x)/frost_sin01(x+0.25f);}   /* tan(pi f/fs) */
+FROST_XCODE FROST_NOINLINE FROST_NOFMA const float *frost_ir_cut_block(float *state,float low,float high,const float *in,float *out)
+{
+    union { float f; uint32_t u; } mark;unsigned n,lo=low>=20.0f,hi=high>=1000.0f && high<20000.0f;
+    float gl=0.0f,al=0.0f,gh=0.0f,ah=0.0f;const float k=1.41421356f;
+    mark.f=state[0];
+    if(mark.u!=FROST_IR_CUT_MARK){mark.u=FROST_IR_CUT_MARK;state[0]=mark.f;state[1]=state[2]=state[3]=state[4]=0.0f;}
+    if(!lo)state[1]=state[2]=0.0f;
+    if(!hi)state[3]=state[4]=0.0f;
+    if(!lo && !hi)return in;
+    if(lo){gl=frost_ir_cut_g(low);al=1.0f/(1.0f+gl*(gl+k));}
+    if(hi){gh=frost_ir_cut_g(high);ah=1.0f/(1.0f+gh*(gh+k));}
+    for(n=0;n<FROST_IR_FFT_BLOCK;++n){
+        float x=in[n],v1,v2;
+        if(lo){v1=(state[1]+gl*(x-state[2]))*al;v2=state[2]+gl*v1;state[1]=2.0f*v1-state[1];state[2]=2.0f*v2-state[2];x=x-k*v1-v2;}
+        if(hi){v1=(state[3]+gh*(x-state[4]))*ah;v2=state[4]+gh*v1;state[3]=2.0f*v1-state[3];state[4]=2.0f*v2-state[4];x=v2;}
+        out[n]=x;
+    }
+    return out;
 }

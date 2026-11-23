@@ -15,12 +15,15 @@
 #define FROST_LIBRARY_KERNELS_LATE 1
 #ifdef FROST_OVERLAYS
 void frost_ovl_load(const void *chain);
+int frost_ovl_fits(const unsigned *types);
 #define FROST_ROUTE_COMMIT_HOOK(s) frost_ovl_load(s)
+#define FROST_ROUTE_ADMIT(types) frost_ovl_fits(types)   /* 32h: refuse chains the pool cannot hold */
 #endif
 #ifdef FROST_IR_LINK
 #define FROST_IRL_REQUIRE_REMOTE 1       /* playable chains budget for controller IR */
 #define FROST_IRL_CLOCK() REG(0xE0001004u)   /* DWT cycle counter */
 #define FROST_EDIT_BLOCKS 1                     /* 31y9: block paths while knobs move */
+#define FROST_LOAD_ADMIT 1                      /* 32i: refuse chains over the DSP budget (engine/load_budget.h) */
 #define FROST_LINE_LATE_RELEASE 1378u          /* 31y14: overload mute releases after 2 s on time */
 #endif
 #include "engine/bundle.c"
@@ -139,8 +142,11 @@ static float frost_ir_fft_spectrum[FROST_IR_FFT_PARTS][FROST_IR_FFT_SIZE];
  * build/library/ovl_check.py). On every route commit (all slots silent at the
  * fade midpoint, before any slot runs) the modules of the chain's types are
  * copied into this LARGE pool and the kernel table points at the copies. The
- * pool holds any six modules (checked offline). Before the first load every
- * entry is NULL and overlay types pass their input. */
+ * pool does NOT hold every six-module set (32d: six largest 10.9 KB), so
+ * route and preset requests are admitted only when their module set fits
+ * (frost_ovl_fits, the loader's own size arithmetic; FROST_SLOT_CHAIN_FULL
+ * otherwise). Before the first load every entry is NULL and overlay types
+ * pass their input; a module that still does not fit counts an overflow. */
 #define FROST_OVL_POOL 8960u
 static uint32_t frost_ovl_pool[FROST_OVL_POOL/4u] GP5_LARGE;
 #define FROST_OVL_MODULES(M) \
@@ -191,6 +197,16 @@ static inline unsigned frost_ovl_type(unsigned t)
 {return t>=FROST_DELUXE && t<=FROST_5150?FROST_DELUXE:t;}
 FROST_LARGE_ONLY float frost_ovl_call(void *state,float x,const float *p,unsigned type)
 {FrostOvlKernel k=frost_ovl_kernel[type];return k?k(state,x,p):x;}
+/* 32h: bytes the loader would use for these six slot types (same rounding). */
+FROST_COLD int frost_ovl_fits(const unsigned *types)
+{
+    unsigned i,m,need=0;
+    for(m=0;m<sizeof frost_ovl_modules/sizeof frost_ovl_modules[0];++m)
+        for(i=0;i<FROST_SLOTS;++i)if(frost_ovl_type(types[i])==frost_ovl_modules[m].type){
+            need+=((unsigned)(frost_ovl_modules[m].end-frost_ovl_modules[m].start)+7u)&~7u;break;
+        }
+    return need<=FROST_OVL_POOL;
+}
 FROST_COLD void frost_ovl_load(const void *chain)
 {
     const FrostChain *c=(const FrostChain *)chain;uint8_t *pos=(uint8_t *)frost_ovl_pool,*end=pos+FROST_OVL_POOL;unsigned i,m;uint64_t want=0;
