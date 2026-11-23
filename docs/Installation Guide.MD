@@ -40,9 +40,10 @@ USB port. Charge-only cables cannot transfer firmware.
 
 The supplied first beta is `Frost_GP5_0.1.0-beta.1.bin`, 506,976 bytes.
 MIDI and website patch recall require **0.1.0-beta.2 or newer**. The current
-source candidate, **0.1.0-beta.7**, adds NAM Bass/Middle/Treble and global output EQ, retaining the reverb and preset-recall improvements.
-It still needs physical listening/load checks before release. Verify the settings version
-against the package you actually install.
+beta, **0.1.0-beta.8**, adds the reworked RV-6 SHIMMER, IR LOW/HIGH CUT, drive
+anti-aliasing, chain guards (CHAIN TOO BIG, DSP LIMIT) and the Global settings
+submenus. Check that GLOBAL SETTINGS → SYSTEM → FIRMWARE shows the version of
+the package you actually install.
 The first beta's SHA-256 is:
 
 ```text

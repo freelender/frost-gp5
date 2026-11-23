@@ -8,6 +8,7 @@ import subprocess
 import unittest
 from pathlib import Path
 import test_web_store as W
+import settings_nav
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -88,7 +89,7 @@ class SetlistTests(unittest.TestCase):
         revision=c.ge_actual_revision();c.ge_foot();self.settle()
         self.assertEqual(c.ge_current_preset(),0);self.assertEqual(c.ge_set_part(),0);self.assertEqual(c.ge_set_error(),1);self.assertEqual(c.ge_actual_revision(),revision)
     def test_setlist_hold_setting_on_pedal_and_persistence(self):
-        c=self.lib;self.install();c.ge_long_press();c.ge_turn(6);c.ge_press();c.ge_turn(1);c.ge_press();c.ge_turn(c.ge_settings_back_row()-6);c.ge_press();self.settle()
+        c=self.lib;self.install();c.ge_long_press();settings_nav.set_value(c,settings_nav.SETLIST_HOLD,1);settings_nav.leave(c);self.settle()
         self.assertEqual(c.ge_set_hold(),0);c.ge_reboot();self.settle();self.assertEqual(c.ge_set_hold(),0);self.assertEqual(c.ge_view(),15)
     def test_backup_restore_includes_songs(self):
         self.install();p=str(ROOT/'build/setlist-test.frostbackup');self.js(['backup',p]);changed=copy.deepcopy(self.data);changed['name']='Other set'

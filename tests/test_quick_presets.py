@@ -13,6 +13,7 @@ import unittest
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
 from host import build
+sys.path.insert(0,str(Path(__file__).resolve().parent));import settings_nav
 
 class QuickPresetTests(unittest.TestCase):
     @classmethod
@@ -61,7 +62,7 @@ class QuickPresetTests(unittest.TestCase):
         c=self.lib;self.load(0);c.ge_flash_save(0);self.settle();self.assertEqual(c.ge_global(6),0)
         self.load(1);c.ge_advance(15000);c.ge_tick_draw();self.assertEqual(c.ge_global(6),0)
         c.ge_reboot();self.settle();self.assertEqual(c.ge_current_preset(),0)
-        self.load(2);c.ge_long_press();c.ge_turn(c.ge_settings_back_row());c.ge_press();self.settle();self.assertEqual(c.ge_global(6),2)
+        self.load(2);c.ge_long_press();settings_nav.leave(c);self.settle();self.assertEqual(c.ge_global(6),2)
         c.ge_reboot();self.settle();self.assertEqual(c.ge_current_preset(),2)
     def test_lost_acceptance_retries_identical_mutation_once(self):
         c=self.lib;c.ge_drop(2,1);self.load(0) # lost probes must not disable fast recall

@@ -263,3 +263,6 @@ API const char *ge_part_name(void){static char out[17];setlist_name(setlist_part
 API int ge_global_eq(unsigned band){return band<3?globals.eq_db[band]:0;}
 API int ge_dsp_eq(unsigned band){return band<3?frost_global_eq.db[band]:0;}
 API unsigned ge_settings_back_row(void){return SET_BACK;}
+API unsigned ge_settings_menu(void){return settings_menu;}
+API unsigned ge_settings_pos(void){return settings_pos;}
+API unsigned ge_settings_count(void){return settings_count(settings_menu);}

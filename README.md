@@ -11,8 +11,8 @@ chain, amp models, cabinet impulse responses and presets. Shape your sound
 with the pedal's controls or use the companion website to edit effects,
 manage models and cabinets, and organize songs for performance.
 
-Current source version: **0.1.0-beta.7**. Settings → Firmware displays
-**0.1.0-BETA.7**. This candidate reduces global EQ and amp-editing overhead and requires pedal listening and load checks before release. Frost is in beta and supports the Valeton GP-5.
+Current beta: **0.1.0-beta.8**. GLOBAL SETTINGS → SYSTEM → FIRMWARE displays
+**0.1.0-BETA.8**. Frost is in beta and supports the Valeton GP-5.
 
 ## Features
 

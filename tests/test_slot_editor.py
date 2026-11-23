@@ -133,9 +133,11 @@ class SlotEditorTests(unittest.TestCase):
         self.assertEqual([c.ge_order(i) for i in range(6)],[0,1,2,3,4,5])
         self.assertEqual(c.ge_mutations(),mutations)
         c.ge_long_press();self.assertEqual(c.ge_view(),SETTINGS)
-        c.ge_turn(1);c.ge_press();self.assertEqual(c.ge_view(),SETTINGS_VALUE);c.ge_turn(-3)
+        c.ge_press();self.assertEqual(c.ge_settings_menu(),1)               # AUDIO submenu
+        c.ge_turn(1);c.ge_press();self.assertEqual(c.ge_view(),SETTINGS_VALUE);c.ge_turn(-3)   # OUTPUT LEVEL
         c.ge_foot();self.assertEqual(c.ge_view(),SETTINGS)                  # value kept, menu stays
         self.assertEqual(c.ge_global(1),97)
+        c.ge_foot();self.assertEqual(c.ge_view(),SETTINGS);self.assertEqual(c.ge_settings_menu(),0)   # AUDIO -> GLOBAL SETTINGS
         c.ge_foot();self.assertEqual(c.ge_view(),CHAIN);self.settle()       # saved and left
         self.assertEqual(c.ge_global(1),97)
         self.assertEqual([c.ge_enabled(i) for i in range(6)],enabled)

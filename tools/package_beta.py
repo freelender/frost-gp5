@@ -3,7 +3,7 @@ import argparse,datetime,hashlib,json,re,shutil,sys,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
-def package(stage,baseline,out):
+def package(stage,baseline,out,notes=None):
     info=json.loads((stage/'frost-input.json').read_text())
     version=info['release_version']
     assert version==re.search(r'#define FROST_VERSION "([^"]+)"',(ROOT/'firmware/version.h').read_text())[1]
@@ -23,6 +23,7 @@ def package(stage,baseline,out):
     for source,dest in [('Installation Guide.MD','Installation Guide.MD'),('User Guide.md','User Guide.md'),('Website Guide.md','Website Guide.md'),('Build Firmware.md','Build Firmware.md'),('Build effect.MD','Build effect.MD')]:
         shutil.copy2(ROOT/'docs'/source,testers/dest)
     for filename in ('LICENSE','THIRD_PARTY_NOTICES.md'):shutil.copy2(ROOT/filename,testers/filename)
+    if notes:shutil.copy2(notes,testers/'RELEASE_NOTES.md')   # tester notes, kept outside the repository
     site=out/'website';shutil.copytree(ROOT/'web',site)
     assert not any(site.rglob('*.bin'))
     assert all(not row.get('file') for row in json.loads((site/'firmware/manifest.json').read_text()))
@@ -45,4 +46,5 @@ def package(stage,baseline,out):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('stage',type=Path);p.add_argument('--baseline',required=True,type=Path);p.add_argument('--out',required=True,type=Path)
-    a=p.parse_args();package(a.stage,a.baseline,a.out)
+    p.add_argument('--notes',type=Path,help='release notes file (outside the repository) added to the tester ZIP')
+    a=p.parse_args();package(a.stage,a.baseline,a.out,a.notes)

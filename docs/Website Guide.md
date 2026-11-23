@@ -158,7 +158,7 @@ There are two separate things: a **song library** of named parts and a
    **Remove** here removes an order entry, while **Delete song** removes the
    library song and its entries. A song can appear in the order more than once.
 7. Click **Save to pedal**, confirm and wait for the display to refresh.
-8. On the pedal choose Global **HOME SCREEN → SETLIST**, then **BACK**.
+8. On the pedal choose GLOBAL SETTINGS → **DISPLAY → HOME SCREEN → SETLIST**, then **BACK** to save.
 
 **Export songs** saves the browser library/order as JSON. **Import songs**
 replaces the browser draft after validation/confirmation; it does not write

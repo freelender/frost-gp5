@@ -1,6 +1,6 @@
 # Frost for Valeton GP-5 — User Guide
 
-Source candidate: **0.1.0-beta.7** · Website: **1.3.0** · Updated: 22 November 2026
+Beta: **0.1.0-beta.8** · Website: **1.4.0** · Updated: 23 November 2026
 
 Website: [Frost GP-5 Studio](https://frost.fretlexwins.workers.dev/)
 
@@ -43,8 +43,9 @@ Some effects have their own momentary footswitch behavior on home screens.
 
 ### Choose a home screen
 
-Hold PARA on a home screen, select **HOME SCREEN**, press, choose a view, then
-press again. Choose **BACK** in Global settings to save and return.
+Hold PARA on a home screen, open **DISPLAY**, select **HOME SCREEN**, press,
+choose a view, then press again. Go back to GLOBAL SETTINGS and choose **BACK**
+to save and return.
 
 | Home screen | PARA turn | Footswitch tap |
 |---|---|---|
@@ -269,27 +270,30 @@ as saving can briefly interrupt audio.
 
 ## 8. Global settings and tuner
 
-Hold PARA on a home screen to open Global settings. Turn to select a row,
-press to edit, turn to change and press again. Choose **BACK** to save and exit.
+Hold PARA on a home screen to open **GLOBAL SETTINGS**. It lists three
+menus: **AUDIO**, **DISPLAY** and **SYSTEM**. Turn to select a row and press to
+open a menu or edit a setting; turn to change the value and press again.
+**BACK** (or the footswitch) goes up one level; BACK in GLOBAL SETTINGS saves
+and exits.
 
-| Setting | Purpose |
-|---|---|
-| INPUT GAIN | Adjust input level from -20 to +20 dB |
-| OUTPUT LEVEL | Scale overall output, 0–100% |
-| OUTPUT MODE | Mono/stereo preference; current effect processing is mono |
-| CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
-| BRIGHTNESS | Adjust screen brightness |
-| HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
-| SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
-| FIRMWARE | Release version; this source candidate displays 0.1.0-BETA.7 |
-| GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
-| RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
-| FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
+| Menu | Setting | Purpose |
+|---|---|---|
+| AUDIO | INPUT GAIN | Adjust input level from -20 to +20 dB |
+| AUDIO | OUTPUT LEVEL | Scale overall output, 0–100% |
+| AUDIO | OUTPUT MODE | Mono/stereo preference; current effect processing is mono |
+| AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
+| AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
+| DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
+| DISPLAY | BRIGHTNESS | Adjust screen brightness |
+| DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
+| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.8 |
+| SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
+| SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 
 Global EQ follows the complete effect chain, consumes no effect slot and stays
 the same when switching presets. It also remains active during MIDI global
 bypass, as an output correction. Flat global EQ skips its audio processing.
-Choose BACK to save it with global settings.
+Leave GLOBAL SETTINGS with BACK to save it with the other settings.
 
 To use the tuner, hold the footswitch on a home screen where the tuner gesture
 is available. In Setlist view, choose TUNER for SETLIST HOLD first. Tap the

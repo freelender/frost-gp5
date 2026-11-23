@@ -59,6 +59,18 @@ static unsigned tuner_home;                      /* the home view to return to *
 enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_BACK, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
+/* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
+ * SET_BACK (one level up; saves and leaves at the top) or a submenu. The
+ * highlighted leaf stays in settings_row, so editing is unchanged. */
+enum { SM_TOP, SM_AUDIO, SM_DISPLAY, SM_SYSTEM, SM_EQ, SM_MENUS };
+enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ };
+static const uint8_t settings_menus[SM_MENUS][7]={
+    {SE_AUDIO,SE_DISPLAY,SE_SYSTEM,SET_BACK,255,255,255},
+    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
+    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_BACK,255,255,255},
+    {SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255,255},
+    {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255}};
+static unsigned settings_menu,settings_pos;
 static unsigned factory_stage,settings_row,settings_dirty,settings_confirm,para_down,para_long,current_preset,last_preset_dirty,boot_load_done;
 static uint32_t para_down_ms,last_input_ms;
 static uint16_t recall_old_cabs[6];
@@ -211,20 +223,29 @@ static void settings_value(unsigned row,char out[24])
     default:*q=0;
     }
 }
+static unsigned settings_count(unsigned menu)
+{unsigned n=0;while(n<7u && settings_menus[menu][n]!=255u)++n;return n;}
+static unsigned settings_entry(void){return settings_menus[settings_menu][settings_pos];}
+static void settings_select(unsigned menu,unsigned pos)
+{settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
     static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","BACK"};
+    static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ"};
+    static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ"};
     unsigned i;char value[24];
     if(view==SETTINGS || view==SETTINGS_VALUE){
-        unsigned first=settings_row>=4?settings_row-3:0;
-        text(5,3,"SETTINGS",INK);text(125,3,view==SETTINGS_VALUE?"VALUE":"",INK);line(4,12,155,12,WIRE);
-        for(i=first;i<SET_ROWS && i<first+4;++i){
-            int y=18+(int)(i-first)*12;
-            if(i==settings_row){rect(3,y-2,154,11,SELECTION);text(5,y,">",FOCUS);}
-            text(15,y,labels[i],INK);settings_value(i,value);
-            text(153-(int)length(value)*6,y,value,i==settings_row && view==SETTINGS_VALUE?FOCUS:INK);
+        unsigned count=settings_count(settings_menu),first=settings_pos>=4?settings_pos-3:0,entry=settings_entry();
+        text(5,3,titles[settings_menu],INK);text(125,3,view==SETTINGS_VALUE?"VALUE":"",INK);line(4,12,155,12,WIRE);
+        for(i=first;i<count && i<first+4;++i){
+            unsigned e=settings_menus[settings_menu][i];int y=18+(int)(i-first)*12;
+            if(i==settings_pos){rect(3,y-2,154,11,SELECTION);text(5,y,">",FOCUS);}
+            if(e>=SE_AUDIO){text(15,y,menus[e-SE_AUDIO],INK);text(147,y,">",INK);continue;}
+            text(15,y,labels[e],INK);settings_value(e,value);
+            text(153-(int)length(value)*6,y,value,i==settings_pos && view==SETTINGS_VALUE?FOCUS:INK);
         }
-        text(5,72,message?message:settings_row==SET_SETLIST_HOLD?"SETLIST VIEW ONLY":settings_row<=SET_CAB?"INPUT / OUTPUT":settings_row<=SET_HOME?"DISPLAY / UI":settings_row<SET_BACK?"SYSTEM":"PRESS TO SAVE AND EXIT",INK);
+        text(5,72,message?message:entry>=SE_AUDIO?"PRESS TO OPEN":entry==SET_SETLIST_HOLD?"SETLIST VIEW ONLY":
+             entry==SET_BACK?(settings_menu==SM_TOP?"PRESS TO SAVE AND EXIT":"PRESS TO GO BACK"):"",INK);
     }else if(view==SETTINGS_CONFIRM){
         unsigned factory=settings_row==SET_FACTORY;
         text(5,3,factory?"FACTORY RESET":"RESET SETTINGS",INK);line(4,12,155,12,WIRE);
@@ -443,7 +464,7 @@ void fw_init(void)
     frost_line_control_init(&line_control);
 #endif
     globals_load();setlist_init();global_client_init(&global_client,gp5_ms());globals_apply_backlight();
-    settings_row=settings_dirty=settings_confirm=para_down=para_long=last_preset_dirty=boot_load_done=0;current_preset=globals.last_preset;
+    settings_menu=settings_pos=0;settings_row=settings_dirty=settings_confirm=para_down=para_long=last_preset_dirty=boot_load_done=0;current_preset=globals.last_preset;
     para_down_ms=last_input_ms=gp5_ms();recall_pending=editor_transport_status=0;
     tuner_client_init(&tuner_client,gp5_ms());foot_down=foot_long=foot_toggled=tuner_ref_dirty=tuner_ref_unlocked=0;foot_down_ms=gp5_ms();tuner_home=CHAIN;
     editor_init(&editor,gp5_ms());selected=1;view=home_view();parameter=choice=changed=0;pick_category=pick_model=foot_held=0;
@@ -681,7 +702,7 @@ int fw_editor_reply(const uint8_t *p,unsigned n)
     if(had_snapshot && editor.ready && editor.revision!=old_revision)changed=1;
     ++generation;return result;
 }
-static void settings_leave(void);
+static void settings_leave(void);static void settings_up(void);
 /* Footswitch outside the home screens and tuner: one level back, like the
  * BACK rows. A parameter value is already applied while turning; a pending
  * TYPE/POSITION/CAB/REMOVE choice or a confirmation is cancelled. Leaving
@@ -689,7 +710,7 @@ static void settings_leave(void);
 static void foot_back(void)
 {
     switch(view){
-    case SETTINGS:settings_leave();break;
+    case SETTINGS:settings_up();break;
     case SETTINGS_VALUE:case SETTINGS_CONFIRM:view=SETTINGS;settings_confirm=0;factory_stage=0;break;
     case VALUE:case TYPE_CATEGORY:case PRESETS:view=PARAMETERS;break;
     case TYPE_MODEL:view=TYPE_CATEGORY;break;
@@ -761,7 +782,15 @@ void fw_foot(void)
     foot_raw=1;foot_raw_ms=now;foot_debounce(now);
 }
 void fw_foot_release(void){uint32_t now=gp5_ms();foot_debounce(now);foot_raw=0;foot_raw_ms=now;foot_debounce(now);}
-static void settings_open(void){view=SETTINGS;settings_row=0;settings_confirm=0;factory_stage=0;}
+static void settings_open(void){view=SETTINGS;settings_select(SM_TOP,0);settings_confirm=0;factory_stage=0;}
+/* One level up: a submenu returns to its entry in the parent; the top saves and leaves. */
+static void settings_up(void)
+{
+    unsigned parent=settings_menu==SM_EQ?SM_AUDIO:SM_TOP,i,want=settings_menu==SM_EQ?SE_EQ:SE_AUDIO+settings_menu-SM_AUDIO;
+    if(settings_menu==SM_TOP){settings_leave();return;}
+    for(i=0;i<settings_count(parent);++i)if(settings_menus[parent][i]==want)break;
+    settings_select(parent,i);
+}
 static void settings_leave(void)
 {
     if(settings_dirty || last_preset_dirty){globals.last_preset=current_preset;if(globals_save(gp5_ms()))settings_dirty=last_preset_dirty=0;}
@@ -770,7 +799,9 @@ static void settings_leave(void)
 static void settings_press(void)
 {
     if(view==SETTINGS){
-        if(settings_row==SET_BACK)settings_leave();
+        unsigned entry=settings_entry();
+        if(entry>=SE_AUDIO)settings_select(entry==SE_EQ?SM_EQ:SM_AUDIO+entry-SE_AUDIO,0);
+        else if(settings_row==SET_BACK)settings_up();
         else if(settings_row==SET_FIRMWARE){}
         else if(settings_row==SET_RESET || settings_row==SET_FACTORY){view=SETTINGS_CONFIRM;settings_confirm=0;factory_stage=0;}
         else view=SETTINGS_VALUE;
@@ -790,7 +821,7 @@ static void settings_press(void)
 }
 static void settings_turn(int d)
 {
-    if(view==SETTINGS){settings_row=(unsigned)(((int)settings_row+d%SET_ROWS+SET_ROWS)%SET_ROWS);return;}
+    if(view==SETTINGS){int n=(int)settings_count(settings_menu);settings_select(settings_menu,(unsigned)(((int)settings_pos+d%n+n)%n));return;}
     if(view==SETTINGS_CONFIRM){settings_confirm=(unsigned)(((int)settings_confirm+d%2+2)%2);return;}
     switch(settings_row){
     case SET_EQ_BASS:case SET_EQ_MIDDLE:case SET_EQ_TREBLE:{int v=globals.eq_db[settings_row-SET_EQ_BASS]+d;globals.eq_db[settings_row-SET_EQ_BASS]=v<-12?-12:v>12?12:v;break;}

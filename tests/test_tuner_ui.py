@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/'tools'),str(ROOT/'tests')]
 from host import build
+import settings_nav
 CHAIN,PARAMS,PHOME,STOMP,TUNER=0,1,12,13,14
 F=44100/256
 class TunerUiTests(unittest.TestCase):
@@ -51,12 +52,12 @@ class TunerUiTests(unittest.TestCase):
     def test_preset_view_tap_is_next_preset_and_hold_is_tuner(self):
         c=self.lib
         for i in (1,3):self.assertEqual(c.ge_flash_save(i),1);self.settle()
-        c.ge_long_press();c.ge_turn(5);c.ge_press();c.ge_turn(1);c.ge_press();c.ge_turn(c.ge_settings_back_row()-5);c.ge_press();self.settle()
+        c.ge_long_press();settings_nav.set_value(c,settings_nav.HOME,1);settings_nav.leave(c);self.settle()
         self.assertEqual(c.ge_view(),PHOME);cur=c.ge_current_preset()
         c.ge_foot();self.settle();self.assertNotEqual(c.ge_current_preset(),cur);cur=c.ge_current_preset()
         c.ge_foot_hold();self.assertEqual(c.ge_view(),TUNER);self.assertEqual(c.ge_current_preset(),cur)   # hold: no preset change
         c.ge_foot();self.assertEqual(c.ge_view(),PHOME)
     def test_stomp_view_hold(self):
-        c=self.lib;c.ge_long_press();c.ge_turn(5);c.ge_press();c.ge_turn(2);c.ge_press();c.ge_turn(c.ge_settings_back_row()-5);c.ge_press();self.settle()
+        c=self.lib;c.ge_long_press();settings_nav.set_value(c,settings_nav.HOME,2);settings_nav.leave(c);self.settle()
         self.assertEqual(c.ge_view(),STOMP);c.ge_foot_hold();self.assertEqual(c.ge_view(),TUNER);c.ge_foot();self.assertEqual(c.ge_view(),STOMP)
 if __name__=='__main__':unittest.main()
