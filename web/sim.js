@@ -21,6 +21,8 @@ export function simulatedPedal(catalog) {
       if(op===0x1a){const accepted=ok && types[s]===3 && Number.isInteger(a) && a>=0 && a<=63;if(accepted)cabs[s]=a;return Uint8Array.from([0x7e,op,accepted?1:0]);}
       if (op === 0x15 && ok) { const p = catalog.effects[types[s]]?.params[a]; if (p) { let x = (lo | (hi << 8)) << 16 >> 16; values[s][a] = Math.max(p.min, Math.min(p.max, x)); } return Uint8Array.from([0x7e, 0x15, p ? 1 : 0]); }
       if (op === 0x16 && ok) { enabled[s] = a ? 1 : 0; return Uint8Array.from([0x7e, 0x16, 1]); }
+      if (op === 0x1f && q.length === 8) { const o = [...q.slice(2)], good = [...o].sort().join() === '0,1,2,3,4,5'; if (good) { order.splice(0, 6, ...o); revision++; } return Uint8Array.from([0x7e, 0x1f, good ? 1 : 0]); }
+      if (op === 0x20) return q.length === 2 ? Uint8Array.from([0x7e, 0x20, 1, 0, 0, 255, 0, 0]) : Uint8Array.from([0x7e, 0x20, 0]);   // the demo cannot save
       if (op === 0x17 && ok) { types[s] = a; values[s] = (catalog.effects[a]?.params || []).map(p => p.initial); enabled[s] = 0; revision++; return Uint8Array.from([0x7e, 0x17, 1]); }
       return null;
     },

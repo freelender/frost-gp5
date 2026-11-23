@@ -33,6 +33,7 @@
 #include "../effects/lowpass/lowpass.c"
 #include "../effects/autowah/autowah.c"
 #include "../effects/treble_boost/treble_boost.c"
+#include "../effects/extras/extras.c"
 #include "../effects/foxx/foxx.c"
 #include "../effects/tape/tape.c"
 #include "../effects/vintage_fuzz/vintage_fuzz.c"

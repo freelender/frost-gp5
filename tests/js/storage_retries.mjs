@@ -4,7 +4,7 @@ import { Store } from '../../web/store.js';
 
 // NOR-like flash with faults at the protocol boundary: a refused pause does
 // not write, whereas a lost acknowledgement can follow a completed write.
-function pedal() {
+function pedal(writeDelay = async () => {}) {
   const flash = new Uint8Array(FILES.SECTORS * FILES.SECTOR).fill(255);
   const calls = [], faults = new Map();
   const ask = async q => {
@@ -20,7 +20,7 @@ function pedal() {
     if (fault === 'corrupt') flash[offset] ^= 1;
     return Uint8Array.of(0x7e, command, 1);
   };
-  return { store: new Store(new PedalFiles(ask)), calls, faults };
+  return { store: new Store(new PedalFiles(ask, 3, { writeDelay })), calls, faults };
 }
 function record(size, label) {
   const r = new Uint8Array(size);
@@ -46,7 +46,7 @@ for (const [kind, size] of [['amp', 400], ['ir', 1048]]) {
 
   // A persistent failure must exhaust the limit and leave the previous copy.
   const spare = FILES.BASE + FILES.SECTOR;
-  p.faults.set(`8:${spare + 0xb0}`, ['refuse', 'refuse', 'refuse']);
+  p.faults.set(`8:${spare + 0xb0}`, Array(8).fill('refuse'));
   await assert.rejects(p.store.putSlot(kind, kind === 'amp' ? 1 : 0, record(size, 'REPLACE')), /program failed/);
   assert.deepEqual(await p.store.slot(kind, kind === 'amp' ? 1 : 0), rec);
   assert.equal(p.faults.get(`8:${spare + 0xb0}`).length, 0);
@@ -61,10 +61,16 @@ for (const [kind, size] of [['amp', 400], ['ir', 1048]]) {
 
 // Erase refusals are bounded too, and ordinary reads retain their behavior.
 let attempts = 0;
-const refused = new PedalFiles(async q => { attempts++; return Uint8Array.of(q[0], q[1], 0); });
+const refused = new PedalFiles(async q => { attempts++; return Uint8Array.of(q[0], q[1], 0); }, 3, { writeDelay: async () => {} });
 await assert.rejects(refused.erase(FILES.BASE), /erase failed/);
-assert.equal(attempts, 3);
+assert.equal(attempts, 8);
 attempts = 0;
 await assert.rejects(refused.read(FILES.BASE, 4), /flash read failed/);
 assert.equal(attempts, 1);
+// 32s: a long run of refusals (the pedal busy re-syncing with its DSP) is ridden
+// out: seven refusals of one chunk, then success, with growing pauses.
+{ const waits = [], p = pedal(async ms => { waits.push(ms); }), rec = record(400, 'LONG');
+  const chunk = FILES.BASE + 0xb0; p.faults.set(`8:${chunk}`, Array(7).fill('refuse'));
+  await p.store.ampPut(2, rec); assert.deepEqual(await p.store.slot('amp', 2), rec);
+  assert.deepEqual(waits, [100, 200, 300, 400, 500, 600, 700]); }
 console.log('AMP/CAB transient refusal, lost reply, bounded failure and copy preservation checks passed');

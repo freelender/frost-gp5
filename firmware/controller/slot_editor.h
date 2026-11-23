@@ -56,7 +56,7 @@ static unsigned foot_down,foot_long,foot_toggled,tuner_ref_dirty,tuner_ref_unloc
 static uint32_t foot_down_ms;
 static unsigned tuner_home;                      /* the home view to return to */
 /* Stage 2b: global settings menu, home screens, long press (docs/User%20Guide.md). */
-enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_BACK, SET_ROWS };
+enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_BACK, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
 /* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
@@ -66,9 +66,9 @@ enum { SM_TOP, SM_AUDIO, SM_DISPLAY, SM_SYSTEM, SM_EQ, SM_MENUS };
 enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ };
 static const uint8_t settings_menus[SM_MENUS][7]={
     {SE_AUDIO,SE_DISPLAY,SE_SYSTEM,SET_BACK,255,255,255},
-    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
-    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_BACK,255,255,255},
-    {SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255,255},
+    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_TAP_NOTE,SET_BACK},
+    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_TEMPO_LIGHT,SET_BACK,255,255},
+    {SET_TAP_TEMPO,SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255},
     {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255}};
 static unsigned settings_menu,settings_pos;
 static unsigned factory_stage,settings_row,settings_dirty,settings_confirm,para_down,para_long,current_preset,last_preset_dirty,boot_load_done;
@@ -174,6 +174,70 @@ static void popup_tick(uint32_t now)
     popup_seen=editor.refusals;
     if(popup_kind && (int32_t)(now-popup_until)>=0){popup_kind=0;++generation;}
 }
+/* Footswitch tap tempo, only with GLOBAL SETTINGS -> SYSTEM -> TAP TEMPO ON
+ * (OFF by default: the footswitch then behaves exactly as before). On a "tempo
+ * block" (a delay with a TIME/RATE in ms, or a modulation effect with a rate in
+ * Hz; not the ring modulator) on the Chain/Stomp screen (32v):
+ *   a short press is a TAP (counted on release, timed at the press);
+ *   a press-and-hold (FROST_TAP_HOLD_MS) switches the block on/off.
+ * Each tap shows the TAP TEMPO overlay (BPM and ms) for 2.5 s; the tempo is the
+ * average of the last taps (30..300 BPM); TAP NOTE turns it into the delay time
+ * or modulation period. The footswitch LED flashes yellow on the beat
+ * (TEMPO LIGHT), on blue while the overlay is up. Controller only. */
+#define FROST_TAP_TIMEOUT_MS 2500u
+#define FROST_TAP_FLASH_MS 70u
+#define FROST_TAP_HOLD_MS 500u
+static unsigned tap_mode,tap_slot,tap_count,tap_beat_now,tap_pending;   /* tap_mode: overlay shown */
+static uint32_t tap_until,tap_mark,tap_press_ms;
+static unsigned tap_beat[6];static int tap_value[6];static uint32_t tap_phase[6];
+/* The parameter a tap sets for `type`, or -1 (no tempo control). */
+static int tap_param(unsigned type)
+{
+    const FrostControlEffect *e=frost_control_find(type);unsigned j,cat;
+    if(!e || type==FROST_EMPTY || type==FROST_RINGMOD)return -1;
+    cat=frost_type_category(type);
+    for(j=0;j<e->count;++j){
+        const char *u=e->p[j].unit;
+        if(cat==FROST_CATEGORY_DELAY && u[0]=='M' && u[1]=='S')return (int)j;
+        if(cat==FROST_CATEGORY_MODULATION && u[0]=='H' && u[1]=='Z')return (int)j;
+    }
+    return -1;
+}
+/* Delay time / modulation period for a beat: 1/4, dotted 1/8 (3/4) or 1/8 (1/2). */
+static unsigned tap_period(unsigned beat){return globals.tap_note==1u?beat*3u/4u:globals.tap_note==2u?beat/2u:beat;}
+static void tap_apply(unsigned slot,unsigned beat,uint32_t now)
+{
+    int j=tap_param(editor.types[slot]),v;const Parameter *p;unsigned period=tap_period(beat);
+    if(j<0 || !period)return;
+    p=&frost_control_find(editor.types[slot])->p[j];
+    v=p->unit[0]=='M'?(int)period:(int)((1000u*(unsigned)p->scale+period/2u)/period);
+    if(v<p->minimum)v=p->minimum;if(v>p->maximum)v=p->maximum;
+    if(editor_queue_parameter(&editor,slot,(unsigned)j,v)){changed=1;tap_beat[slot]=beat;tap_value[slot]=v;tap_phase[slot]=now;}
+}
+static void tap_press(uint32_t now)
+{
+    unsigned ms;
+    if(!tap_mode || tap_slot!=selected){tap_mode=1;tap_slot=selected;tap_count=0;tap_mark=0;tap_beat_now=0;}
+    ms=now-tap_mark;
+    if(tap_mark && ms>=200u && ms<=2000u){
+        unsigned n=tap_count<3u?tap_count:3u;
+        if(tap_count && (ms*10u<tap_beat_now*6u || ms*10u>tap_beat_now*14u)){tap_beat_now=ms;tap_count=1;}   /* an outlier restarts */
+        else {tap_beat_now=tap_count?(tap_beat_now*n+ms)/(n+1u):ms;++tap_count;}
+        tap_apply(tap_slot,tap_beat_now,now);
+    }else if(tap_mark)tap_count=0;
+    tap_mark=now;tap_until=now+FROST_TAP_TIMEOUT_MS;++generation;
+}
+/* The beat to flash for `slot` in ms (0 = none): the tapped beat while the
+ * value is still the tapped one, otherwise the control's own period. */
+static unsigned tap_flash_beat(unsigned slot)
+{
+    int j=tap_param(editor.types[slot]),v;const Parameter *p;
+    if(j<0)return 0;
+    p=&frost_control_find(editor.types[slot])->p[j];v=editor_integer(&editor,slot,(unsigned)j);
+    if(tap_beat[slot] && v==tap_value[slot])return tap_beat[slot];
+    if(v<=0)return 0;
+    return p->unit[0]=='M'?(unsigned)v:(1000u*(unsigned)p->scale+(unsigned)v/2u)/(unsigned)v;
+}
 /* MODEL row of an AMP block: "NN NAME" from its file, "NN DEFAULT" without one.
  * Uppercase; characters the font lacks become '*'. */
 static void fcm_model_label(char out[24],int index)
@@ -220,6 +284,9 @@ static void settings_value(unsigned row,char out[24])
     case SET_HOME:{const char *t=globals.home==HOME_SETLIST?"SETLIST":globals.home==HOME_PRESET?"PRESET":globals.home==HOME_STOMP?"STOMP":"CHAIN";while(*t)*q++=*t++;*q=0;break;}
     case SET_SETLIST_HOLD:{const char *t=globals.setlist_hold?"PREV PART":"TUNER";while(*t)*q++=*t++;*q=0;break;}
     case SET_FIRMWARE:{const char *t=FROST_FIRMWARE_TEXT;while(*t)*q++=*t++;*q=0;break;}
+    case SET_TAP_NOTE:{const char *t=globals.tap_note==1u?"DOTTED 1/8":globals.tap_note==2u?"1/8":"1/4";while(*t)*q++=*t++;*q=0;break;}
+    case SET_TEMPO_LIGHT:{const char *t=globals.tempo_light?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_TAP_TEMPO:{const char *t=globals.tap_tempo?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
     default:*q=0;
     }
 }
@@ -230,7 +297,7 @@ static void settings_select(unsigned menu,unsigned pos)
 {settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
-    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","BACK"};
+    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","BACK"};
     static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ"};
     static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ"};
     unsigned i;char value[24];
@@ -337,6 +404,14 @@ static void render_stage2b(const char *message)
 static void render_popup(void)
 {
     const char *title=popup_kind==1?"CHAIN TOO BIG":"DSP LIMIT",*hint="REMOVE AN EFFECT";
+    if(tap_mode){
+        char line[24],*q=line;
+        unsigned beat=tap_count?tap_beat_now:tap_flash_beat(tap_slot);
+        if(beat){unsigned bpm=(60000u+beat/2u)/beat;q=number(q,bpm);*q++=' ';*q++='B';*q++='P';*q++='M';*q++=' ';*q++=' ';q=number(q,tap_count?tap_period(beat):beat);*q++=' ';*q++='M';*q++='S';*q=0;}
+        else {const char *t="TAP ON THE BEAT";while(*t)*q++=*t++;*q=0;}
+        rect(8,20,144,40,COLOR(240,212,82));rect(10,22,140,36,BG);
+        text(80-(int)length("TAP TEMPO")*3,29,"TAP TEMPO",COLOR(240,212,82));text(80-(int)length(line)*3,43,line,INK);return;
+    }
     if(!popup_kind)return;
     rect(8,20,144,40,FOCUS);rect(10,22,140,36,BG);
     text(80-(int)length(title)*3,29,title,FOCUS);text(80-(int)length(hint)*3,43,hint,INK);
@@ -472,7 +547,7 @@ void fw_init(void)
     ram_bank_init();capture_client_init(&capture_client);
     {unsigned i;for(i=0;i<6;++i)ir_cabs[i]=0;}ir_file_client_init(&editor);
     fcm_client_init(&fcm_client,gp5_ms());
-    generation=1;draw_generation=0;band=80;last_para=gp5_ms()-50u;foot_raw=foot_state=0;foot_edge_ms=foot_raw_ms=gp5_ms()-50u;popup_kind=0;popup_seen=editor.refusals;popup_until=0;
+    generation=1;draw_generation=0;band=80;last_para=gp5_ms()-50u;foot_raw=foot_state=0;foot_edge_ms=foot_raw_ms=gp5_ms()-50u;popup_kind=0;popup_seen=editor.refusals;popup_until=0;tap_mode=tap_count=tap_pending=0;tap_mark=0;{unsigned k;for(k=0;k<6u;++k){tap_beat[k]=0;tap_value[k]=0;tap_phase[k]=0;}}
 #ifdef FROST_IR_LINK
     if(!irl.started)irl_start();
 #endif
@@ -501,7 +576,21 @@ return globals_level(line_control.level)*midi_volume/127u;
 return 0;
 #endif
 }
-unsigned fw_active(void){return editor.desired_enabled[selected];}
+/* 32t: off = dim red, on = mint; a tempo block flashes yellow on the beat
+ * (TEMPO LIGHT), on a Frost-blue base while TAP mode is open. */
+#define FROST_LED_YELLOW GP5_LED(32,26,0)
+#define FROST_LED_BLUE GP5_LED(5,20,32)
+unsigned fw_active(void)
+{
+    unsigned on=editor.desired_enabled[selected],slot=tap_mode?tap_slot:selected,beat;uint32_t now;
+    if(!globals.tap_tempo)return on;                       /* 32u: TAP TEMPO OFF = the usual light */
+    if(!globals.tempo_light || !(tap_mode || (on && (view==CHAIN || view==STOMP))))return tap_mode?FROST_LED_BLUE:on;
+    beat=tap_mode && !tap_count?0u:tap_flash_beat(slot);
+    if(!beat)return tap_mode?FROST_LED_BLUE:on;
+    now=gp5_ms();
+    if((uint32_t)(now-tap_phase[slot])%beat<FROST_TAP_FLASH_MS)return FROST_LED_YELLOW;
+    return tap_mode?FROST_LED_BLUE:on;
+}
 int fw_take(uint32_t *id,uint32_t *value){(void)id;(void)value;return 0;}
 void fw_retry(uint32_t id){(void)id;}
 void fw_knob(unsigned knob){
@@ -676,6 +765,36 @@ unsigned fw_files_host(const uint8_t *request,unsigned bytes,uint8_t *reply,unsi
         setlist_refresh();reply[0]=0x7e;reply[1]=0x1b;reply[2]=1;reply[3]=1;
         reply[4]=(uint8_t)set_count;reply[5]=(uint8_t)set_order;reply[6]=(uint8_t)set_part;reply[7]=(uint8_t)set_pending;return 8;
     }
+    /* 32p: 7E 1F o0..o5 reorders the live chain (order[position] = slot), the
+     * same editor route change as POSITION on the pedal; settings stay with
+     * their blocks. -> 7E 1F ok */
+    if(bytes==8u && request[0]==0x7e && request[1]==0x1f && max>=3u){
+        uint8_t types[6],order[6];unsigned i,mask=0,ok=0;
+        for(i=0;i<6u;++i){order[i]=request[2+i];types[i]=editor.types[i];if(order[i]<6u)mask|=1u<<order[i];}
+        if(mask==63u && editor_editable(&editor) && !ir_file_client.state && !preset_client.state && !capture_client.state){
+            ok=(unsigned)editor_queue_route(&editor,types,order,editor.pre);if(ok){changed=1;++generation;}
+        }
+        reply[0]=0x7e;reply[1]=0x1f;reply[2]=(uint8_t)ok;return 3;
+    }
+    /* 32p: 7E 20 n [name 1..16] saves the live sound as preset n (the pedal's
+     * PRESETS -> SAVE), optionally renamed. -> 7E 20 ok.
+     * 7E 20 alone: save status -> 7E 20 1 busy error current_preset reason retries
+     * (32q: reason 2 busy, 3 revision, 4 checksum, 5 storage, 1 other). */
+    if(bytes>=2u && request[0]==0x7e && request[1]==0x20 && max>=8u){
+        reply[0]=0x7e;reply[1]=0x20;
+        if(bytes==2u){reply[2]=1;reply[3]=(uint8_t)(capture_client.state!=0);reply[4]=(uint8_t)capture_client.error;reply[5]=(uint8_t)current_preset;
+            reply[6]=(uint8_t)capture_client.reason;reply[7]=(uint8_t)capture_client.retries;return 8;}
+        reply[2]=0;
+        if(bytes<=19u && request[2]<FROST_PRESETS && !capture_client.state){
+            unsigned i,k=0;char label[17];
+            for(i=3;i<bytes;++i){unsigned c=request[i];label[k++]=(char)(c>=32u && c<127u?c:'?');}
+            label[k]=0;
+            for(i=0;i<17u;++i)store_save_label[i]=label[i];
+            if(fw_flash_save(request[2])){capture_client.error=0;reply[2]=1;++generation;}
+            else store_save_label[0]=0;
+        }
+        return 3;
+    }
     {unsigned n=live_host(request,bytes,reply,max);if(n)return n;}   /* 7E 14..18: live editing (website) */
 #ifdef FROST_IR_LINK
     if(bytes==2 && request[0]==0x7e && request[1]==0x13)return irl_host_status(reply,max);   /* read-only */
@@ -728,8 +847,12 @@ static void foot_press(uint32_t now)
     last_input_ms=now;
     if(view==TUNER){view=tuner_home;tuner_client.want=0;if(tuner_ref_dirty && globals_save(now))tuner_ref_dirty=0;++generation;return;}
     if(!is_home_view(view)){foot_back();++generation;return;}
+    if(tap_mode && tap_slot!=selected){tap_mode=0;++generation;}   /* selection changed */
     if(view==SETLIST_HOME){foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;return;}
     mode=foot_mode();foot_held=0;
+    if(globals.tap_tempo && !mode && (view==CHAIN || view==STOMP) && tap_param(editor.types[selected])>=0){
+        foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;tap_pending=1;tap_press_ms=now;return;   /* 32v: tap on release, on/off on hold */
+    }
     if(is_home_view(view) && !(view!=PRESET_HOME && mode)){        /* hold opens the tuner */
         foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;
         if(view==PRESET_HOME)return;                                  /* next preset on release */
@@ -746,6 +869,7 @@ static void foot_release(void)
     unsigned slot;
     if(foot_down){
         foot_down=0;
+        if(tap_pending){tap_pending=0;if(!foot_long)tap_press(tap_press_ms);foot_long=0;return;}   /* 32v: a short press is a tap */
         if(!foot_long && view==SETLIST_HOME)setlist_step(1,0);
         if(!foot_long && view==PRESET_HOME){unsigned next=preset_step(current_preset,1);if(next!=255u && fw_flash_load(next))++generation;}
         foot_long=0;return;
@@ -832,6 +956,9 @@ static void settings_turn(int d)
     case SET_BRIGHT:{int v=(int)globals.brightness+10*d;globals.brightness=(unsigned)(v<0?0:v>100?100:v);globals_apply_backlight();break;}
     case SET_HOME:globals.home=(unsigned)(((int)globals.home+d%HOMES+HOMES)%HOMES);break;
     case SET_SETLIST_HOLD:globals.setlist_hold=(unsigned)(((int)globals.setlist_hold+d%2+2)%2);break;
+    case SET_TAP_NOTE:globals.tap_note=(unsigned)(((int)globals.tap_note+d%3+3)%3);break;
+    case SET_TEMPO_LIGHT:globals.tempo_light=(unsigned)(((int)globals.tempo_light+d%2+2)%2);break;
+    case SET_TAP_TEMPO:globals.tap_tempo=(unsigned)(((int)globals.tap_tempo+d%2+2)%2);if(!globals.tap_tempo)tap_mode=0;break;
     default:return;
     }
     settings_dirty=1;
@@ -973,8 +1100,14 @@ int fw_draw(unsigned knob,int force)
         }
 #endif
         foot_debounce(now);
+        if(tap_mode && (int32_t)(now-tap_until)>=0){tap_mode=0;++generation;}
         if(para_down && !para_long && is_home_view(view) && (uint32_t)(now-para_down_ms)>=FROST_LONG_PRESS_MS){para_long=1;settings_open();++generation;}
-        if(foot_down && !foot_long && is_home_view(view) && (uint32_t)(now-foot_down_ms)>=FROST_LONG_PRESS_MS){
+        if(foot_down && tap_pending && !foot_long && (uint32_t)(now-foot_down_ms)>=FROST_TAP_HOLD_MS){
+            foot_long=1;tap_mark=0;tap_count=0;tap_mode=0;                /* 32v: hold = on/off; ends a tap run */
+            if(editor_queue_enable(&editor,selected,!editor.desired_enabled[selected]))changed=1;
+            ++generation;
+        }
+        if(foot_down && !tap_pending && !foot_long && is_home_view(view) && (uint32_t)(now-foot_down_ms)>=FROST_LONG_PRESS_MS){
             foot_long=1;
             if(foot_toggled){unsigned s=foot_toggled-1u;(void)editor_queue_enable(&editor,s,!editor.desired_enabled[s]);foot_toggled=0;}   /* undo the press */
             if(view==SETLIST_HOME && globals.setlist_hold){setlist_step(-1,0);}

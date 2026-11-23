@@ -224,10 +224,11 @@ int frost_irl_running(void){return (int)irl.started;}
 /* Acknowledged main-loop hand-off. Never called from the audio IRQ. A failed
  * pause must not permit a flash write while the master is still clocking. */
 #ifdef FROST_IRL_HOST
-static unsigned irl_host_pause_fail,irl_host_resume_fail,irl_host_controls;
+static unsigned irl_host_pause_fail,irl_host_resume_fail,irl_host_controls,irl_host_pause_misses;   /* misses: transient (32q) */
 static int irl_master_control(unsigned op)
 {
     ++irl_host_controls;
+    if(op==FROST_IRL_FLASH_PAUSE && irl_host_pause_misses){--irl_host_pause_misses;return 0;}
     if((op==FROST_IRL_FLASH_PAUSE && irl_host_pause_fail) ||
        (op==FROST_IRL_FLASH_RESUME && irl_host_resume_fail))return 0;
     frost_irl_flash_control(op);

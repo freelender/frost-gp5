@@ -27,7 +27,7 @@ class WebFlasherTests(unittest.TestCase):
         if stock.exists():self.assertEqual(d[2]['kind'],'stock')
     def test_effect_catalog_matches_firmware(self):
         d=json.loads((ROOT/'web/effects.json').read_text())
-        self.assertEqual(len(d['effects']),52);self.assertEqual(d['effects']['34']['short'],'DROP')
+        self.assertEqual(len(d['effects']),59);self.assertEqual(d['effects']['34']['short'],'DROP')
 if __name__=='__main__':unittest.main()
 
 @unittest.skipUnless(shutil.which('node'),'Node.js needed')

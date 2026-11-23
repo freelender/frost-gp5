@@ -43,7 +43,12 @@ FROST_HOT static float reverb_sample(FrostEffectState *s,float x,const float *p)
 /* 31i: overlay kernels are reached through the loaded-copy table; a type whose
  * module is not loaded passes its input (the route admission sizes the pool so
  * every chain fits; see frost_ovl_load). */
+/* 32l: in LARGE on the pedal (VARS is full); the overlay pool gave up 256 bytes for it. */
+#if defined(GP5_LARGE) && defined(__arm__) && defined(GP5_FIRMWARE)
+FrostOvlKernel frost_ovl_kernel[FROST_EFFECTS] GP5_LARGE;
+#else
 FrostOvlKernel frost_ovl_kernel[FROST_EFFECTS];
+#endif
 #define FROST_WRAP_OVL(name,member,kernel,resetfn,type) static void name##_reset(FrostEffectState *s){resetfn(&s->member);} FROST_HOT FROST_LARGE_ONLY static float name##_sample(FrostEffectState *s,float x,const float *p){return frost_ovl_call(&s->member,x,p,type);}
 #else
 #define FROST_WRAP_OVL(name,member,kernel,resetfn,type) FROST_WRAP(name,member,kernel,resetfn)
@@ -143,6 +148,78 @@ return frost_ovl_call(&s->treble_boost,x,p,FROST_TREBLE_BOOST);
 return frost_treble_boost_sample(&s->treble_boost,x,p);
 #endif
 }
+/* 32l: effects/extras. Wrappers run from dsp-data flash (no LARGE/VARS cost); the block
+ * and settled paths call the loaded overlay copy directly. */
+FROST_XCODE void frost_x_rotary_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_rotary_reset(FrostEffectState *s){frost_rotary_reset(&s->rotary);}
+FROST_XCODE float frost_x_rotary_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_rotary_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->rotary,x,p,FROST_ROTARY);
+#else
+return frost_rotary_sample(&s->rotary,x,p);
+#endif
+}
+FROST_XCODE void frost_x_ringmod_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_ringmod_reset(FrostEffectState *s){frost_ringmod_reset(&s->ringmod);}
+FROST_XCODE float frost_x_ringmod_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_ringmod_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->ringmod,x,p,FROST_RINGMOD);
+#else
+return frost_ringmod_sample(&s->ringmod,x,p);
+#endif
+}
+FROST_XCODE void frost_x_crusher_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_crusher_reset(FrostEffectState *s){frost_crusher_reset(&s->crusher);}
+FROST_XCODE float frost_x_crusher_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_crusher_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->crusher,x,p,FROST_CRUSHER);
+#else
+return frost_crusher_sample(&s->crusher,x,p);
+#endif
+}
+FROST_XCODE void frost_x_harmtrem_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_harmtrem_reset(FrostEffectState *s){frost_harmtrem_reset(&s->harmtrem);}
+FROST_XCODE float frost_x_harmtrem_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_harmtrem_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->harmtrem,x,p,FROST_HARMTREM);
+#else
+return frost_harmtrem_sample(&s->harmtrem,x,p);
+#endif
+}
+FROST_XCODE void frost_x_muff_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_muff_reset(FrostEffectState *s){frost_muff_reset(&s->muff);}
+FROST_XCODE float frost_x_muff_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_muff_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->muff,x,p,FROST_MUFF);
+#else
+return frost_muff_sample(&s->muff,x,p);
+#endif
+}
+FROST_XCODE void frost_x_boost_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_boost_reset(FrostEffectState *s){frost_boost_reset(&s->boost);}
+FROST_XCODE float frost_x_boost_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_boost_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->boost,x,p,FROST_BOOST);
+#else
+return frost_boost_sample(&s->boost,x,p);
+#endif
+}
+FROST_XCODE void frost_x_swell_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_swell_reset(FrostEffectState *s){frost_swell_reset(&s->swell);}
+FROST_XCODE float frost_x_swell_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_swell_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->swell,x,p,FROST_SWELL);
+#else
+return frost_swell_sample(&s->swell,x,p);
+#endif
+}
 FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s);   /* 32c: cold, flash */
 FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s){frost_foxx_reset(&s->foxx);}
 FROST_LARGE_ONLY float frost_new_foxx_sample(FrostEffectState *s,float x,const float *p);
@@ -232,51 +309,58 @@ const FrostEffect frost_effects[FROST_EFFECTS] = {
         sizeof(FrostModulation *),sizeof(FrostModulation),modulation_reset,flanger_sample},
     {FROST_REVERB_NAME,FROST_REVERB_PARAMETER_COUNT,frost_params_reverb,
         sizeof(FrostReverbWorkspace *),sizeof(FrostReverbWorkspace),reverb_reset,reverb_sample},
-    FROST_LIB_ENTRY(FROST_TS,"TS",0,FROST_LIB_TS,0,ts,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_BD2,"BD-2",0,FROST_LIB_BD2,0,bd2,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_KLON,"KLON",0,FROST_LIB_KLON,0,klon,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_BLUESBREAKER,"BLUESB",0,FROST_LIB_BLUESBREAKER,0,bluesbreaker,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_OCD,"OCD",0,FROST_LIB_OCD,0,ocd,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_DS1,"DS-1",0,FROST_LIB_DS1,0,ds1,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_RAT,"RAT",0,FROST_LIB_RAT,0,rat,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_DISTPLUS,"DIST+",0,FROST_LIB_DISTPLUS,0,distplus,sizeof(FrostDrive),0),
-    FROST_LIB_ENTRY(FROST_DD3,"DD-3",0,FROST_LIB_DD3,0,dd3,sizeof(FrostDD3),sizeof(FrostDelay)),
-    FROST_LIB_ENTRY(FROST_DM2,"DM-2",0,FROST_LIB_DM2,0,dm2,sizeof(FrostDM2),sizeof(FrostDelay)),
-    FROST_LIB_ENTRY(FROST_RV6,"RV-6",0,FROST_LIB_RV6,0,rv6,sizeof(FrostReverbActiveModel),sizeof(FrostReverbWorkspace)),
+    FROST_LIB_ENTRY(FROST_TS,"SCREAM",0,FROST_LIB_TS,0,ts,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_BD2,"BLUESY",0,FROST_LIB_BD2,0,bd2,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_KLON,"HORSE",0,FROST_LIB_KLON,0,klon,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_BLUESBREAKER,"BREAK",0,FROST_LIB_BLUESBREAKER,0,bluesbreaker,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_OCD,"OBSESS",0,FROST_LIB_OCD,0,ocd,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_DS1,"ORANGE",0,FROST_LIB_DS1,0,ds1,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_RAT,"MOUSE",0,FROST_LIB_RAT,0,rat,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_DISTPLUS,"PLUS",0,FROST_LIB_DISTPLUS,0,distplus,sizeof(FrostDrive),0),
+    FROST_LIB_ENTRY(FROST_DD3,"DIGI",0,FROST_LIB_DD3,0,dd3,sizeof(FrostDD3),sizeof(FrostDelay)),
+    FROST_LIB_ENTRY(FROST_DM2,"BBD",0,FROST_LIB_DM2,0,dm2,sizeof(FrostDM2),sizeof(FrostDelay)),
+    FROST_LIB_ENTRY(FROST_RV6,"SPACE",0,FROST_LIB_RV6,0,rv6,sizeof(FrostReverbActiveModel),sizeof(FrostReverbWorkspace)),
     FROST_LIB_ENTRY(FROST_SPRING,"SPRING",0,FROST_LIB_SPRING,0,spring,sizeof(FrostReverbActiveModel),sizeof(FrostReverbWorkspace)),
-    FROST_LIB_ENTRY(FROST_PHASE90,"PH-90",0,FROST_LIB_PHASE90,0,phase90,sizeof(FrostPhase90),0),
-    FROST_LIB_ENTRY(FROST_CE2,"CE-2",0,FROST_LIB_CE2,0,ce2,sizeof(FrostModState),sizeof(FrostModulation)),
-    FROST_LIB_ENTRY(FROST_MISTRESS,"MISTRS",0,FROST_LIB_MISTRESS,0,mistress,sizeof(FrostModState),sizeof(FrostModulation)),
-    FROST_LIB_ENTRY(FROST_M117,"M117",0,FROST_LIB_M117,0,m117,sizeof(FrostModState),sizeof(FrostModulation)),
+    FROST_LIB_ENTRY(FROST_PHASE90,"PHASE",0,FROST_LIB_PHASE90,0,phase90,sizeof(FrostPhase90),0),
+    FROST_LIB_ENTRY(FROST_CE2,"WARM",0,FROST_LIB_CE2,0,ce2,sizeof(FrostModState),sizeof(FrostModulation)),
+    FROST_LIB_ENTRY(FROST_MISTRESS,"LADY",0,FROST_LIB_MISTRESS,0,mistress,sizeof(FrostModState),sizeof(FrostModulation)),
+    FROST_LIB_ENTRY(FROST_M117,"JET",0,FROST_LIB_M117,0,m117,sizeof(FrostModState),sizeof(FrostModulation)),
     FROST_LIB_ENTRY(FROST_UNIVIBE,"VIBE",0,FROST_LIB_UNIVIBE,0,univibe,sizeof(FrostUniVibe),0),
-    FROST_LIB_ENTRY(FROST_VB2,"VB-2",0,FROST_LIB_VB2,0,vb2,sizeof(FrostModState),sizeof(FrostModulation)),
-    FROST_LIB_ENTRY(FROST_TR2,"TR-2",0,FROST_LIB_TR2,0,tr2,sizeof(FrostTR2),0),
-    FROST_LIB_ENTRY(FROST_POG,"POG",0,FROST_LIB_POG,0,pog,sizeof(FrostOctave),sizeof(FrostModulation)),
-    FROST_LIB_ENTRY(FROST_DYNACOMP,"DYNA",0,FROST_LIB_DYNACOMP,0,dynacomp,sizeof(FrostDynaComp),0),
-    FROST_LIB_ENTRY(FROST_COMPPLUS,"COMP+",0,FROST_LIB_COMPPLUS,0,compplus,sizeof(FrostCompPlus),0),
-    FROST_LIB_ENTRY(FROST_GE7,"GE-7",0,FROST_LIB_GE7,0,ge7,sizeof(FrostGE7),0),
-    FROST_LIB_ENTRY(FROST_NS2,"NS-2",0,FROST_LIB_NS2,0,ns2,sizeof(FrostNS2),0),
+    FROST_LIB_ENTRY(FROST_VB2,"WARBLE",0,FROST_LIB_VB2,0,vb2,sizeof(FrostModState),sizeof(FrostModulation)),
+    FROST_LIB_ENTRY(FROST_TR2,"TREM",0,FROST_LIB_TR2,0,tr2,sizeof(FrostTR2),0),
+    FROST_LIB_ENTRY(FROST_POG,"OCTAVE",0,FROST_LIB_POG,0,pog,sizeof(FrostOctave),sizeof(FrostModulation)),
+    FROST_LIB_ENTRY(FROST_DYNACOMP,"SQUASH",0,FROST_LIB_DYNACOMP,0,dynacomp,sizeof(FrostDynaComp),0),
+    FROST_LIB_ENTRY(FROST_COMPPLUS,"BLEND",0,FROST_LIB_COMPPLUS,0,compplus,sizeof(FrostCompPlus),0),
+    FROST_LIB_ENTRY(FROST_GE7,"EQ-7",0,FROST_LIB_GE7,0,ge7,sizeof(FrostGE7),0),
+    FROST_LIB_ENTRY(FROST_NS2,"NOISE",0,FROST_LIB_NS2,0,ns2,sizeof(FrostNS2),0),
     {"AMP",FROST_LIB_COUNT(FROST_LIB_FCM),frost_params_FROST_FCM,sizeof(FrostFcm),sizeof(FrostModulation),frost_fcm_state_reset,frost_fcm_state_sample},
     FROST_LIB_ENTRY(FROST_DROP,"DROP",0,FROST_LIB_DROP,0,drop,sizeof(FrostDropTune),sizeof(FrostModulation)),
-    FROST_LIB_ENTRY(FROST_NS1X,"NS-1X",0,FROST_LIB_NS1X,0,frost_new_ns1x,sizeof(FrostNS1X),0),
+    FROST_LIB_ENTRY(FROST_NS1X,"NOISEX",0,FROST_LIB_NS1X,0,frost_new_ns1x,sizeof(FrostNS1X),0),
     FROST_LIB_ENTRY(FROST_MULTIBAND,"MB-CMP",0,FROST_LIB_MULTIBAND,0,frost_new_multiband,sizeof(FrostMultiband),0),
     FROST_LIB_ENTRY(FROST_HIGHPASS,"HPF",0,FROST_LIB_HIGHPASS,0,frost_new_highpass,sizeof(FrostHighpass),0),
     FROST_LIB_ENTRY(FROST_LOWPASS,"LPF",0,FROST_LIB_LOWPASS,0,frost_new_lowpass,sizeof(FrostLowpass),0),
-    FROST_LIB_ENTRY(FROST_AUTOWAH,"AW-3",0,FROST_LIB_AUTOWAH,0,frost_new_autowah,sizeof(FrostAutowah),0),
-    FROST_LIB_ENTRY(FROST_TREBLE_BOOST,"TREBLE",0,FROST_LIB_TREBLE_BOOST,0,frost_new_treble_boost,sizeof(FrostTrebleBoost),0),
-    FROST_LIB_ENTRY(FROST_FOXX,"FOXX",0,FROST_LIB_FOXX,0,frost_new_foxx,sizeof(FrostFoxx),0),
+    FROST_LIB_ENTRY(FROST_AUTOWAH,"ENVWAH",0,FROST_LIB_AUTOWAH,0,frost_new_autowah,sizeof(FrostAutowah),0),
+    FROST_LIB_ENTRY(FROST_TREBLE_BOOST,"RANGER",0,FROST_LIB_TREBLE_BOOST,0,frost_new_treble_boost,sizeof(FrostTrebleBoost),0),
+    FROST_LIB_ENTRY(FROST_FOXX,"FOXY",0,FROST_LIB_FOXX,0,frost_new_foxx,sizeof(FrostFoxx),0),
     FROST_LIB_ENTRY(FROST_TAPE,"TAPE",0,FROST_LIB_TAPE,0,frost_new_tape,sizeof(FrostTape),sizeof(FrostDelay)),
-    FROST_LIB_ENTRY(FROST_VINTAGE_FUZZ,"FUZZ",0,FROST_LIB_VINTAGE_FUZZ,0,frost_new_vintage_fuzz,sizeof(FrostVintageFuzz),0),
+    FROST_LIB_ENTRY(FROST_VINTAGE_FUZZ,"FACE",0,FROST_LIB_VINTAGE_FUZZ,0,frost_new_vintage_fuzz,sizeof(FrostVintageFuzz),0),
     FROST_LIB_ENTRY(FROST_ACOUSTIC,"ACOUST",0,FROST_LIB_ACOUSTIC,0,frost_new_acoustic,sizeof(FrostAcoustic),0),
 #define FROST_AMP_ENTRY(id,name,LIST,reset) {name,FROST_LIB_COUNT(LIST),frost_params_##id,sizeof(FrostAmpHead),0,reset,frost_ampheads_sample}
-    FROST_AMP_ENTRY(FROST_DELUXE,"DELUXE",FROST_LIB_DELUXE,frost_deluxe_reset),
-    FROST_AMP_ENTRY(FROST_TWIN,"TWIN",FROST_LIB_TWIN,frost_twin_reset),
-    FROST_AMP_ENTRY(FROST_AC30,"AC30",FROST_LIB_AC30,frost_ac30_reset),
-    FROST_AMP_ENTRY(FROST_JC120,"JC-120",FROST_LIB_JC120,frost_jc120_reset),
-    FROST_AMP_ENTRY(FROST_JCM800,"JCM800",FROST_LIB_JCM800,frost_jcm800_reset),
-    FROST_AMP_ENTRY(FROST_RECTIFIER,"RECTO",FROST_LIB_RECTIFIER,frost_rectifier_reset),
-    FROST_AMP_ENTRY(FROST_5150,"5150",FROST_LIB_5150,frost_5150_reset)
+    FROST_AMP_ENTRY(FROST_DELUXE,"US-DLX",FROST_LIB_DELUXE,frost_deluxe_reset),
+    FROST_AMP_ENTRY(FROST_TWIN,"US-DBL",FROST_LIB_TWIN,frost_twin_reset),
+    FROST_AMP_ENTRY(FROST_AC30,"CHIME",FROST_LIB_AC30,frost_ac30_reset),
+    FROST_AMP_ENTRY(FROST_JC120,"JAZZ",FROST_LIB_JC120,frost_jc120_reset),
+    FROST_AMP_ENTRY(FROST_JCM800,"UK-800",FROST_LIB_JCM800,frost_jcm800_reset),
+    FROST_AMP_ENTRY(FROST_RECTIFIER,"CALI",FROST_LIB_RECTIFIER,frost_rectifier_reset),
+    FROST_AMP_ENTRY(FROST_5150,"BROWN",FROST_LIB_5150,frost_5150_reset)
 #undef FROST_AMP_ENTRY
+    ,FROST_LIB_ENTRY(FROST_ROTARY,"ROTARY",0,FROST_LIB_ROTARY,0,frost_x_rotary,sizeof(FrostRotary),0),
+    FROST_LIB_ENTRY(FROST_RINGMOD,"RING",0,FROST_LIB_RINGMOD,0,frost_x_ringmod,sizeof(FrostRingMod),0),
+    FROST_LIB_ENTRY(FROST_CRUSHER,"CRUSH",0,FROST_LIB_CRUSHER,0,frost_x_crusher,sizeof(FrostCrusher),0),
+    FROST_LIB_ENTRY(FROST_HARMTREM,"H-TREM",0,FROST_LIB_HARMTREM,0,frost_x_harmtrem,sizeof(FrostHarmTrem),0),
+    FROST_LIB_ENTRY(FROST_MUFF,"BIG PI",0,FROST_LIB_MUFF,0,frost_x_muff,sizeof(FrostMuff),0),
+    FROST_LIB_ENTRY(FROST_BOOST,"BOOST",0,FROST_LIB_BOOST,0,frost_x_boost,sizeof(FrostBoost),0),
+    FROST_LIB_ENTRY(FROST_SWELL,"SWELL",0,FROST_LIB_SWELL,0,frost_x_swell,sizeof(FrostSwell),0)
 };
 FROST_CTL_RAM const FrostEffect *frost_effect_find(unsigned type)
 { return type<FROST_EFFECTS?&frost_effects[type]:0; }

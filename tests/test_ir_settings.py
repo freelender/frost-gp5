@@ -19,6 +19,15 @@ class IrSettingsTests(unittest.TestCase):
             self.assertGreater(c.is_state(2),writes)
             self.assertEqual(c.is_state(3)-calls,2*(c.is_state(2)-writes))
             c.ge_reboot();self.assertEqual(c.ge_global(5),home)
+    def test_transient_pause_misses_are_retried(self):
+        """32q: a flash write asks the IR-link pause again (4 tries) before it is
+        refused, so a busy link no longer fails a save; 4 misses still refuse."""
+        c=self.c;c.is_home(0);c.is_miss_pause(3);c.is_home(1)
+        self.assertEqual(c.ge_global(5),1);self.assertEqual(c.is_state(4),0)
+        c.ge_reboot();self.assertEqual(c.ge_global(5),1)
+        writes=c.ge_flash_ops();c.is_miss_pause(4);c.is_home(2)
+        self.assertEqual(c.ge_flash_ops(),writes);self.assertEqual(c.is_state(4),1)
+        c.ge_reboot();self.assertEqual(c.ge_global(5),1)
     def test_failed_pause_keeps_flash_unchanged_and_settings_dirty(self):
         c=self.c;c.is_home(0);writes=c.ge_flash_ops();c.is_fail_pause(1);c.is_home(1)
         self.assertEqual(c.ge_flash_ops(),writes)

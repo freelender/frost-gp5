@@ -1,7 +1,7 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
 import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.4.0';
-import { Store, PRESETS } from './store.js?v=1.4.0';
+import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.4.0';
 import { convertIr, readWav } from './ir.js?v=1.4.0';
 import { LiveView, loadCatalog } from './live.js?v=1.4.0';
 import { initFirmware, isBusy } from './firmware.js?v=1.4.0';
@@ -91,7 +91,7 @@ function renderDirty() {
   p.className = 'pill ' + (state.dirty ? 'warn' : 'ok');
   p.textContent = state.dirty ? '● UNSAVED LIVE CHANGES' : state.mode === 'demo' ? 'DEMO' : '● LIVE';
   s.className = 'savestate' + (state.dirty ? ' dirty' : '');
-  s.textContent = state.dirty ? 'You changed the chain from this page. To keep it:' : 'No changes from this page yet. To save a chain:';
+  s.textContent = state.dirty ? 'You changed the chain from this page. To keep it, save it as a preset:' : 'No changes from this page yet. To save the current sound:';
 }
 function setLivePanel() {
   const on = live.attached;
@@ -99,7 +99,8 @@ function setLivePanel() {
   renderDirty();
 }
 const setlists = new SetlistView($('setlist-editor'), {
-  confirm: ask, exclusive, error: message => notice(message), saved: () => toast('Songs and setlist saved. Select Setlist in Global → Home Screen.', 'ok'),
+  confirm: (title, text, ok, opts) => ask(title, text, ok, opts), exclusive, error: message => notice(message), saved: () => toast('Songs and setlist saved. On the pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST.', 'ok'),
+  removed: () => toast('Setlist removed from the pedal.', 'ok'),
   download: (text, name) => save(new TextEncoder().encode(text), name),
 });
 async function connect() {
@@ -171,11 +172,12 @@ async function refreshAll() {
     const { models } = await state.store.amps(); state.models = models;
     state.cabs = await state.store.irs();
     state.presets = await state.store.presets();
+    try { state.current = (await live.live?.presetStatus())?.current; } catch { state.current = null; }
     await setlists.attach(state.store, state.presets);
   } catch (e) { notice('Could not read the pedal: ' + (e.message || e)); }
   renderLists();
 }
-function renderLists() { renderAmps(); renderCabs(); renderPresets(); fillSlots(); }
+function renderLists() { renderAmps(); renderCabs(); renderPresets(); fillSlots(); fillPresetSlots(); }
 
 // ---------- shared list rendering ----------
 const offlineText = () => state.mode === 'demo' ? 'The demo has no storage. Connect a pedal running Frost to see it.' : 'Connect a pedal running Frost to see what is on it.';
@@ -189,8 +191,10 @@ function list(ul, rows, empty) {
     const b = document.createElement('b'); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
     info.append(b, s);
     const btns = document.createElement('div'); btns.className = 'btns';
-    for (const [label, cls, fn, aria] of buttons) {
-      const btn = document.createElement('button'); btn.className = 'btn small ' + (cls || 'ghost'); btn.textContent = label; btn.disabled = !!state.op;
+    for (const [label, cls, fn, aria, off] of buttons) {
+      const btn = document.createElement('button'); btn.className = 'btn small ' + (cls || 'ghost'); btn.textContent = label;
+      if (off) btn.dataset.off = '1';   // permanently unavailable here (e.g. ↑ on the first row): keeps the column layout
+      btn.disabled = !!state.op || !!off;
       if (aria) btn.setAttribute('aria-label', aria);
       btn.onclick = fn; btns.appendChild(btn);
     }
@@ -336,8 +340,14 @@ function renderPresets() {
         const c=await live.live.chain();if(c)await live.render(c);
       })) toast(`Preset ${pad2(i + 1)} loaded.`, 'ok');
     }, `Load preset ${pad2(i + 1)}`],
-    ...(i > 0 ? [['↑', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i - 1)), `Move preset ${pad2(i + 1)} up`]] : []),
-    ...(i < PRESETS - 1 ? [['↓', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i + 1)), `Move preset ${pad2(i + 1)} down`]] : []),
+    ['↑', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i - 1)), `Move preset ${pad2(i + 1)} up`, i === 0],
+    ['↓', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i + 1)), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],
+    ['Download', 'ghost', () => exclusive('Downloading a preset', async () => {
+      const rec = await s.presetGet(i); if (!rec) throw new Error('the preset could not be read');
+      const name = presetName(rec), file = JSON.stringify({ format: 'frost-preset', version: 1, number: i + 1, name, record: b64(rec) }, null, 1);
+      save(new TextEncoder().encode(file), `frost-preset-${pad2(i + 1)}-${(name || 'preset').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'preset'}.frostpreset`);
+      toast(`Preset ${pad2(i + 1)} downloaded.`, 'ok');
+    }), `Download preset ${pad2(i + 1)}`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
       if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)))) toast('Preset renamed.', 'ok');
@@ -346,9 +356,39 @@ function renderPresets() {
       if (await ask(`Delete preset ${pad2(i + 1)}?`, `"${state.presets[i].name}" is deleted from the pedal. This cannot be undone unless you have a backup.`, 'Delete', { danger: true }))
         if (await exclusive('Deleting a preset', () => s.presetDelete(i))) toast('Preset deleted.', 'ok');
     }, `Delete preset ${pad2(i + 1)}`],
-  ] })), state.store ? 'No presets yet. Save one on the pedal: PRESETS → SAVE.' : offlineText());
+  ] })), state.store ? 'No presets yet. Save one from the Live editor or on the pedal: PRESETS → SAVE.' : offlineText());
   $('presets-summary').textContent = state.store ? `${idx.length} of ${PRESETS} used` : 'Not connected';
 }
+const b64 = b => { let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
+function fillPresetSlots() {
+  for (const id of ['save-slot', 'import-slot']) {
+    const sel = $(id), keep = sel.value; sel.textContent = '';
+    for (let i = 0; i < PRESETS; i++) sel.add(new Option(`${pad2(i + 1)} · ${state.presets[i] ? state.presets[i].name + ' (replace)' : 'empty'}`, i));
+    const current = state.current ?? null, free = [...Array(PRESETS).keys()].find(i => !state.presets[i]);
+    sel.value = keep !== '' && sel.querySelector(`option[value="${keep}"]`) ? keep : String(id === 'save-slot' && current != null && current < PRESETS ? current : (free ?? 0));
+  }
+  const i = Number($('save-slot').value);
+  if (!$('save-name').dataset.edited) $('save-name').value = state.presets[i]?.name || `PRESET ${pad2(i + 1)}`;
+}
+$('save-slot').onchange = () => { delete $('save-name').dataset.edited; fillPresetSlots(); };
+$('save-name').oninput = () => { $('save-name').value = $('save-name').value.replace(/[^\x20-\x7e]/g, ''); $('save-name').dataset.edited = '1'; };
+$('save-preset').onclick = async () => {
+  const i = Number($('save-slot').value), name = ($('save-name').value.trim() || `PRESET ${pad2(i + 1)}`).slice(0, 16), old = state.presets[i];
+  if (!(await ask(`Save as preset ${pad2(i + 1)}?`, `The current sound is saved on the pedal as "${name}"${old ? `, replacing "${old.name}"` : ''}.`, 'Save'))) return;
+  if (await exclusive('Saving a preset', async () => { await live.live.savePreset(i, name); state.dirty = false; renderDirty(); delete $('save-name').dataset.edited; })) toast(`Saved as preset ${pad2(i + 1)}.`, 'ok');
+};
+$('import-file').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f || !state.store) return;
+  let rec, name;
+  try {
+    const j = JSON.parse(await f.text());
+    if (j?.format !== 'frost-preset' || j.version !== 1 || typeof j.record !== 'string') throw new Error('not a Frost preset file');
+    rec = Uint8Array.from(atob(j.record), c => c.charCodeAt(0)); checkPreset(rec); name = presetName(rec);
+  } catch (err) { toast(`${f.name}: ${err instanceof SyntaxError ? 'not a Frost preset file' : err.message}`, 'bad'); return; }
+  const i = Number($('import-slot').value), old = state.presets[i];
+  if (!(await ask(`Import "${name}" as preset ${pad2(i + 1)}?`, old ? `This replaces "${old.name}" on the pedal.` : 'The preset is written to the pedal.', 'Import', { danger: !!old }))) return;
+  if (await exclusive('Importing a preset', () => state.store.presetPut(i, rec))) toast(`"${name}" is now preset ${pad2(i + 1)}.`, 'ok');
+};
 function save(bytes, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $('backup').onclick = () => exclusive('Backing up', async () => {
   $('backup-state').textContent = 'Reading everything from the pedal…';
@@ -379,11 +419,15 @@ function updateButtons() {
   $('cab-write').disabled = !on || !state.cab || !!op;
   why('cab-why', !state.cab ? '' : !on ? offline : op ? `Waiting for "${op}" to finish.` : '');
   $('backup').disabled = !on || !!op;
+  const canSave = on && !!live.attached && !op;
+  $('save-preset').disabled = !canSave; $('save-slot').disabled = $('save-name').disabled = !on;
+  why('save-why', state.mode === 'demo' ? 'The demo cannot save. Connect a pedal running Frost.' : !on ? '' : op ? `Waiting for "${op}" to finish.` : '');
+  $('import-label').classList.toggle('disabled', !on || !!op); $('import-file').disabled = !on || !!op;
   $('restore-label').classList.toggle('disabled', !on || !!op);
   $('restore-file').disabled = !on || !!op;
   $('live-panel').inert = !!op;
   $('setlist-editor').inert = !!op;
-  for (const b of document.querySelectorAll('.library .btn')) b.disabled = !!op;
+  for (const b of document.querySelectorAll('.library .btn')) b.disabled = !!op || b.dataset.off === '1';
 }
 renderLists(); setLivePanel(); updateButtons();
 if (new URLSearchParams(location.search).has('demo')) demo(false);

@@ -30,6 +30,7 @@ add_library(frost_dsp STATIC
   effects/lowpass/lowpass.c
   effects/autowah/autowah.c
   effects/treble_boost/treble_boost.c
+  effects/extras/extras.c
   effects/foxx/foxx.c
   effects/tape/tape.c
   effects/vintage_fuzz/vintage_fuzz.c

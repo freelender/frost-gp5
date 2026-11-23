@@ -10,6 +10,8 @@
  *   7E 17 slot type   change the slot's effect type (255 = empty)    -> 7E 17 ok
  *   7E 19 slot        IR CAB: ok slot cab busy error exists name[16]
  *   7E 1A slot cab    set IR CAB 0..63 through the pedal asset client -> 7E 1A ok
+ * 7E 1F (chain order) and 7E 20 (save live sound to a preset) are handled in
+ * slot_editor.h fw_files_host (32p).
  * ok = 1 accepted, 0 refused (busy, bad slot/parameter). Values use the
  * pedal's control integers (engine/control_catalog.h: value / scale + unit). */
 static unsigned live_host(const uint8_t *q,unsigned n,uint8_t *pl,unsigned max)

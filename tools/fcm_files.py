@@ -12,7 +12,7 @@ USB commands (Frost generic controller, same wire as OpenGP5 0.5):
 7E 0E files changed. Writing never touches the app, the DSP or Valeton data.
 
   python fcm_files.py list
-  python fcm_files.py add 3 build/nam-distill/<capture>/IIR313-sos.npz --name "JCM800"
+  python fcm_files.py add 3 build/nam-distill/<capture>/IIR313-sos.npz --name "MY CRUNCH"
   python fcm_files.py add 3 model.fcm          (a raw 400-byte record)
   python fcm_files.py remove 3
   python fcm_files.py presets                  (storage 2: list presets)

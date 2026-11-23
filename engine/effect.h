@@ -21,6 +21,7 @@
 #include "../effects/lowpass/lowpass.h"
 #include "../effects/autowah/autowah.h"
 #include "../effects/treble_boost/treble_boost.h"
+#include "../effects/extras/extras.h"
 #include "../effects/foxx/foxx.h"
 #include "../effects/tape/tape.h"
 #include "../effects/vintage_fuzz/vintage_fuzz.h"
@@ -69,6 +70,14 @@ typedef union {
     FrostVintageFuzz vintage_fuzz;
     FrostAcoustic acoustic;
     FrostAmpHead amphead;
+    /* 32l: effects/extras (each within the union's existing size) */
+    FrostRotary rotary;
+    FrostRingMod ringmod;
+    FrostCrusher crusher;
+    FrostHarmTrem harmtrem;
+    FrostMuff muff;
+    FrostBoost boost;
+    FrostSwell swell;
 
 } FrostEffectState;
 typedef struct {

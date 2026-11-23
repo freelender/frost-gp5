@@ -36,8 +36,13 @@ int frost_irl_flash_begin(void);void frost_irl_flash_end(void);
 static inline int frost_irl_flash_begin(void){return 1;}
 static inline void frost_irl_flash_end(void){}
 #endif
-static int frost_flash_erase(uint32_t a){int r;if(!frost_irl_flash_begin())return -1;r=gp5_flash_erase(a);frost_irl_flash_end();return r;}
-static int frost_flash_program(uint32_t a,const uint32_t *w,unsigned n){int r;if(!frost_irl_flash_begin())return -1;r=gp5_flash_program(a,w,n);frost_irl_flash_end();return r;}
+/* 32q: the IR-link pause before a flash write is one DSP link exchange (50 ms
+ * wait); busy USB/DSP traffic can make it miss. It is asked again a few times
+ * before the write is refused (still before flash is touched: fail closed). */
+#define FROST_FLASH_PAUSE_TRIES 4u
+static int frost_flash_pause(void){unsigned k;for(k=0;k<FROST_FLASH_PAUSE_TRIES;++k)if(frost_irl_flash_begin())return 1;return 0;}
+static int frost_flash_erase(uint32_t a){int r;if(!frost_flash_pause())return -1;r=gp5_flash_erase(a);frost_irl_flash_end();return r;}
+static int frost_flash_program(uint32_t a,const uint32_t *w,unsigned n){int r;if(!frost_flash_pause())return -1;r=gp5_flash_program(a,w,n);frost_irl_flash_end();return r;}
 static uint32_t files_word(uint32_t a)
 {const volatile uint8_t *p=FROST_FILE_AT(a);return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);}
 static uint32_t files_crc(uint32_t a,uint32_t n)

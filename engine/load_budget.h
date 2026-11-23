@@ -35,7 +35,10 @@ static const uint32_t frost_load_cost[FROST_EFFECTS] FROST_XDATA={
      22100, 38600, 35800, 85300, 33500, 31800,   /* 30..35 */
      27500, 12800, 12100, 21700, 15200, 29600,   /* 36..41 */
      49900, 39600, 45800, 53800, 55900, 53100,   /* 42..47 */
-     54500, 79500, 78900, 78900    /* 48..51 */
+     54500, 79500, 78900, 78900,   /* 48..51 */
+     /* 52..58 ROTARY RING CRUSH H-TREM MUFF BOOST SWELL: measured on the
+      * pedal 2026-11-23 (build 32l), same method */
+     32900, 13100,  9700, 18700, 34900,  8800, 13200
 };
 typedef char FrostLoadCostTable[(sizeof frost_load_cost/sizeof frost_load_cost[0]==FROST_EFFECTS)?1:-1];
 uint32_t frost_load_estimate(const unsigned *types);

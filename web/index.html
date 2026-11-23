@@ -81,10 +81,13 @@
             <p class="hint">Changes here play on the pedal at once, exactly like turning PARA. They are <b>not saved</b>: switching presets or powering off discards them.</p>
             <div class="savebox" id="savebox">
               <div class="savestate" id="save-state">No changes from this page yet.</div>
-              <ol class="steps">
-                <li>On the pedal, open <b>PRESETS</b>.</li>
-                <li>Choose <b>SAVE</b> and pick a preset number.</li>
-              </ol>
+              <div class="saveform">
+                <label><span class="inputlabel">Save as preset</span><select id="save-slot"></select></label>
+                <label><span class="inputlabel">Name</span><input id="save-name" maxlength="16" placeholder="e.g. MY CLEAN" autocomplete="off"></label>
+                <div class="actions"><button id="save-preset" class="btn primary" disabled>Save to pedal</button></div>
+                <p id="save-why" class="why"></p>
+              </div>
+              <p class="hint">Or on the pedal: <b>PRESETS</b> → <b>SAVE</b>.</p>
             </div>
             <p class="hint">Some combinations are refused by the pedal (for example a second AMP, or a chain that would not fit the DSP). The block then stays as it was.</p>
           </div>
@@ -106,7 +109,7 @@
           <label class="drop" id="amp-drop"><input id="amp-file" type="file" accept=".nam,.fcm"><span class="symbol" aria-hidden="true">⇧</span><b id="amp-dropname">Drop a .nam or .fcm file</b><small>NAM A2 capture, or a ready-made Frost model · or click to choose</small></label>
           <p id="amp-info" class="hint" hidden></p>
           <div class="inputrow">
-            <label><span class="inputlabel">Name</span><input id="amp-name" maxlength="15" placeholder="e.g. JCM800" autocomplete="off"></label>
+            <label><span class="inputlabel">Name</span><input id="amp-name" maxlength="15" placeholder="e.g. MY CRUNCH" autocomplete="off"></label>
             <label><span class="inputlabel">MODEL number</span><select id="amp-slot"></select></label>
           </div>
           <div class="trainbox">
@@ -171,7 +174,13 @@
             <label class="btn ghost" id="restore-label">Restore backup<input id="restore-file" type="file" accept=".frostbackup,application/json" hidden></label>
           </div>
           <p id="backup-state" class="why"></p>
-          <div class="help">To save a new preset, edit the chain (here or on the pedal), then on the pedal: <b>PRESETS → SAVE</b>.</div>
+          <div class="paneltitle gap">Single presets</div>
+          <p class="hint">Download one preset as a file with its row's <b>Download</b> button, or import a preset file into a preset number. The file keeps the effects and settings; cabinets and AMP models are referenced by their CAB/MODEL number, so the receiving pedal needs the same ones.</p>
+          <div class="inputrow">
+            <label><span class="inputlabel">Import into</span><select id="import-slot"></select></label>
+            <label class="btn ghost" id="import-label">Import preset<input id="import-file" type="file" accept=".frostpreset,application/json" hidden></label>
+          </div>
+          <div class="help">To save the current sound, use <b>Save to pedal</b> in the Live editor, or on the pedal: <b>PRESETS → SAVE</b>.</div>
         </div>
       </div>
     </section>
@@ -221,6 +230,7 @@
             <li><a href="https://github.com/sdatkinson/NeuralAmpModelerCore" target="_blank" rel="noopener">Neural Amp Modeler</a><span>The A2 model format the converter reads (MIT).</span></li>
             <li><b>Capture authors</b><span>Captures you convert belong to their authors: respect their terms.</span></li>
           </ul>
+          <p class="hint">Frost's effects and amps are its own models with their own names. Product names mentioned in the User Guide, such as Boss, Fender, Marshall or Electro-Harmonix models, are trademarks of their respective owners and are used only to describe the sound a model was inspired by. Frost is not affiliated with or endorsed by them.</p>
         </div>
       </div>
     </section>

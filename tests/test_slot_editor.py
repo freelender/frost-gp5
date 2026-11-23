@@ -267,7 +267,7 @@ class SlotEditorTests(unittest.TestCase):
         c=self.lib
         for type,defaults,desired in ((6,[80,50,30],[100,54,34]),(7,[30,50,56],[50,54,-56])):
             c.ge_init();self.settle();self.select(4)
-            self.pick(4,type+1,drop=(1,2));self.settle() # MODULATION: generic CHORUS/FLANGER last
+            self.pick(4,type+4,drop=(1,2));self.settle() # MODULATION: generic CHORUS/FLANGER after H-TREM, ROTARY, RING
             self.assertEqual(c.ge_type(4),type);self.assertEqual(c.ge_enabled(4),0)
             self.assertEqual([c.ge_value(4,p) for p in range(3)],defaults)
             self.home_bypass(reopen=True)

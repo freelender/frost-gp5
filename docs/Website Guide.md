@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # Website Guide
 
 [Frost Studio](https://frost.fretlexwins.workers.dev/) is the companion editor
@@ -22,11 +24,21 @@ real hardware compatibility. Use the connection control to disconnect when
 finished. Listen through the GP-5's normal audio output; this editor is not a
 USB audio recorder.
 
+<p align="center"><img src="../assets/docs/website-connect.webp" alt="Frost Studio before connecting: Connect GP-5 or Try the demo" width="760"><br><sub>Frost Studio before connecting: Connect GP-5 or Try the demo</sub></p>
+
 ## Live editor
+
+<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Live editor: the chain strip (top) and the selected block's controls" width="760"><br><sub>Live editor: the chain strip (top) and the selected block's controls</sub></p>
 
 The chain strip shows the six slots in input-to-output order. Click a block
 to select it; the inspector below shows its controls. Left/right keyboard
 arrows also move the selection between blocks.
+
+To change the order, **drag a block** onto another position. The other blocks
+keep their order and every block keeps its settings. On a touch screen or with
+the keyboard, use the inspector's **◀ ▶** buttons or **Alt + ←/→**. Reordering
+needs Frost 32p or later; like every live edit it is not saved until you save
+a preset.
 
 ### Choose and edit an effect
 
@@ -53,11 +65,15 @@ fallback. Uploading a cabinet does not select it automatically.
 ### Save your live sound
 
 Live edits change the current sound but are **not stored in a preset**.
-To keep them, use the pedal:
+To keep them from the website (Frost 32p or later):
 
-1. Press PARA on a selected block to open its parameters.
-2. Open **PRESETS** and choose the destination number.
-3. Choose **SAVE** and press PARA. Saving to an occupied slot replaces it.
+1. In **Live vs saved**, choose **Save as preset**: a preset number. It starts
+   on the preset currently loaded; numbers marked *(replace)* are in use.
+2. Enter a **Name** (up to 16 characters) and click **Save to pedal**.
+3. Confirm. The pedal saves the sound exactly as its own PRESETS → SAVE does.
+
+On the pedal: press PARA on a selected block, open **PRESETS**, choose the
+destination number, then **SAVE**. Saving to an occupied number replaces it.
 
 Changing presets or switching off before saving discards live edits. A backup
 contains stored data, not unsaved live settings.
@@ -122,11 +138,20 @@ The list shows saved pedal presets, not a separate browser preset bank.
 - **Rename:** enter the new name (up to 16 characters) and confirm.
 - **Up/down:** move/reorder stored sounds using the available list controls.
 - **Delete:** remove that stored preset after confirmation.
+- **Download:** save that preset as a `.frostpreset` file, for sharing or
+  keeping single sounds.
+
+To **import** a preset file, choose the destination in **Import into**, then
+**Import preset** and the file. Importing to a used number replaces that preset
+after confirmation. A preset file holds the chain, order and every setting.
+Cabinets and AMP models are referenced by their CAB and MODEL numbers, not
+included: the receiving pedal needs the same files at those numbers, otherwise
+the built-in cabinet or default model plays.
 
 Song parts reference preset numbers. Reordering, replacing or deleting a
 preset changes what those parts play. Check your setlist after reorganizing.
-To save live edits, use the on-pedal controls described in the
-[User Guide](User%20Guide.md). MIDI controllers can also recall patches and
+To save live edits, use **Save to pedal** in the Live editor, or the on-pedal
+controls described in the [User Guide](User%20Guide.md). MIDI controllers can also recall patches and
 control every effect: see [MIDI commands](Midi%20Command.md).
 
 ### Back up everything
@@ -157,12 +182,18 @@ There are two separate things: a **song library** of named parts and a
 6. Name the setlist. Use its up/down controls to arrange the performance order.
    **Remove** here removes an order entry, while **Delete song** removes the
    library song and its entries. A song can appear in the order more than once.
-7. Click **Save to pedal**, confirm and wait for the display to refresh.
+7. In the **Setlist** panel click **Save setlist to pedal**, confirm and wait
+   for the display to refresh.
 8. On the pedal choose GLOBAL SETTINGS → **DISPLAY → HOME SCREEN → SETLIST**, then **BACK** to save.
+
+**Remove setlist from pedal** (in the Setlist panel) deletes the songs and
+setlist stored on the pedal after confirmation; its Setlist home screen then
+shows NO SETLIST. Presets and global settings are kept, and the browser draft
+stays so you can save it again.
 
 **Export songs** saves the browser library/order as JSON. **Import songs**
 replaces the browser draft after validation/confirmation; it does not write
-the pedal until you choose Save to pedal. Drafts also persist in this browser's
+the pedal until you choose Save setlist to pedal. Drafts also persist in this browser's
 local storage. Other browsers/computers have separate drafts.
 
 Limits: up to 64 library songs, 16 parts per song and 64 performance entries,

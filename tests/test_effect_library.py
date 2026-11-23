@@ -65,7 +65,7 @@ class LibraryTests(unittest.TestCase):
         return self.run_(x)[warm:]
     # ---------------- registry/controls ----------------
     def test_registry_appends_ids_and_keeps_original_nine(self):
-        c=self.c;self.assertEqual(c.lib_effect_count(),52)
+        c=self.c;self.assertEqual(c.lib_effect_count(),59)
         self.assertEqual([c.lib_parameter_count(t) for t in range(9)],[1,1,3,3,3,3,3,3,3])
         counts={TS:4,BD2:3,KLON:3,BB:3,OCD:4,DS1:3,RAT:3,DISTPLUS:2,DD3:5,DM2:3,RV6:4,SPRING:3,PH90:2,CE2:2,
                 MISTRESS:4,M117:4,VIBE:4,VB2:4,TR2:3,POG:3,DYNA:2,COMPPLUS:5,GE7:8,NS2:3,FCM:6}
@@ -77,7 +77,7 @@ class LibraryTests(unittest.TestCase):
                 lo,hi,init,flags=(c.lib_bound(t,p,i) for i in range(4))
                 self.assertTrue(lo<=init<=hi,(t,p))
                 if flags:self.assertEqual(init,int(init))
-        self.assertEqual(c.lib_parameter_count(52),0)
+        self.assertEqual(c.lib_parameter_count(59),0)
     def test_workspace_classes_and_categories(self):
         c=self.c
         self.assertEqual({t for t in range(52) if c.lib_workspace(t)==2},{5,DD3,DM2,42})
@@ -459,7 +459,7 @@ class LibraryEditorTests(unittest.TestCase):
         self.assertEqual(c.ge_type(4),RAT);self.assertEqual(c.ge_enabled(4),0)
         c.ge_turn(3);c.ge_press();self.assertEqual((c.ge_view(),c.ge_pick_category()),(7,1)) # TYPE row after 3 knobs
         c.ge_press();self.assertEqual(c.ge_pick_model(),1) # opens on current model
-        c.ge_turn(3);self.assertEqual(c.ge_pick_model(),4) # BACK entry after vintage fuzz
+        c.ge_turn(5);self.assertEqual(c.ge_pick_model(),6) # BACK entry after CRUSH (32l: MUFF, CRUSH added)
         c.ge_press();self.assertEqual(c.ge_view(),7);c.ge_turn(8);c.ge_press() # category BACK (after PITCH) -> PARAMETERS
         self.assertEqual(c.ge_view(),1);self.assertEqual(c.ge_type(4),RAT)
         self.assertEqual(c.ge_paint(),0) # full frame drawn, no out-of-range blits

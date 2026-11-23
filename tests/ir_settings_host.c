@@ -6,11 +6,12 @@
 API void is_init(void)
 {
     irl.started=0;irl_flash_depth=irl_flash_writes=0;
-    irl_host_pause_fail=irl_host_resume_fail=irl_host_controls=0;
+    irl_host_pause_fail=irl_host_resume_fail=irl_host_controls=irl_host_pause_misses=0;
     ge_init();
 }
 API void is_home(unsigned home){globals.home=home;settings_dirty=1;settings_leave();}
 API void is_fail_pause(unsigned on){irl_host_pause_fail=on;}
+API void is_miss_pause(unsigned n){irl_host_pause_misses=n;}
 API unsigned is_state(unsigned i)
 {
     unsigned v[]={FROST_IRL->quiet,irl_flash_depth,irl_flash_writes,irl_host_controls,settings_dirty};

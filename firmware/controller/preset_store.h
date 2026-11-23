@@ -134,12 +134,15 @@ static void store_words_to_record(const uint32_t *w,const char *name,const uint1
 /* Save compact words as preset i. Keeps the stored name (or "PRESET NN") and
  * IR references. 1 = written; 0 = refused/failed (old copy intact). */
 static uint16_t store_ir_refs[2]={0xffffu,0xffffu};
+/* 32p: a name for the next save (website 7E 20); empty keeps the slot's name. */
+static char store_save_label[17];
 static int store_save_preset(unsigned i,const uint32_t *w,uint32_t now)
 {
     char name[8],label[17];uint16_t refs[2]={0xffffu,0xffffu};uint32_t d;unsigned k;
     if(i>=FROST_PRESETS || w[0]!=FROST_PRESET_VERSION_COMPACT)return 0;
     if(files_host_written && (uint32_t)(now-files_host_write_ms)<FROST_STORE_GUARD_MS)return 0;
-    store_preset_name(i,label);
+    if(store_save_label[0]){for(k=0;k<17u;++k)label[k]=store_save_label[k];store_save_label[0]=0;}
+    else store_preset_name(i,label);
     if(!label[0]){const char *p="PRESET ";for(k=0;p[k];++k)label[k]=p[k];label[k++]=(char)('0'+(i+1)/10);label[k++]=(char)('0'+(i+1)%10);label[k]=0;}
     refs[0]=store_ir_refs[0];refs[1]=store_ir_refs[1];
     store_group_name(name,'p','s','t',i/FROST_PST_SLOTS);

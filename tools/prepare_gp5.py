@@ -111,7 +111,7 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
         ('#define FROST_IR_FFT_PARTS 8u\n#define FROST_IR_FFT_SPLIT_SPECTRUM 1\n' if cab_ir_taps==512 else '')+responder)
     if reverb_int16:
         link=destination/'platform/dsp/link.ld';text=link.read_text()
-        text=text.replace('*(.text*) *(.rodata*)','*(.text*) *(.frost_legacy_reverb_code) KEEP(*(.frost_legacy_reverb)) *(.rodata*)')
+        text=text.replace('*(.text*) *(.rodata*)','*(.text*) KEEP(*(.frost_legacy_reverb)) *(.rodata*)')   # 32l: the legacy loops go to XFLASH
         link.write_text(text)
     if hot_ram:
         # Opt-in experiment, measured SLOWER than cached flash on the GP-5
@@ -184,8 +184,8 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
         # the dsp-data image carries them. Module list must match firmware.h FROST_OVL_MODULES.
         link=destination/'platform/dsp/link.ld';ltext=link.read_text();needle='  .large (NOLOAD) :'
         if ltext.count(needle)!=1:raise ValueError('Pinned DSP linker .large anchor mismatch')
-        ovl=''.join('  .ovl_%s : ALIGN(8) { __ovl_%s_start = .; KEEP(*(.ovl.%s)) . = ALIGN(4); __ovl_%s_end = .; } > XFLASH\n'%(i,i,i,i) for i in ['ts', 'bd2', 'klon', 'bb', 'ocd', 'rat', 'distplus', 'dynacomp', 'compplus', 'ge7', 'ns2', 'phase90', 'univibe', 'tr2', 'mistress', 'm117', 'vb2', 'dd3', 'dm2', 'pog', 'fcm', 'drop', 'ns1x', 'multiband', 'highpass', 'lowpass', 'autowah', 'treble_boost', 'foxx', 'tape', 'vintage_fuzz', 'acoustic', 'ampheads'])
-        link.write_text(ltext.replace(needle,ovl+'  .frost_global_eq : ALIGN(4) { *(.frost_global_eq) *(.frost_xcode) *(.frost_xdata) } > XFLASH\n'+needle))
+        ovl=''.join('  .ovl_%s : ALIGN(8) { __ovl_%s_start = .; KEEP(*(.ovl.%s)) . = ALIGN(4); __ovl_%s_end = .; } > XFLASH\n'%(i,i,i,i) for i in ['ts', 'bd2', 'klon', 'bb', 'ocd', 'rat', 'distplus', 'dynacomp', 'compplus', 'ge7', 'ns2', 'phase90', 'univibe', 'tr2', 'mistress', 'm117', 'vb2', 'dd3', 'dm2', 'pog', 'fcm', 'drop', 'ns1x', 'multiband', 'highpass', 'lowpass', 'autowah', 'treble_boost', 'foxx', 'tape', 'vintage_fuzz', 'acoustic', 'ampheads', 'rotary', 'ringmod', 'crusher', 'harmtrem', 'muff', 'boost', 'swell'])
+        link.write_text(ltext.replace(needle,ovl+'  .frost_global_eq : ALIGN(4) { *(.frost_global_eq) *(.frost_xcode) *(.frost_xdata) *(.frost_legacy_reverb_code) } > XFLASH\n'+needle))
         builder=destination/'platform/dsp/build.py';btext=builder.read_text();n5='"--only-section=.lcode", str(elf), str(xbin)'
         if btext.count(n5)!=1:raise ValueError('Pinned dsp-data objcopy mismatch')
         builder.write_text(btext.replace(n5,'"--only-section=.lcode", "--only-section=.ovl_*", "--only-section=.frost_global_eq", str(elf), str(xbin)'))

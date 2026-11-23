@@ -147,7 +147,7 @@ static float frost_ir_fft_spectrum[FROST_IR_FFT_PARTS][FROST_IR_FFT_SIZE];
  * (frost_ovl_fits, the loader's own size arithmetic; FROST_SLOT_CHAIN_FULL
  * otherwise). Before the first load every entry is NULL and overlay types
  * pass their input; a module that still does not fit counts an overflow. */
-#define FROST_OVL_POOL 8960u
+#define FROST_OVL_POOL 8704u   /* 32l: was 8960; 256 bytes moved to frost_ovl_kernel (LARGE) */
 static uint32_t frost_ovl_pool[FROST_OVL_POOL/4u] GP5_LARGE;
 #define FROST_OVL_MODULES(M) \
     M(ts,FROST_TS,frost_ts_sample) \
@@ -182,7 +182,14 @@ static uint32_t frost_ovl_pool[FROST_OVL_POOL/4u] GP5_LARGE;
     M(tape,FROST_TAPE,frost_tape_sample) \
     M(vintage_fuzz,FROST_VINTAGE_FUZZ,frost_vintage_fuzz_sample) \
     M(acoustic,FROST_ACOUSTIC,frost_acoustic_sample) \
-    M(ampheads,FROST_DELUXE,frost_amphead_sample)
+    M(ampheads,FROST_DELUXE,frost_amphead_sample) \
+    M(rotary,FROST_ROTARY,frost_rotary_sample) \
+    M(ringmod,FROST_RINGMOD,frost_ringmod_sample) \
+    M(crusher,FROST_CRUSHER,frost_crusher_sample) \
+    M(harmtrem,FROST_HARMTREM,frost_harmtrem_sample) \
+    M(muff,FROST_MUFF,frost_muff_sample) \
+    M(boost,FROST_BOOST,frost_boost_sample) \
+    M(swell,FROST_SWELL,frost_swell_sample)
 #define FROST_OVL_EXTERN(id,type,fn) extern char __ovl_##id##_start[],__ovl_##id##_end[];
 FROST_OVL_MODULES(FROST_OVL_EXTERN)
 typedef struct {unsigned type;const char *start,*end;const void *entry;} FrostOvlModule;

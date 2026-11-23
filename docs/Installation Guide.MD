@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # Installation Guide
 
 Install Frost on a **Valeton GP-5** through USB. You do not need to build the
@@ -40,7 +42,7 @@ USB port. Charge-only cables cannot transfer firmware.
 
 The supplied first beta is `Frost_GP5_0.1.0-beta.1.bin`, 506,976 bytes.
 MIDI and website patch recall require **0.1.0-beta.2 or newer**. The current
-beta, **0.1.0-beta.8**, adds the reworked RV-6 SHIMMER, IR LOW/HIGH CUT, drive
+beta, **0.1.0-beta.8**, adds the reworked SPACE reverb SHIMMER mode, IR LOW/HIGH CUT, drive
 anti-aliasing, chain guards (CHAIN TOO BIG, DSP LIMIT) and the Global settings
 submenus. Check that GLOBAL SETTINGS → SYSTEM → FIRMWARE shows the version of
 the package you actually install.
@@ -74,9 +76,13 @@ immediately repeating a completed flash.
 
 ## 6. Check the result
 
-1. Hold **PARA** on a home screen to open Settings.
-2. Find **FIRMWARE**. The numbered beta displays **0.1.0-BETA.1**.
-3. Choose **BACK** to leave Settings.
+1. Hold **PARA** on a home screen to open GLOBAL SETTINGS.
+2. Open **SYSTEM** and find **FIRMWARE**. It shows the installed version, for
+   example **0.1.0-BETA.8**.
+3. Choose **BACK** to leave the menu, then **BACK** again to leave Settings.
+
+<p align="center"><img src="../assets/docs/pedal-settings-system.png" alt="GLOBAL SETTINGS → SYSTEM shows the installed firmware version" width="330"><br><sub>GLOBAL SETTINGS → SYSTEM shows the installed firmware version</sub></p>
+
 4. At low volume, select a preset and play through the normal audio output.
    USB is used here for control and file transfer.
 5. Try a patch with IR enabled, then change Chain → Preset and Preset → Chain.

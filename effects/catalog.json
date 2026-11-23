@@ -332,6 +332,55 @@
       "folder": "effects/amp_heads",
       "status": "implemented",
       "physical": "not qualified"
+    },
+    {
+      "id": "rotary",
+      "type_id": 52,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "ringmod",
+      "type_id": 53,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "crusher",
+      "type_id": 54,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "harmtrem",
+      "type_id": 55,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "muff",
+      "type_id": 56,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "boost",
+      "type_id": 57,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
+    },
+    {
+      "id": "swell",
+      "type_id": 58,
+      "folder": "effects/extras",
+      "status": "implemented",
+      "physical": "not qualified"
     }
   ]
 }

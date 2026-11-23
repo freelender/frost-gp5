@@ -48,7 +48,8 @@ class RamPresetTests(unittest.TestCase):
         self.load();self.assertEqual(c.ge_actual_value(0,0),1.75);self.assertTrue(c.ge_muted());self.assertEqual(c.ge_changed(),0)
         c.ge_paint();self.assertEqual([c.ge_pixel(y*160+x) for y in range(12) for x in range(105)],clean)
         self.remote_gain(1.5);c.ge_pump(20);self.settle();self.assertEqual(c.ge_changed(),1)
-        self.assertEqual(c.ge_capture_bytes(),4476);self.assertEqual(c.ge_ram_bytes(),13220) # 3 x 1101 words + valid/epoch
+        self.assertEqual(c.ge_capture_bytes(),4488);   # 32q: +retries, reason, retry_at
+        self.assertEqual(c.ge_ram_bytes(),13220) # 3 x 1101 words + valid/epoch
     def test_complete_two_ir_capture_and_recall_preserves_all_words_and_signed_zero(self):
         c=self.lib;w=read_tests.PresetReadTests.body(None)
         for p in recall_packets(Capture('Synthetic',w),1,1,first_token=1000):self.wire(p)

@@ -144,7 +144,8 @@
 /* Keep shared helpers out of line to bound DSP flash; no arithmetic change. */
 #if defined(FROST_REVERB_INT16) && defined(__arm__) && defined(GP5_FIRMWARE)
 /* The compact backend retains the old callers of boot-region statics. Their
- * unused float loops belong after boot in flash, rather than consuming LARGE. */
+ * unused float loops belong after boot in flash, rather than consuming LARGE
+ * (32l: in dsp-data flash, linker section .frost_legacy_reverb_code). */
 #define FROST_REVERB_FLOAT_AUDIO __attribute__((section(".frost_legacy_reverb_code"),noinline,optimize("O2","no-tree-loop-distribute-patterns")))
 #define FROST_REVERB_FLOAT_DSP FROST_REVERB_FLOAT_AUDIO
 #define FROST_REVERB_FLOAT_DSP_NOFMA __attribute__((section(".frost_legacy_reverb_code"),noinline,optimize("O2","no-tree-loop-distribute-patterns","fp-contract=off")))

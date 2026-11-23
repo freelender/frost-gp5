@@ -9,7 +9,7 @@ sys.path[:0]=[str(ROOT/'tools'),str(ROOT/'tests')]
 from host import build
 import settings_nav
 CHAIN,PARAMS,SETTINGS,SVALUE,SCONFIRM,PHOME,STOMP=0,1,9,10,11,12,13
-IN_GAIN,OUT_LEVEL,OUT_MODE,CAB,BRIGHT,HOME,SETLIST_HOLD,FIRMWARE,RESET,FACTORY,EQ_BASS,EQ_MIDDLE,EQ_TREBLE,BACK=range(14)
+IN_GAIN,OUT_LEVEL,OUT_MODE,CAB,BRIGHT,HOME,SETLIST_HOLD,FIRMWARE,RESET,FACTORY,EQ_BASS,EQ_MIDDLE,EQ_TREBLE,TAP_NOTE,TEMPO_LIGHT,TAP_TEMPO,BACK=range(17)
 class GlobalSettingsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -43,9 +43,9 @@ class GlobalSettingsTests(unittest.TestCase):
             for pos in range(c.ge_settings_count()):
                 settings_nav.turn_to(c,pos);rows[top].append(c.ge_settings_row())
         N=settings_nav
-        self.assertEqual(rows[0][:4]+[rows[0][5]],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB,N.BACK])
-        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.BACK])
-        self.assertEqual(rows[2],[N.FIRMWARE,N.RESET,N.FACTORY,N.BACK])
+        self.assertEqual(rows[0][:4]+rows[0][5:],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB,N.TAP_NOTE,N.BACK])
+        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.TEMPO_LIGHT,N.BACK])
+        self.assertEqual(rows[2],[N.TAP_TEMPO,N.FIRMWARE,N.RESET,N.FACTORY,N.BACK])
         settings_nav.top(c);settings_nav.turn_to(c,0);c.ge_press();settings_nav.turn_to(c,4);c.ge_press()
         self.assertEqual(c.ge_settings_menu(),4)
         self.assertEqual([(settings_nav.turn_to(c,p),c.ge_settings_row())[1] for p in range(4)],[N.EQ_BASS,N.EQ_MIDDLE,N.EQ_TREBLE,N.BACK])

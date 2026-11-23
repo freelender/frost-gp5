@@ -37,6 +37,49 @@ class LiveHostTests(unittest.TestCase):
         self.assertEqual(self.slot(4)['values'][0],1);self.assertAlmostEqual(self.c.ge_actual_value(4,0),1.0,places=5)
         self.assertEqual(self.host([0x7e,0x15,4,1,*struct.pack('<h',999)]),b'\x7e\x15\x01');self.settle()  # clamped to 100
         self.assertEqual(self.slot(4)['values'][1],100)
+    def test_reorder_moves_blocks_and_keeps_their_settings(self):
+        """32p 7E 1F: drag-and-drop on the website reorders the live chain."""
+        ok=lambda c:bytes([0x7e,c,1])
+        self.assertEqual(self.host([0x7e,0x17,4,34]),ok(0x17));self.settle()       # DROP in slot 4
+        self.assertEqual(self.host([0x7e,0x15,4,1,*struct.pack('<h',60)]),ok(0x15));self.settle()
+        types,order,_,_,_=self.chain()
+        new=[order[4]]+[s for s in order if s!=order[4]]                             # position 5 to the front
+        self.assertEqual(self.host([0x7e,0x1f,*new]),ok(0x1f));self.settle()
+        t2,o2,_,_,_=self.chain();self.assertEqual(o2,new);self.assertEqual(t2,types)
+        self.assertEqual([self.c.ge_actual_order(i) for i in range(6)],new)            # the DSP follows
+        self.assertEqual(self.slot(4)['values'][1],60)                                  # settings stay with the block
+        for bad in ([0,1,2,3,4,4],[0,1,2,3,4,6],[0,1,2,3,4]):
+            r=self.host([0x7e,0x1f,*bad]);self.assertTrue(r is None or r[2]==0,bad)
+        self.assertEqual(self.chain()[1],new)
+    def test_save_live_sound_to_a_named_preset(self):
+        """32p 7E 20: the website saves the live sound like PRESETS -> SAVE."""
+        st=self.host([0x7e,0x20]);self.assertEqual(list(st[:5]),[0x7e,0x20,1,0,0]);self.assertEqual(len(st),8)
+        self.assertEqual(self.host([0x7e,0x20,7,*b'MY SOUND']),bytes([0x7e,0x20,1]))
+        for _ in range(400):
+            self.c.ge_pump(1);st=self.host([0x7e,0x20])
+            if not st[3]:break
+        self.assertEqual((st[3],st[4],st[5]),(0,0,7))
+        self.c.ge_store_name.restype=ct.c_char_p
+        self.assertEqual(self.c.ge_store_preset(7),1);self.assertEqual(self.c.ge_store_name(7),b'MY SOUND')
+        self.assertEqual(self.host([0x7e,0x20,60,*b'X'])[2],0)                         # preset 61 does not exist
+        self.assertEqual(self.host([0x7e,0x20,8])[2],1)                                 # no name: default
+        for _ in range(400):
+            self.c.ge_pump(1)
+            if not self.host([0x7e,0x20])[3]:break
+        self.assertEqual(self.c.ge_store_name(8),b'PRESET 09')
+    def save_and_wait(self,index,name):
+        self.assertEqual(self.host([0x7e,0x20,index,*name])[2],1)
+        for _ in range(600):
+            self.c.ge_pump(1);st=self.host([0x7e,0x20])
+            if not st[3]:return st
+        self.fail('save did not finish')
+    def test_save_retries_an_interrupted_read_back(self):
+        """32q: a BUSY read-back (chain transition) restarts the capture instead
+        of failing; after too many it fails with reason 2 and stores nothing."""
+        self.c.ge_busy_reads(2);st=self.save_and_wait(9,b'RETRY')
+        self.assertEqual((st[4],st[7]),(0,2));self.assertEqual(self.c.ge_store_preset(9),1)
+        self.c.ge_busy_reads(50);st=self.save_and_wait(10,b'NEVER');self.c.ge_busy_reads(0)
+        self.assertEqual((st[4],st[6],st[7]),(1,2,4));self.assertEqual(self.c.ge_store_preset(10),0)
     def test_bad_requests_are_refused(self):
         self.assertEqual(self.host([0x7e,0x15,9,0,0,0]),b'\x7e\x15\x00')     # bad slot
         self.assertEqual(self.host([0x7e,0x17,0,200]),b'\x7e\x17\x00')       # unknown type

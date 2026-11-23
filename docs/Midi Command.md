@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # MIDI commands — setup and examples
 
 For **Frost 0.1.0-beta.2 or newer**. Set your controller to **MIDI channel 1**.
@@ -151,9 +153,9 @@ matching the number of choices:
 | 5 | **0**, **32**, **64**, **95**, **127** |
 | 6 | **0**, **25**, **51**, **76**, **102**, **127** |
 
-Example: RV-6 MODE choices are ROOM, HALL, PLATE, MOD, SHIMMER.
+Example: SPACE MODE choices are ROOM, HALL, PLATE, MOD, SHIMMER.
 PLATE is the third of five choices → **MIDI value 64**.
-With RV-6 in block 6, MODE is control 4 → **CC 75, value 64**.
+With SPACE in block 6, MODE is control 4 → **CC 75, value 64**.
 For COMP+ PICKUP, **0 = SINGLE**, **127 = HUMBKR**.
 
 ### Time, frequency and other ranges
@@ -179,11 +181,11 @@ the named effect being in the stated block.
 | COMP+ BLEND 70 | Block 1 | **34** | **89** | BLEND **70** |
 | COMP+ PICKUP humbucker | Block 1 | **36** | **127** | PICKUP **HUMBKR** |
 | DELAY MIX 25 | Block 5 | **66** | **32** | MIX **25** |
-| DD-3 feedback 30 | Block 5 | **65** | **38** | F.BACK **30** |
-| DD-3 time about 400 ms | Block 5 | **66** | **62** | TIME **398 ms** (nearest selectable value) |
+| DIGI feedback 30 | Block 5 | **65** | **38** | F.BACK **30** |
+| DIGI time about 400 ms | Block 5 | **66** | **62** | TIME **398 ms** (nearest selectable value) |
 | IR VOL 80 | Block 4 | **56** | **102** | VOL **80** |
 | CHORUS rate 1.00 Hz | Block 6 | **72** | **24** | RATE **1.00 Hz** |
-| RV-6 mode Plate | Block 6 | **75** | **64** | MODE **PLATE** |
+| SPACE mode Plate | Block 6 | **75** | **64** | MODE **PLATE** |
 
 ## Load a preset
 
@@ -263,7 +265,7 @@ release. A gap longer than two seconds starts a new tap pair.
 
 Tempo sets every delay TIME/RATE expressed in milliseconds to one quarter
 note. Modulation RATE/SPEED controls expressed in Hz follow one cycle per
-quarter note. Each control is clamped to its supported range; a DM-2 cannot
+quarter note. Each control is clamped to its supported range; a BBD delay cannot
 exceed its 300 ms maximum. Reverb decay, vibrato rise and envelope release
 times are not tempo targets. No note-division selection is provided.
 
@@ -369,29 +371,32 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| TS | **1 DRIVE** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100); **4 MODEL** (TS808 / TS9) |
-| BD-2 | **1 GAIN** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100) |
-| KLON | **1 GAIN** (0–100); **2 TREBLE** (0–100); **3 OUTPUT** (0–100) |
-| BLUESB | **1 GAIN** (0–100); **2 TONE** (0–100); **3 VOLUME** (0–100) |
-| OCD | **1 DRIVE** (0–100); **2 TONE** (0–100); **3 VOLUME** (0–100); **4 PEAK** (LP / HP) |
+| SCREAM | **1 DRIVE** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100); **4 MODEL** (CLASSIC / BRIGHT) |
+| BLUESY | **1 GAIN** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100) |
+| HORSE | **1 GAIN** (0–100); **2 TREBLE** (0–100); **3 OUTPUT** (0–100) |
+| BREAK | **1 GAIN** (0–100); **2 TONE** (0–100); **3 VOLUME** (0–100) |
+| OBSESS | **1 DRIVE** (0–100); **2 TONE** (0–100); **3 VOLUME** (0–100); **4 PEAK** (LP / HP) |
 | DRIVE | **1 GAIN** (0–100); **2 TONE** (0–100); **3 VOL** (0–100) |
-| TREBLE | **1 BOOST** (0–100); **2 RANGE** (0–100); **3 LEVEL** (0–100) |
+| RANGER | **1 BOOST** (0–100); **2 RANGE** (0–100); **3 LEVEL** (0–100) |
+| BOOST | **1 GAIN** (0–20 dB); **2 BRIGHT** (OFF / ON) |
 
 ### Distortion
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| DS-1 | **1 DIST** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100) |
-| RAT | **1 DIST** (0–100); **2 FILTER** (0–100); **3 VOLUME** (0–100) |
-| DIST+ | **1 DIST** (0–100); **2 OUTPUT** (0–100) |
-| FUZZ | **1 FUZZ** (0–100); **2 VOL** (0–100); **3 BIAS** (0–100) |
+| ORANGE | **1 DIST** (0–100); **2 TONE** (0–100); **3 LEVEL** (0–100) |
+| MOUSE | **1 DIST** (0–100); **2 FILTER** (0–100); **3 VOLUME** (0–100) |
+| PLUS | **1 DIST** (0–100); **2 OUTPUT** (0–100) |
+| FACE | **1 FUZZ** (0–100); **2 VOL** (0–100); **3 BIAS** (0–100) |
+| BIG PI | **1 SUSTAIN** (0–100); **2 TONE** (0–100); **3 VOLUME** (0–100) |
+| CRUSH | **1 BITS** (2–16); **2 RATE** (1–44.1 khz); **3 MIX** (0–100) |
 
 ### Delay
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| DD-3 | **1 E.LEVEL** (0–100); **2 F.BACK** (0–100); **3 TIME** (13–800 ms); **4 HOLD** (OFF / ON); **5 FOOT** (BYPASS / HOLD) |
-| DM-2 | **1 RATE** (20–300 ms); **2 ECHO** (0–100); **3 INTENS** (0–100) |
+| DIGI | **1 E.LEVEL** (0–100); **2 F.BACK** (0–100); **3 TIME** (13–800 ms); **4 HOLD** (OFF / ON); **5 FOOT** (BYPASS / HOLD) |
+| BBD | **1 RATE** (20–300 ms); **2 ECHO** (0–100); **3 INTENS** (0–100) |
 | DELAY | **1 TIME** (1–500 ms); **2 REPEAT** (0–100); **3 MIX** (0–100) |
 | TAPE | **1 TIME** (20–800 ms); **2 REPEAT** (0–100); **3 MIX** (0–100); **4 WOW** (0–100); **5 AGE** (0–100); **6 DRIVE** (0–100) |
 
@@ -399,7 +404,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| RV-6 | **1 E.LEVEL** (0–100); **2 TONE** (0–100); **3 TIME** (0–100); **4 MODE** (ROOM / HALL / PLATE / MOD / SHIMMER) |
+| SPACE | **1 E.LEVEL** (0–100); **2 TONE** (0–100); **3 TIME** (0–100); **4 MODE** (ROOM / HALL / PLATE / MOD / SHIMMER) |
 | SPRING | **1 DWELL** (0–100); **2 MIX** (0–100); **3 TONE** (0–100) |
 | REVERB | **1 DECAY** (0–100); **2 TONE** (0–100); **3 MIX** (0–100) |
 
@@ -407,28 +412,32 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| PH-90 | **1 SPEED** (0.1–10 hz); **2 VOICE** (SCRIPT / BLOCK) |
-| CE-2 | **1 RATE** (0.1–8 hz); **2 DEPTH** (0–100) |
-| MISTRS | **1 RATE** (0.02–2 hz); **2 RANGE** (0–100); **3 COLOR** (0–100); **4 MATRIX** (OFF / ON) |
-| M117 | **1 MANUAL** (0–100); **2 WIDTH** (0–100); **3 SPEED** (0.05–5 hz); **4 REGEN** (0–100) |
+| PHASE | **1 SPEED** (0.1–10 hz); **2 VOICE** (SCRIPT / BLOCK) |
+| WARM | **1 RATE** (0.1–8 hz); **2 DEPTH** (0–100) |
+| LADY | **1 RATE** (0.02–2 hz); **2 RANGE** (0–100); **3 COLOR** (0–100); **4 MATRIX** (OFF / ON) |
+| JET | **1 MANUAL** (0–100); **2 WIDTH** (0–100); **3 SPEED** (0.05–5 hz); **4 REGEN** (0–100) |
 | VIBE | **1 SPEED** (0.3–10 hz); **2 INTENS** (0–100); **3 MODE** (CHORUS / VIBRATO); **4 VOLUME** (0–100) |
-| VB-2 | **1 RATE** (0.1–10 hz); **2 DEPTH** (0–100); **3 RISE** (150–5000 ms); **4 MODE** (LATCH / UNLATCH) |
-| TR-2 | **1 RATE** (0.3–12 hz); **2 WAVE** (0–100); **3 DEPTH** (0–100) |
+| WARBLE | **1 RATE** (0.1–10 hz); **2 DEPTH** (0–100); **3 RISE** (150–5000 ms); **4 MODE** (LATCH / UNLATCH) |
+| TREM | **1 RATE** (0.3–12 hz); **2 WAVE** (0–100); **3 DEPTH** (0–100) |
+| H-TREM | **1 RATE** (0.3–12 hz); **2 DEPTH** (0–100); **3 LEVEL** (0–100) |
+| ROTARY | **1 SPEED** (SLOW / FAST); **2 DEPTH** (0–100); **3 BALANCE** (0–100); **4 LEVEL** (0–100) |
+| RING | **1 FREQ** (20–2000 hz); **2 MIX** (0–100) |
 | CHORUS | **1 RATE** (0.05–5 hz); **2 DEPTH** (0–100); **3 MIX** (0–100) |
 | FLANGE | **1 RATE** (0.05–5 hz); **2 DEPTH** (0–100); **3 RESO** (-100–100) |
-| AW-3 | **1 SENS** (0–100); **2 MANUAL** (0–100); **3 DECAY** (10–1000 ms); **4 MODE** (UP / DOWN / SHARP / HUMAN / TEMPO); **5 VOWEL 1** (A / E / I / O / U); **6 VOWEL 2** (A / E / I / O / U); **7 RATE** (0.25–5 hz); **8 MIX** (0–100) |
-| FOXX | **1 SPEED** (0.05–8 hz); **2 DEPTH** (0–100); **3 REGEN** (0–100); **4 STAGES** (6 STAGE / 10 STAGE); **5 MANUAL** (0–100); **6 MODE** (AUTO / MANUAL); **7 MIX** (0–100) |
+| ENVWAH | **1 SENS** (0–100); **2 MANUAL** (0–100); **3 DECAY** (10–1000 ms); **4 MODE** (UP / DOWN / SHARP / HUMAN / TEMPO); **5 VOWEL 1** (A / E / I / O / U); **6 VOWEL 2** (A / E / I / O / U); **7 RATE** (0.25–5 hz); **8 MIX** (0–100) |
+| FOXY | **1 SPEED** (0.05–8 hz); **2 DEPTH** (0–100); **3 REGEN** (0–100); **4 STAGES** (6 STAGE / 10 STAGE); **5 MANUAL** (0–100); **6 MODE** (AUTO / MANUAL); **7 MIX** (0–100) |
 
 ### Dynamics / Eq
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| DYNA | **1 OUTPUT** (0–100); **2 SENS** (0–100) |
-| COMP+ | **1 SUSTAIN** (0–100); **2 LEVEL** (0–100); **3 BLEND** (0–100); **4 TONE** (0–100); **5 PICKUP** (SINGLE / HUMBKR) |
-| GE-7 | **1 100** (-15–15 dB); **2 200** (-15–15 dB); **3 400** (-15–15 dB); **4 800** (-15–15 dB); **5 1.6K** (-15–15 dB); **6 3.2K** (-15–15 dB); **7 6.4K** (-15–15 dB); **8 LEVEL** (-15–15 dB) |
-| NS-2 | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 MODE** (REDUCE / MUTE) |
-| NS-1X | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 DAMP** (0–100); **4 MODE** (REDUCE / GATE / MUTE) |
+| SQUASH | **1 OUTPUT** (0–100); **2 SENS** (0–100) |
+| BLEND | **1 SUSTAIN** (0–100); **2 LEVEL** (0–100); **3 BLEND** (0–100); **4 TONE** (0–100); **5 PICKUP** (SINGLE / HUMBKR) |
+| EQ-7 | **1 100** (-15–15 dB); **2 200** (-15–15 dB); **3 400** (-15–15 dB); **4 800** (-15–15 dB); **5 1.6K** (-15–15 dB); **6 3.2K** (-15–15 dB); **7 6.4K** (-15–15 dB); **8 LEVEL** (-15–15 dB) |
+| NOISE | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 MODE** (REDUCE / MUTE) |
+| NOISEX | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 DAMP** (0–100); **4 MODE** (REDUCE / GATE / MUTE) |
 | MB-CMP | **1 LOW THR** (-60–0 dB); **2 MID THR** (-60–0 dB); **3 HI THR** (-60–0 dB); **4 RATIO** (1–10); **5 ATTACK** (1–100 ms); **6 RELEASE** (20–1000 ms); **7 MIX** (0–100); **8 LEVEL** (0–100) |
+| SWELL | **1 ATTACK** (50–3000 ms); **2 SENS** (0–100); **3 LEVEL** (0–100) |
 
 ### Utility / Cab
 
@@ -437,7 +446,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 | GAIN | **1 GAIN** (0–100) |
 | GATE | **1 THRESH** (0–100) |
 | EQ | **1 BASS** (0–100); **2 MID** (0–100); **3 TREBLE** (0–100) |
-| IR | **1 VOL** (0–100) |
+| IR | **1 VOL** (0–100); **2 LOW CUT** (0–400 hz); **3 HIGH CUT** (1000–20000 hz) |
 | HPF | **1 FREQ** (20–18000 hz); **2 Q** (0.5–2); **3 SLOPE** (12 DB / 24 DB) |
 | LPF | **1 FREQ** (20–18000 hz); **2 Q** (0.5–2); **3 SLOPE** (12 DB / 24 DB) |
 | ACOUST | **1 BODY** (0–100); **2 TOP** (0–100); **3 MODE** (STANDARD / JUMBO / PIEZO / ENHANCE); **4 MIX** (0–100); **5 LEVEL** (0–100) |
@@ -446,13 +455,13 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| DELUXE | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| TWIN | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| AC30 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 CUT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| JC-120 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| JCM800 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| RECTO | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
-| 5150 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| US-DLX | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| US-DBL | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| CHIME | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 CUT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| JAZZ | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 BRIGHT** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| UK-800 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| CALI | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| BROWN | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
 | NAM | **1 MODEL** (0–63); **2 GAIN** (-12–12 dB); **3 LEVEL** (0–100); **4 BASS**, **5 MIDDLE**, **6 TREBLE** (-12–12 dB each) |
 
 ### Pitch
@@ -460,7 +469,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
 | DROP | **1 DROP** (1/2 STEP / 1 STEP / 3/2 STEP / 2 STEP / 5/2 STEP / 3 STEP); **2 MIX** (0–100) |
-| POG | **1 DRY** (0–100); **2 SUB OCT** (0–100); **3 OCT UP** (0–100) |
+| OCTAVE | **1 DRY** (0–100); **2 SUB OCT** (0–100); **3 OCT UP** (0–100) |
 
 ## Raw MIDI examples (advanced)
 
@@ -495,6 +504,9 @@ not raw MIDI bytes to send directly. `web/pedal.js` builds the outer frame;
 | `7E 1C` | `7E 1C 01 current queued busy error bypass volume ready` |
 | `7E 1D index` | `7E 1D accepted`; queue preset index 0–59, accepted = 0/1 |
 | `7E 1E` | `7E 1E 01` followed by null-terminated `FROST_FW:` and semantic version |
+| `7E 1F o0 … o5` | `7E 1F accepted`; reorders the live chain, `o[position]` = slot (a permutation of 0–5); settings stay with their blocks (Frost 32p+) |
+| `7E 20 index [name]` | `7E 20 accepted`; saves the live sound as preset index 0–59, with an optional name of 1–16 ASCII characters (Frost 32p+) |
+| `7E 20` | `7E 20 01 busy error current reason retries`; save status: poll until busy is zero; error non-zero means the save failed. Reason: 2 busy, 3 revision, 4 checksum (the sound changed while it was read back), 5 storage, 1 other; the read-back restarts up to 4 times before failing |
 
 In status, current/queued are zero-based preset numbers; `FF` means none.
 Busy covers preset recall and IR asset work. Error is the preset client's

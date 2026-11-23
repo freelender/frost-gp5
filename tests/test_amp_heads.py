@@ -28,7 +28,7 @@ class AmpHeadTests(unittest.TestCase):
 
     def test_seven_amp_entries_have_no_workspace_and_keep_old_ids(self):
         c = self.c
-        self.assertEqual(c.lib_effect_count(), 52)
+        self.assertEqual(c.lib_effect_count(), 59)
         self.assertEqual(c.lib_state_bytes(), 120)
         d = json.loads((ne.ROOT/'web/effects.json').read_text())
         self.assertEqual(d['picker'][7], list(HEADS)+[33])

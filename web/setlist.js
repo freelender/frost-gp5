@@ -37,22 +37,36 @@ export function decodeSetlist(b) {
   }
   encodeSetlist(data); return data;
 }
+// The setlist shares the glb-0 group with the global settings (its first 64
+// bytes). The pedal rewrites that group on its own, e.g. on every preset save
+// (last preset) or settings change. A save therefore keeps the pedal's current
+// settings and refuses only when the SETLIST part changed since it was read
+// (another browser saved a different setlist).
+const sameBytes = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 export class SetlistStore {
-  constructor(store) { this.store = store; this.seq = undefined; }
+  constructor(store) { this.store = store; this.seq = undefined; this.base = undefined; }
   async read() {
     const files = await this.store.scan(), h = this.store.newest(files, 0x424c4746, 'glb-0');
     const group = await this.store.readGroup('glb', 0, files);
     if (h && !group) throw new Error('Global settings group is damaged; save was disabled.');
     this.seq = h?.seq ?? null;
+    this.base = group ? Uint8Array.from(group.subarray(64)) : new Uint8Array(SETLIST_BYTES);
     return group ? decodeSetlist(group.subarray(64)) : emptySetlist();
   }
-  async write(data, say) {
-    const { bytes } = encodeSetlist(data), files = await this.store.scan();
-    const h = this.store.newest(files, 0x424c4746, 'glb-0');
-    if (this.seq === undefined || (h?.seq ?? null) !== this.seq) throw new Error('Settings or setlist changed on the pedal. Read from pedal and retry.');
-    const old = await this.store.readGroup('glb', 0, files), group = old ? Uint8Array.from(old) : new Uint8Array(4032);
+  /** Remove the songs and setlist stored on the pedal; global settings are kept. */
+  async clear(say) { return this.writeBytes(new Uint8Array(SETLIST_BYTES), say); }
+  async write(data, say) { return this.writeBytes(encodeSetlist(data).bytes, say); }
+  async writeBytes(bytes, say) {
+    if (this.base === undefined) throw new Error('Read the setlist from the pedal first.');
+    const files = await this.store.scan();
+    const h = this.store.newest(files, 0x424c4746, 'glb-0'), seq = h?.seq ?? null;
+    const old = await this.store.readGroup('glb', 0, files);
+    if (h && !old) throw new Error('Global settings group is damaged; save was disabled.');
+    const current = old ? old.subarray(64) : new Uint8Array(SETLIST_BYTES);
+    if (!sameBytes(current, this.base)) throw new Error('The setlist on the pedal was changed elsewhere since it was read. Read from pedal and retry.');
+    const group = old ? Uint8Array.from(old) : new Uint8Array(4032);
     if (!old) { group.set([70, 71, 1, 0, 0, 100, 0, 0, 100, 0, 255, 40, 2]); new DataView(group.buffer).setUint32(60, crc32(group.subarray(0, 60)), true); }
-    group.set(bytes, 64); await this.store.writeGroup('glb', 0, group, say, this.seq);
-    this.seq = undefined; // Read the committed sequence before a subsequent save.
+    group.set(bytes, 64); await this.store.writeGroup('glb', 0, group, say, seq);
+    this.seq = undefined; this.base = Uint8Array.from(bytes);   // what the pedal now holds
   }
 }

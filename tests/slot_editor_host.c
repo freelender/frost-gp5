@@ -48,7 +48,7 @@ void gp5_uart0_rx_int_clear(void){}
 static unsigned host_backlight=100;void gp5_backlight_duty(unsigned percent){host_backlight=percent;}
 #define FROST_SLOT_EDITOR 1
 #include "../firmware/controller/firmware.c"
-static unsigned drop_count,drop_mode,wire_calls,mutations,poison;
+static unsigned drop_count,drop_mode,wire_calls,mutations,poison,busy_reads;
 static unsigned dsp_link_raw(const uint8_t *p,unsigned n,uint8_t *out,unsigned max,unsigned wait,uint8_t *status)
 {
     unsigned i,cmd=(unsigned)p[0]|((unsigned)p[1]<<8),mutation=cmd==FROST_ROUTE_WRITE_COMMAND ||
@@ -68,6 +68,8 @@ static unsigned dsp_link_raw(const uint8_t *p,unsigned n,uint8_t *out,unsigned m
         else if(poison==2 && cmd==FROST_SLOT_COMMAND){response[32]^=1;poison=0;}
         else if(poison==3 && cmd==FROST_SLOT_COMMAND){frost_wire_put32(response+36,0x7fc00000u);poison=0;}
     }
+    /* 32q: the next `busy_reads` preset read-back replies say BUSY (a chain transition). */
+    if(busy_reads && cmd==FROST_PRESET_READ_COMMAND && response_bytes>=16){frost_wire_put32(response+12,FROST_SLOT_BUSY);--busy_reads;}
     if(affected && drop_count){--drop_count;
         if(drop_mode==1){*status=0;return 0;}
         if(drop_mode==2 && response_bytes>=12)response[8]^=0x40;
@@ -103,6 +105,18 @@ API unsigned ge_view(void){return view;}
 API unsigned ge_parameter(void){return parameter;}
 API unsigned ge_type(unsigned slot){return editor.types[slot];}
 API unsigned ge_order(unsigned i){return editor.order[i];}
+API unsigned ge_actual_order(unsigned i){return frost_chain.order[i];}
+API void ge_busy_reads(unsigned n){busy_reads=n;}
+API unsigned ge_tap_mode(void){return tap_mode;}
+API unsigned ge_now(void){return now;}
+API unsigned ge_led(void){return fw_active();}
+API void ge_tap_note(unsigned n){globals.tap_note=n;}
+API void ge_tempo_light(unsigned n){globals.tempo_light=n;}
+API void ge_tap_tempo(unsigned n){globals.tap_tempo=n;}
+API unsigned ge_tap_tempo_on(void){return globals.tap_tempo;}
+API unsigned ge_tap_settings(void){return globals.tap_note*10u+globals.tempo_light;}
+API void ge_select(unsigned slot){selected=slot;++generation;}
+API const char *ge_store_name(unsigned i){static char out[17];store_preset_name(i,out);return out;}
 API unsigned ge_enabled(unsigned slot){return editor.desired_enabled[slot];}
 API int ge_value(unsigned slot,unsigned p){return editor_integer(&editor,slot,p);}
 /* Existing transport/preset tests use the original scaled DSP domain. Keep it

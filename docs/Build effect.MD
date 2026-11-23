@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # Build an effect for Frost
 
 This tutorial adds a simple **TRIM** effect on a development branch. One LEVEL

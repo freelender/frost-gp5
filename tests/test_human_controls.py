@@ -95,4 +95,4 @@ class HumanControlsTests(unittest.TestCase):
             if type in (6,7):
                 self.assertEqual(c.ge_human_text(4,0),b'0.80HZ' if type==6 else b'0.30HZ')
             if type==5:self.assertEqual(c.ge_human_text(4,0),b'250MS')
-        self.assertEqual(c.ge_type_change(4,52),0) # first unregistered type after the Stage 5 additions
+        self.assertEqual(c.ge_type_change(4,59),0) # first unregistered type after the 32l additions

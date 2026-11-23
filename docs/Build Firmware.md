@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # Build Firmware
 
 This guide builds Frost from source without accessing a pedal. Run commands

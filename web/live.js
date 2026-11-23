@@ -1,4 +1,5 @@
-// Live effect editing (firmware/controller/live_host.h, 7E 14..18): the pedal's
+// Live effect editing (firmware/controller/live_host.h, 7E 14..18; 7E 1F order and
+// 7E 20 save in slot_editor.h): the pedal's
 // editor does the work, so the pedal screen, SAVE and the DSP stay in sync.
 // effects.json is generated from the firmware catalog (tools/export_effects.py).
 const EMPTY = 255;
@@ -27,6 +28,27 @@ export class LiveChain {
   async setParam(s, p, v) { const r = await this.ask([0x7e, 0x15, s, p, v & 255, (v >> 8) & 255]); return !!(r && r[2]); }
   async setEnabled(s, on) { const r = await this.ask([0x7e, 0x16, s, on ? 1 : 0]); return !!(r && r[2]); }
   async setType(s, type) { const r = await this.ask([0x7e, 0x17, s, type]); return !!(r && r[2]); }
+  /** order[position] = slot, a permutation of 0..5 (7E 1F; Frost 32p or later). */
+  async setOrder(order) { const r = await this.ask([0x7e, 0x1f, ...order]); return !!(r && r.length === 3 && r[2] === 1); }
+  /** Save the live sound as preset `index` (0..59) named `name` (7E 20, the pedal's PRESETS -> SAVE). */
+  async savePreset(index, name, { timeout = 20000, delay = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
+    if (!Number.isInteger(index) || index < 0 || index >= 60) throw new Error('Preset must be 1–60.');
+    const label = [...new TextEncoder().encode((name || '').replace(/[^ -~]/g, '?').slice(0, 16))];
+    const r = await this.ask([0x7e, 0x20, index, ...label]);
+    if (!r) throw new Error('Saving from the website needs a newer Frost firmware. Save on the pedal: PRESETS → SAVE.');
+    if (r[2] !== 1) throw new Error('The pedal is busy and did not start saving. Finish the current operation and try again.');
+    const until = Date.now() + timeout;
+    do {
+      await delay(150);
+      const s = await this.ask([0x7e, 0x20]);
+      if (s && s.length >= 6 && s[2] === 1 && !s[3]) {
+        if (s[4]) throw new Error(s[6] === 5 ? 'The pedal could not write the preset to its storage (storage busy or full). Try again in a moment.'
+          : 'The pedal could not read the current sound back to save it (the sound kept changing). Try again in a moment.');
+        return true;
+      }
+    } while (Date.now() < until);
+    throw new Error('Saving did not finish. Read the presets again to check the result.');
+  }
   async presetStatus() {
     const r = await this.ask([0x7e, 0x1c]);
     if (!r || r.length !== 10 || r[2] !== 1) return null;
@@ -43,8 +65,8 @@ export class LiveChain {
       const s = await this.presetStatus();
       if (!s) throw new Error('Lost contact during preset loading. Reconnect to check the current sound.');
       if (s.queued === 255 && !s.busy) {
-        if (s.error === 3) throw new Error('The pedal refused this preset: together its effects would overload the audio processor (DSP LIMIT). Replace a heavy effect (POG, NAM capture, a high-gain amp head, a reverb) and save it again.');
-        if (s.error === 2) throw new Error('The pedal refused this preset: its effects do not fit together in the effect memory of the pedal. Replace one of the larger effects (NAM capture, OCD, POG, amp head, AW-3, RAT) and save it again.');
+        if (s.error === 3) throw new Error('The pedal refused this preset: together its effects would overload the audio processor (DSP LIMIT). Replace a heavy effect (OCTAVE, NAM capture, a high-gain amp head, a reverb) and save it again.');
+        if (s.error === 2) throw new Error('The pedal refused this preset: its effects do not fit together in the effect memory of the pedal. Replace one of the larger effects (NAM capture, OBSESS, OCTAVE, amp head, ENVWAH, MOUSE) and save it again.');
         if (s.error) throw new Error('Preset loading failed on the pedal.');
         if (s.current === index && s.ready) return s;
         if (s.current !== index) throw new Error('Another controller changed the preset. Read the pedal again.');
@@ -131,11 +153,36 @@ export class LiveView {
         await this.select(s);
         if (matchMedia('(max-width: 760px)').matches) this.inspector.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
+      // Drag a block onto another position to reorder the chain (7E 1F).
+      b.draggable = c.editable;
+      b.ondragstart = e => { this.dragging = s; b.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(s)); };
+      b.ondragend = () => { this.dragging = null; for (const x of this.strip.children) x.classList.remove('dragging', 'dropbefore', 'dropafter'); };
+      b.ondragover = e => {
+        if (this.dragging == null || this.dragging === s) return;
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        const after = c.order.indexOf(s) > c.order.indexOf(this.dragging);
+        b.classList.toggle('dropafter', after); b.classList.toggle('dropbefore', !after);
+      };
+      b.ondragleave = () => b.classList.remove('dropbefore', 'dropafter');
+      b.ondrop = e => { e.preventDefault(); const from = this.dragging; b.classList.remove('dropbefore', 'dropafter'); if (from != null && from !== s) this.moveTo(from, c.order.indexOf(s)); };
       this.strip.appendChild(b);
     });
     await this.renderInspector();
   }
+  /** Move block `slot` to chain position `pos` (0..5); the other blocks keep their order. */
+  moveTo(slot, pos) {
+    const order = this.chainState.order.filter(x => x !== slot);
+    order.splice(Math.max(0, Math.min(5, pos)), 0, slot);
+    if (order.join() === this.chainState.order.join()) return;
+    this.selected = slot;
+    return this.act(() => this.live.setOrder(order), 'order', true);
+  }
   key(e) {
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && this.chainState?.editable) {   // Alt+arrow moves the block
+      e.preventDefault(); const pos = this.chainState.order.indexOf(this.selected);
+      this.moveTo(this.selected, pos + (e.key === 'ArrowLeft' ? -1 : 1))?.then(() => this.strip.querySelector(`[data-slot="${this.selected}"]`)?.focus());
+      return;
+    }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || !this.chainState) return;
     const order = this.chainState.order, from = e.target.closest?.('.block')?.dataset.slot;
     const pos = order.indexOf(from != null ? Number(from) : this.selected);
@@ -171,7 +218,12 @@ export class LiveView {
         const yes = this.ui.confirm ? await this.ui.confirm(`Remove ${eff.name}?`, `Block ${pos + 1} becomes empty. Like every live edit, this is not saved until you save a preset on the pedal.`) : confirm(`Remove ${eff.name}?`);
         if (yes && this.selected === s) this.act(() => this.live.setType(s, EMPTY), 'effect', true);
       };
-      const side = el('div', 'headbtns'); side.append(rm, sw);
+      const left = el('button', 'btn small ghost', '◀'), right = el('button', 'btn small ghost', '▶');
+      left.type = right.type = 'button'; left.title = 'Move this block one place earlier (or drag it in the chain)'; right.title = 'Move this block one place later';
+      left.setAttribute('aria-label', `Move ${eff.name} earlier`); right.setAttribute('aria-label', `Move ${eff.name} later`);
+      left.disabled = !c.editable || pos === 0; right.disabled = !c.editable || pos === 5;
+      left.onclick = () => this.moveTo(s, pos - 1); right.onclick = () => this.moveTo(s, pos + 1);
+      const side = el('div', 'headbtns'); side.append(left, right, rm, sw);
       this.switchEl = sw; head.appendChild(side);
     }
     this.inspector.append(head, box);
@@ -251,7 +303,9 @@ export class LiveView {
     try { ok = await fn(); } catch { ok = false; }
     finally { this.busy = false; }
     if (ok) this.ui.edited();
-    else this.ui.refused(what === 'effect' ? 'The pedal did not accept that effect in this block (it may be busy, or the chain would not fit).' : 'The pedal is busy; try again in a moment.');
+    else this.ui.refused(what === 'effect' ? 'The pedal did not accept that effect in this block (it may be busy, or the chain would not fit).'
+      : what === 'order' ? 'The pedal did not accept the new order (it may be busy). Reordering from the website needs Frost 32p or later.'
+      : 'The pedal is busy; try again in a moment.');
     if ((rerender || !ok) && this.live) { const c = await this.live.chain(); if (c) await this.render(c); }
   }
 }

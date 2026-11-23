@@ -79,17 +79,21 @@ export function checkRecord(r) {
 
 export class PedalFiles {
   /** ask(payload) -> Promise<reply payload | null> (a MidiPedal's ask, or a test double). */
-  constructor(ask, tries = 3) {
+  /** writeTries/writeDelay (32s): a long upload (a setlist is ~70 chunks) makes
+   *  the pedal re-sync AMP/IR data with its DSP between chunks; that traffic can
+   *  hold the link longer than a short retry window. A refused erase/program
+   *  never touches flash, so it is retried with growing pauses (~2.8 s total). */
+  constructor(ask, tries = 3, { writeTries = 8, writeDelay = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
     this.ask = async p => {
-      const writing = p[0] === 0x7e && (p[1] === 0x07 || p[1] === 0x08);
-      for (let i = 0; i < tries; i++) {
+      const writing = p[0] === 0x7e && (p[1] === 0x07 || p[1] === 0x08), limit = writing ? writeTries : tries;
+      for (let i = 0; i < limit; i++) {
         // A write can be refused before touching flash when the DSP pause
         // handshake times out. Retry the SAME sector/chunk, never the whole
         // upload. Repeating erase/program is also safe after a lost reply.
-        if (writing && i) await new Promise(resolve => setTimeout(resolve, 50 * i));
+        if (writing && i) await writeDelay(100 * i);
         const r = await ask(p);
         const refused = writing && r?.length === 3 && r[0] === p[0] && r[1] === p[1] && r[2] === 0;
-        if (r && (!refused || i === tries - 1)) return r;
+        if (r && (!refused || i === limit - 1)) return r;
       }
       return null;
     };

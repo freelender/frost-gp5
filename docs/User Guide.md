@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/branding/frost_logo.webp" alt="GP-5 Frost" width="340"></p>
+
 # Frost for Valeton GP-5 — User Guide
 
 Beta: **0.1.0-beta.8** · Website: **1.4.0** · Updated: 23 November 2026
@@ -31,7 +33,7 @@ browser tabs using the device.
 | PARA hold on a home screen | Open Global settings |
 | Footswitch tap on a home screen | Bypass the selected block, advance a preset, or advance a setlist part, depending on the home screen |
 | Footswitch tap in a menu | Go back one level (same as **BACK**) |
-| Footswitch hold | Open the tuner; Setlist view can instead use Previous Part |
+| Footswitch hold | Open the tuner; Setlist view can instead use Previous Part. With SYSTEM → TAP TEMPO ON, on a tempo effect (Chain or Stomp view): a tap sets the tempo and a hold switches the effect on/off |
 
 In parameter menus, turn to select a row, press to edit it, turn to change its
 value, then press again to leave the value edit. Use **BACK** or tap the
@@ -40,6 +42,45 @@ an unconfirmed TYPE, POSITION, CAB or REMOVE choice is cancelled. In Global
 settings the footswitch leaves a value edit, and from the settings list it
 saves and returns home like **BACK**. Bypass the block from its home screen.
 Some effects have their own momentary footswitch behavior on home screens.
+
+<table><tr>
+<td align="center"><img src="../assets/docs/pedal-parameters.png" alt="PARA press: the block's parameters" width="330"><br><sub>PARA press: the block's parameters</sub></td>
+<td align="center"><img src="../assets/docs/pedal-value.png" alt="Press again: edit the value (blue)" width="330"><br><sub>Press again: edit the value (blue)</sub></td>
+</tr></table>
+
+### Tap tempo with the footswitch
+
+Tap tempo is **off** by default: the footswitch then works as described above.
+Turn it on in GLOBAL SETTINGS → SYSTEM → **TAP TEMPO**.
+
+Tempo effects are the delays (DIGI, BBD, DELAY, TAPE) and the modulation
+effects with a rate in Hz (for example TREM, H-TREM, VIBE, WARM, PHASE). With
+one of them selected on the Chain or Stomp screen:
+
+- **Tap** the footswitch on the beat. The first tap opens the **TAP TEMPO**
+  popup with the effect's current tempo in BPM and time in ms; from the second
+  tap on it shows the tapped tempo. Taps never switch the effect. The popup
+  closes 2.5 seconds after the last tap.
+- **Press and hold** the footswitch (about half a second) to switch the effect
+  on or off. On a tempo effect the hold does not open the tuner.
+
+<p align="center"><img src="../assets/docs/pedal-tap-tempo.png" alt="TAP TEMPO popup: four taps at 120 BPM set a 500 ms delay" width="330"><br><sub>TAP TEMPO popup: four taps at 120 BPM set a 500 ms delay</sub></p>
+
+The tempo is the average of your last taps (30–300 BPM); a very different tap
+starts a new average, and a pause over 2 seconds starts over. GLOBAL SETTINGS
+→ AUDIO → **TAP NOTE** chooses what a delay repeats on: a quarter note, a
+dotted eighth or an eighth. Modulation runs one cycle per that note. Values
+outside an effect's range are clamped (BBD reaches at most 300 ms). The tapped
+value is a normal edit: save the preset to keep it.
+
+While a tempo effect is on, the footswitch light flashes **yellow** on the
+beat: on its usual mint colour, or on blue while the TAP TEMPO popup is open. An
+effect that is off stays dim red. GLOBAL SETTINGS → DISPLAY → **TEMPO LIGHT**
+turns the flashing off. On any other effect the footswitch works as usual (a
+press switches it, a hold opens the tuner); select a non-tempo block first to
+open the tuner.
+DIGI with FOOT=HOLD and WARBLE with MODE=UNLATCH keep their own footswitch
+behavior.
 
 ### Choose a home screen
 
@@ -53,6 +94,14 @@ to save and return.
 | STOMP | Select an effect; show it prominently | Toggle the selected block |
 | PRESET | Load previous/next stored preset | Load next stored preset; wraps at the end |
 | SETLIST | Select previous/next song and load its first part | Advance to the next part |
+
+<table><tr>
+<td align="center"><img src="../assets/docs/pedal-chain.png" alt="CHAIN" width="330"><br><sub>CHAIN: filled blocks are on, outlined blocks are bypassed</sub></td>
+<td align="center"><img src="../assets/docs/pedal-stomp.png" alt="STOMP" width="330"><br><sub>STOMP: the selected block, large</sub></td>
+</tr><tr>
+<td align="center"><img src="../assets/docs/pedal-preset-home.png" alt="PRESET" width="330"><br><sub>PRESET: number and name (* = edited)</sub></td>
+<td align="center"><img src="../assets/docs/pedal-setlist-home.png" alt="SETLIST" width="330"><br><sub>SETLIST: setlist, song, part and its preset</sub></td>
+</tr></table>
 
 From CHAIN or STOMP, press PARA to open the selected effect's parameters.
 From PRESET or SETLIST, press PARA to open the chain for editing. These views
@@ -81,17 +130,17 @@ overloads, simplify it or select a lighter preset.
 
 Effects also share a fixed amount of effect memory on the audio processor.
 Most chains fit, but several of the largest effects together (NAM capture,
-OCD, POG, an amp head, AW-3, RAT) may not. The pedal then refuses the change
+OBSESS, OCTAVE, an amp head, ENVWAH, MOUSE) may not. The pedal then refuses the change
 and shows **CHAIN TOO BIG**: the previous chain keeps playing, and a preset
 that does not fit is not loaded. Replace one of the larger effects.
 
 The pedal also estimates the processing load of a chain before it plays, from
 costs measured for each effect. A chain estimated above about 90% of the DSP
 is refused with **DSP LIMIT**, so it does not overload and mute. The heaviest
-effects are POG (about 40% on its own), NAM capture (about 31%), the JCM800,
-RECTO and 5150 heads (about 28%) and the reverbs (about 18–21%). Both
+effects are OCTAVE (about 40% on its own), NAM capture (about 31%), the UK-800,
+CALI and BROWN heads (about 28%) and the reverbs (about 18–21%). Both
 refusals appear as a popup for about 2.5 seconds. Settings that cost more
-than an effect's defaults, such as RV-6 SHIMMER, are not part of this
+than an effect's defaults, such as SPACE in SHIMMER mode, are not part of this
 estimate; overload protection still covers them.
 
 ### Read the DSP meter
@@ -117,22 +166,23 @@ noise and physical timing still need confirmation on the pedal.
 
 ## 4. Amp heads and capture models
 
-The algorithmic amp heads are based on these familiar amp styles:
+The algorithmic amp heads are Frost's own models, inspired by these familiar
+amp styles (trademarks of their owners; see the notice in section 11):
 
-- Fender '65 Deluxe Reverb
-- Fender Twin Reverb
-- Vox AC30 Top Boost
-- Roland JC-120
-- Marshall JCM 800
-- Mesa/Boogie Dual Rectifier
-- EVH 5150
+- US-DLX: Fender '65 Deluxe Reverb
+- US-DBL: Fender Twin Reverb
+- CHIME: Vox AC30 Top Boost
+- JAZZ: Roland JC-120
+- UK-800: Marshall JCM 800
+- CALI: Mesa/Boogie Dual Rectifier
+- BROWN: EVH 5150
 
 These are **amp heads only**. Use a separate IR block for the cabinet when
 listening through headphones, an audio interface or a full-range speaker.
 With a physical guitar cabinet, choose whether to bypass the IR for your setup.
 
 Drive/gain affects distortion; master and level affect the amp's response and
-output balance. As a starting point for a newly added Deluxe or AC30 block,
+output balance. As a starting point for a newly added US-DLX or CHIME block,
 MASTER 60 and LEVEL 57 are the current defaults. High-gain models may need
 different levels. Match sounds by listening rather than copying knob values.
 
@@ -276,6 +326,11 @@ open a menu or edit a setting; turn to change the value and press again.
 **BACK** (or the footswitch) goes up one level; BACK in GLOBAL SETTINGS saves
 and exits.
 
+<table><tr>
+<td align="center"><img src="../assets/docs/pedal-settings.png" alt="GLOBAL SETTINGS: three menus" width="330"><br><sub>GLOBAL SETTINGS: three menus</sub></td>
+<td align="center"><img src="../assets/docs/pedal-settings-system.png" alt="SYSTEM: TAP TEMPO and the firmware version" width="330"><br><sub>SYSTEM: TAP TEMPO and the firmware version</sub></td>
+</tr></table>
+
 | Menu | Setting | Purpose |
 |---|---|---|
 | AUDIO | INPUT GAIN | Adjust input level from -20 to +20 dB |
@@ -283,9 +338,12 @@ and exits.
 | AUDIO | OUTPUT MODE | Mono/stereo preference; current effect processing is mono |
 | AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
 | AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
+| AUDIO | TAP NOTE | Footswitch tap tempo (with TAP TEMPO ON): 1/4, DOTTED 1/8 or 1/8 |
 | DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
+| DISPLAY | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
+| SYSTEM | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set its tempo and a hold switches it on/off; the light flashes on the beat |
 | SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.8 |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
@@ -368,26 +426,37 @@ one control at a time.
 
 ### Available effects
 
+All product and company names mentioned in this guide (for example Boss,
+Roland, Ibanez, Electro-Harmonix, MXR, Dunlop, Fender, Marshall, Vox, Mesa/Boogie,
+EVH, Fulltone, Keeley, Klon, ProCo, Dallas, Shin-ei, Valeton and GP-5) are
+trademarks of their respective owners. They are used only to describe the
+sound a Frost model was inspired by. Frost is an independent project and is
+not affiliated with, endorsed or sponsored by any of them. Frost's models are
+its own DSP and are not exact reproductions.
+
 #### Overdrive
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| DRIVE | Overdrive | GAIN, TONE, VOL |
-| TS | Ts808/Ts9 Style Od | DRIVE, TONE, LEVEL, MODEL |
-| BD-2 | Bd-2 Style Blues Od | GAIN, TONE, LEVEL |
-| KLON | Klon Style Od | GAIN, TREBLE, OUTPUT |
-| BLUESB | Bluesbreaker Style | GAIN, TONE, VOLUME |
-| OCD | Ocd Style Drive | DRIVE, TONE, VOLUME, PEAK |
-| TREBLE | Rangemaster Style Boost | BOOST, RANGE, LEVEL |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| DRIVE | Overdrive | GAIN, TONE, VOL | — |
+| SCREAM | Screaming Mid OD | DRIVE, TONE, LEVEL, MODEL | Ibanez Tube Screamer TS808/TS9 |
+| BLUESY | Bluesy Crunch OD | GAIN, TONE, LEVEL | Boss BD-2 Blues Driver |
+| HORSE | Golden Horse OD | GAIN, TREBLE, OUTPUT | Klon Centaur |
+| BREAK | British Breakup OD | GAIN, TONE, VOLUME | Marshall Bluesbreaker pedal |
+| OBSESS | Obsessive Drive | DRIVE, TONE, VOLUME, PEAK | Fulltone OCD |
+| RANGER | Treble Ranger Boost | BOOST, RANGE, LEVEL | Dallas Rangemaster |
+| BOOST | Clean Boost: 0 to +20 dB, BRIGHT adds a treble lift | GAIN, BRIGHT | — |
 
 #### Distortion
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| DS-1 | Ds-1 Style Dist | DIST, TONE, LEVEL |
-| RAT | Rat Style Dist | DIST, FILTER, VOLUME |
-| DIST+ | Dist+ Style | DIST, OUTPUT |
-| FUZZ | Vintage Fuzz Face Style | FUZZ, VOL, BIAS |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| ORANGE | Orange Box Dist | DIST, TONE, LEVEL | Boss DS-1 |
+| MOUSE | Mouse Distortion | DIST, FILTER, VOLUME | ProCo RAT |
+| PLUS | Plus Distortion | DIST, OUTPUT | MXR Distortion+ |
+| FACE | Round Face Fuzz | FUZZ, VOL, BIAS | Dallas Arbiter Fuzz Face |
+| BIG PI | Big Pi Fuzz: two clipping stages; TONE in the middle scoops the mids | SUSTAIN, TONE, VOLUME | Electro-Harmonix Big Muff Pi |
+| CRUSH | Bit Crusher: fewer BITS and a lower RATE (kHz) sound harsher | BITS, RATE, MIX | — |
 
 The overdrive, distortion and fuzz models use anti-aliased clipping: high
 notes at high gain stay clean of the inharmonic "fizz" that plain digital
@@ -396,24 +465,24 @@ clipping adds. The clipped sound is a touch softer in the top octave
 
 #### Delay
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| DELAY | Mono Delay | TIME, REPEAT, MIX |
-| DD-3 | Dd-3 Style Digital | E.LEVEL, F.BACK, TIME, HOLD, FOOT |
-| DM-2 | Dm-2 Style Analog | RATE, ECHO, INTENS |
-| TAPE | Tape Echo | TIME, REPEAT, MIX, WOW, AGE, DRIVE |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| DELAY | Mono Delay | TIME, REPEAT, MIX | — |
+| DIGI | Digital Delay | E.LEVEL, F.BACK, TIME, HOLD, FOOT | Boss DD-3 |
+| BBD | Bucket Brigade Delay | RATE, ECHO, INTENS | Boss DM-2 |
+| TAPE | Tape Echo | TIME, REPEAT, MIX, WOW, AGE, DRIVE | — |
 
 #### Reverb
 
 Reverb excitation uses a fixed two-pole 180 Hz bass cut on the wet path.
-REVERB and RV-6 also shorten low-frequency feedback decay below 300 Hz;
+REVERB and SPACE also shorten low-frequency feedback decay below 300 Hz;
 TONE continues to control brightness. Dry guitar is unaffected by these
-filters. New RV-6 blocks start at E.LEVEL 25 and TIME 30; new SPRING blocks
+filters. New SPACE blocks start at E.LEVEL 25 and TIME 30; new SPRING blocks
 start at MIX 20. Existing presets retain their stored controls, but their
 reverb sound changes with the updated DSP. SPRING has a shorter nominal
 1.8-second tank decay; DWELL controls tank drive, not decay time.
 
-RV-6 SHIMMER is a long hall (about 2 to 10 seconds with TIME) whose tail
+SPACE in SHIMMER mode is a long hall (about 2 to 10 seconds with TIME) whose tail
 blooms with octave-up overtones: an octave-up copy of the tail is fed back
 into the reverb, so the sparkle builds and climbs as the sound sustains.
 TIME also raises how much octave is fed back; TONE sets the brightness of
@@ -424,83 +493,87 @@ HALL plus a third. Builds without that option use the older, heavier
 shimmer, which can sound up to about a semitone out of tune.
 
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| REVERB | Mono Reverb | DECAY, TONE, MIX |
-| RV-6 | Rv-6 Style Reverb | E.LEVEL, TONE, TIME, MODE |
-| SPRING | 6G15 Style Spring | DWELL, MIX, TONE |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| REVERB | Mono Reverb | DECAY, TONE, MIX | — |
+| SPACE | Space Reverb 5 Modes | E.LEVEL, TONE, TIME, MODE | Boss RV-6 |
+| SPRING | Tube Spring Reverb | DWELL, MIX, TONE | Fender 6G15 reverb unit |
 
 #### Modulation
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| CHORUS | Mono Chorus | RATE, DEPTH, MIX |
-| FLANGE | Mono Flanger | RATE, DEPTH, RESO |
-| PH-90 | Phase 90 Style | SPEED, VOICE |
-| CE-2 | Ce-2 Style Chorus | RATE, DEPTH |
-| MISTRS | Mistress Style Flange | RATE, RANGE, COLOR, MATRIX |
-| M117 | M117 Style Flanger | MANUAL, WIDTH, SPEED, REGEN |
-| VIBE | Uni-Vibe Style | SPEED, INTENS, MODE, VOLUME |
-| VB-2 | Vb-2 Style Vibrato | RATE, DEPTH, RISE, MODE |
-| TR-2 | Tr-2 Style Tremolo | RATE, WAVE, DEPTH |
-| AW-3 | Aw-3 Style Dynamic Wah | SENS, MANUAL, DECAY, MODE, VOWEL 1, VOWEL 2, RATE, MIX |
-| FOXX | Foxx Style Foot Phaser | SPEED, DEPTH, REGEN, STAGES, MANUAL, MODE, MIX |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| CHORUS | Mono Chorus | RATE, DEPTH, MIX | — |
+| FLANGE | Mono Flanger | RATE, DEPTH, RESO | — |
+| PHASE | Script Phaser | SPEED, VOICE | MXR Phase 90 |
+| WARM | Warm BBD Chorus | RATE, DEPTH | Boss CE-2 |
+| LADY | Electric Lady Flange | RATE, RANGE, COLOR, MATRIX | Electro-Harmonix Electric Mistress |
+| JET | Jet Flanger | MANUAL, WIDTH, SPEED, REGEN | MXR M117 Flanger |
+| VIBE | Photocell Vibe | SPEED, INTENS, MODE, VOLUME | Shin-ei Uni-Vibe |
+| WARBLE | Warble Vibrato | RATE, DEPTH, RISE, MODE | Boss VB-2 |
+| TREM | Classic Tremolo | RATE, WAVE, DEPTH | Boss TR-2 |
+| H-TREM | Harmonic Tremolo: lows and highs pulse in opposite phase | RATE, DEPTH, LEVEL | — |
+| ROTARY | Rotary Speaker: SLOW/FAST rotors glide between speeds; BALANCE mixes drum and horn | SPEED, DEPTH, BALANCE, LEVEL | — |
+| RING | Ring Modulator: FREQ is the carrier in Hz | FREQ, MIX | — |
+| ENVWAH | Envelope Auto Wah | SENS, MANUAL, DECAY, MODE, VOWEL 1, VOWEL 2, RATE, MIX | Boss AW-3 |
+| FOXY | Foxy Foot Phaser | SPEED, DEPTH, REGEN, STAGES, MANUAL, MODE, MIX | Foxx foot phaser |
 
 #### Dynamics / Eq
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| DYNA | M102 Style Dyna Comp | OUTPUT, SENS |
-| COMP+ | Comp Plus Style | SUSTAIN, LEVEL, BLEND, TONE, PICKUP |
-| GE-7 | Ge-7 Style Graphic Eq | 100, 200, 400, 800, 1.6K, 3.2K, 6.4K, LEVEL |
-| NS-2 | Ns-2 Style Suppressor | THRESH, DECAY, MODE |
-| NS-1X | Ns-1X Style Suppressor | THRESH, DECAY, DAMP, MODE |
-| MB-CMP | Three Band Compressor | LOW THR, MID THR, HI THR, RATIO, ATTACK, RELEASE, MIX, LEVEL |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| SQUASH | Squash Comp | OUTPUT, SENS | MXR M102 Dyna Comp |
+| BLEND | Blend Comp | SUSTAIN, LEVEL, BLEND, TONE, PICKUP | Keeley Compressor Plus |
+| EQ-7 | 7-Band Graphic EQ | 100, 200, 400, 800, 1.6K, 3.2K, 6.4K, LEVEL | Boss GE-7 |
+| NOISE | Noise Suppressor | THRESH, DECAY, MODE | Boss NS-2 |
+| NOISEX | Adaptive Suppressor | THRESH, DECAY, DAMP, MODE | Boss NS-1X |
+| MB-CMP | Three Band Compressor | LOW THR, MID THR, HI THR, RATIO, ATTACK, RELEASE, MIX, LEVEL | — |
+| SWELL | Volume Swell: each note after a pause fades in over ATTACK ms; higher SENS swells quieter notes | ATTACK, SENS, LEVEL | — |
 
 #### Utility / Cab
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| GAIN | Input Gain | GAIN |
-| GATE | Noise Gate | THRESH |
-| EQ | Three Band Eq | BASS, MID, TREBLE |
-| IR | Cabinet Ir | VOL, LOW CUT, HIGH CUT |
-| HPF | High Pass Filter | FREQ, Q, SLOPE |
-| LPF | Low Pass Filter | FREQ, Q, SLOPE |
-| ACOUST | Acoustic Simulator | BODY, TOP, MODE, MIX, LEVEL |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| GAIN | Input Gain | GAIN | — |
+| GATE | Noise Gate | THRESH | — |
+| EQ | Three Band Eq | BASS, MID, TREBLE | — |
+| IR | Cabinet Ir | VOL, LOW CUT, HIGH CUT | — |
+| HPF | High Pass Filter | FREQ, Q, SLOPE | — |
+| LPF | Low Pass Filter | FREQ, Q, SLOPE | — |
+| ACOUST | Acoustic Simulator | BODY, TOP, MODE, MIX, LEVEL | Boss AC-3 |
 
 #### Amp / Capture
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| NAM | Nam Fcm Capture | MODEL, GAIN, LEVEL, BASS, MIDDLE, TREBLE |
-| DELUXE | Fender 65 Deluxe Head | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL |
-| TWIN | Fender Twin Reverb Head | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL |
-| AC30 | Vox Ac30 Top Boost Head | GAIN, BASS, MID, TREBLE, CUT, MASTER, LEVEL |
-| JC-120 | Roland Jc-120 Head | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL |
-| JCM800 | Marshall Jcm800 Head | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL |
-| RECTO | Mesa Dual Rectifier Head | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL |
-| 5150 | Evh 5150 Head | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| NAM | Nam Fcm Capture | MODEL, GAIN, LEVEL, BASS, MIDDLE, TREBLE | — |
+| US-DLX | US Deluxe Clean | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL | Fender '65 Deluxe Reverb |
+| US-DBL | US Double Clean | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL | Fender Twin Reverb |
+| CHIME | Brit Chime 30 | GAIN, BASS, MID, TREBLE, CUT, MASTER, LEVEL | Vox AC30 Top Boost |
+| JAZZ | Jazz Clean 120 | GAIN, BASS, MID, TREBLE, BRIGHT, MASTER, LEVEL | Roland JC-120 |
+| UK-800 | Brit 800 Crunch | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | Marshall JCM800 |
+| CALI | Cali High Gain | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | Mesa/Boogie Dual Rectifier |
+| BROWN | Brown Sound High Gain | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | EVH 5150 |
 
 #### Pitch
 
-| Label | Sound / function | Controls |
-|---|---|---|
-| POG | Pog Style Octave Exp | DRY, SUB OCT, OCT UP |
-| DROP | Drop Tune | DROP, MIX |
+| Label | Sound / function | Controls | Inspired by |
+|---|---|---|---|
+| OCTAVE | Polyphonic Octaver | DRY, SUB OCT, OCT UP | Electro-Harmonix POG |
+| DROP | Drop Tune | DROP, MIX | — |
 
 ### Effect-specific tips
 
-- **DD-3:** FOOT=BYPASS uses the normal selected-block bypass. FOOT=HOLD
+- **DIGI:** FOOT=BYPASS uses the normal selected-block bypass. FOOT=HOLD
   makes the selected footswitch hold/release the delay's hold function.
-- **VB-2:** MODE=UNLATCH is momentary: the selected effect stays enabled
+- **WARBLE:** MODE=UNLATCH is momentary: the selected effect stays enabled
   while the footswitch is held. Other modes use their normal behavior.
 - **ACOUST:** choose STANDARD, JUMBO, PIEZO or ENHANCE, then adjust BODY,
   TOP and MIX. For a starting acoustic-like sound, bypass electric amp/cab
   blocks and add only a little compression and reverb.
 - **DROP:** choose the tuning shift and mix. Pitch processing can add latency
   and artifacts; check it with your own chords and playing before performance.
-- **POG:** the octave model is experimental. Treat sound quality and tracking
+- **OCTAVE:** the octave model is experimental. Treat sound quality and tracking
   as beta behavior rather than an exact reproduction of a commercial pedal.
 - **Gates/suppressors:** start with a low threshold and raise it until idle
   noise is controlled, then verify soft notes and sustained notes are retained.
