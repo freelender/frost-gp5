@@ -23,8 +23,8 @@ manage models and cabinets, and organize songs for performance.
 <td align="center"><img src="assets/docs/pedal-setlist-home.png" alt="Setlist view" width="260"><br><sub>Setlist: songs and parts on stage</sub></td>
 </tr></table>
 
-Current beta: **0.1.0-beta.10**. GLOBAL SETTINGS → SYSTEM → FIRMWARE displays
-**0.1.0-BETA.10**. Frost is in beta and supports the Valeton GP-5.
+Frost is in beta and supports the Valeton GP-5. The installed version is shown
+in GLOBAL SETTINGS → SYSTEM → FIRMWARE; release notes come with each release.
 
 ## Features
 

@@ -2,7 +2,7 @@
 
 # MIDI commands — setup and examples
 
-For **Frost 0.1.0-beta.2 or newer**. Set your controller to **MIDI channel 1**.
+Set your controller to **MIDI channel 1**.
 You can use these instructions in a controller editor without typing raw MIDI bytes.
 
 Start here: [COMP+ LEVEL example](#example-set-comp-level-to-10) ·

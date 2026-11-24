@@ -129,9 +129,11 @@ configuration does not fit the current complete effect library in flash.
 Do not enlarge memory regions to bypass a linker overflow.
 
 Without a supplied cabinet, source builds use the synthetic diagnostic FIR
-in `tests/fixtures/diagnostic_ir.h`. This is not the private cabinet embedded
-in the supplied beta image, and the result will not sound identical. To bake
-your own cabinet, add these staging options before running the build:
+in `tests/fixtures/diagnostic_ir.h`. Release images embed the CC0 "Cookie
+Monster" cabinet instead (see THIRD_PARTY_NOTICES.md), so the result will not
+sound identical. To match a release, download `01-cookie-monster.wav` from
+[OrbitCab](https://github.com/darwinscat/orbitcab/tree/main/resources/ir), or
+bake your own cabinet, with these staging options:
 
 ```sh
 --cab-ir /absolute/path/outside/repository/cabinet.wav --cab-ir-taps 512

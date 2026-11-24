@@ -18,7 +18,7 @@
  *   SCREAM UK-800 IR DIGI SPACE(mode 2)  272,400  measured 272-278k, late blocks (refused now)
  *   BOOST  UK-800 IR DIGI SPACE(mode 2)  247,900  (factory Singing Lead since beta.10)
  * Re-measure when an effect's cost changes
- * (frost-shimmer-32a/measure/sweep_costs2.py, while playing). */
+ * (each effect alone on the pedal with the slot-load meter, while playing). */
 #include "engine/metadata.h"
 #include "engine/hot_code.h"
 /* Table and estimate live in dsp-data flash (FROST_XDATA/FROST_XCODE): DSP

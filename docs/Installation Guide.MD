@@ -45,17 +45,9 @@ USB port. Charge-only cables cannot transfer firmware.
 2. Click **Drop a firmware .bin**, or drag the extracted `.bin` into the box.
 3. Read the detected version and section list before proceeding.
 
-The supplied first beta is `Frost_GP5_0.1.0-beta.1.bin`, 506,976 bytes.
-MIDI and website patch recall require **0.1.0-beta.2 or newer**. The current
-beta, **0.1.0-beta.10**, adds a TAIL setting for delays and reverbs, fixes
-crackles on heavy delay and reverb chains (DSP LIMIT now uses costs measured
-while playing) and lightens two factory presets. Check that GLOBAL SETTINGS → SYSTEM → FIRMWARE shows the version of
-the package you actually install.
-The first beta's SHA-256 is:
-
-```text
-614c554ac9807af395a8c821e61919d5f4d472e66b7d1fcd38f502bc656a6c11
-```
+Each release comes with its `.bin`, release notes and a `SHA256SUMS.txt` file
+with the firmware's checksum. After installing, check that GLOBAL SETTINGS →
+SYSTEM → FIRMWARE shows the version of the release you installed.
 
 A custom source build has its own checksum. Use its build manifest and do
 not assume it matches the supplied image. A ZIP, `.nam`, WAV or backup is
@@ -82,8 +74,7 @@ immediately repeating a completed flash.
 ## 6. Check the result
 
 1. Hold **PARA** on a home screen to open GLOBAL SETTINGS.
-2. Open **SYSTEM** and find **FIRMWARE**. It shows the installed version, for
-   example **0.1.0-BETA.10**.
+2. Open **SYSTEM** and find **FIRMWARE**. It shows the installed version.
 3. Choose **BACK** to leave the menu, then **BACK** again to leave Settings.
 
 <p align="center"><img src="../assets/docs/pedal-settings-system.png" alt="GLOBAL SETTINGS → SYSTEM shows the installed firmware version" width="330"><br><sub>GLOBAL SETTINGS → SYSTEM shows the installed firmware version</sub></p>

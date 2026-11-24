@@ -2,8 +2,6 @@
 
 # Frost for Valeton GP-5 — User Guide
 
-Beta: **0.1.0-beta.10** · Website: **1.6.0** · Updated: 24 November 2026
-
 Website: [Frost GP-5 Studio](https://frost.fretlexwins.workers.dev/)
 
 Frost provides a six-slot signal chain, amp heads, converted capture models,
@@ -180,11 +178,6 @@ reading stays high while playing one preset, simplify the chain and report
 the preset and effects used. Include whether the noise happens only during
 switching or continues afterwards.
 
-The 0.1.0-beta.3 source candidate removes duplicate cabinet preparation and
-history resets during recall, and handles completion polls in RAM. These
-changes retain the same presets, cabinet samples and fades; reduced switching
-noise and physical timing still need confirmation on the pedal.
-
 ## 4. Amp heads and capture models
 
 The algorithmic amp heads are Frost's own models, inspired by these familiar
@@ -250,7 +243,8 @@ depends on the capture. Replacing a model number changes all presets using it.
 An IR adds the frequency response of a captured cabinet/microphone setup. It
 does not replace an amp head. Place IR after the amp for a typical direct tone.
 
-- **CAB 00:** the built-in cabinet. The supplied beta uses Cookie Monster;
+- **CAB 00:** the built-in cabinet. Release firmware uses "Cookie Monster"
+  from the Jesters Brutal Pack (CC0, credited in THIRD_PARTY_NOTICES.md);
   custom source builds may use a different cabinet or the synthetic diagnostic FIR.
 - **CAB 01–63:** custom cabinets written from the website.
 - **VOL 80:** default for a newly added IR block; adjust by ear for your chain.
@@ -386,7 +380,7 @@ and exits.
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
 | DISPLAY | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set its tempo and a hold switches it on/off; the light flashes on the beat |
-| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.10 |
+| SYSTEM | FIRMWARE | The installed Frost version |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 

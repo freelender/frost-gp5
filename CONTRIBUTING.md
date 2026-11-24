@@ -1,7 +1,7 @@
 # Contributing to Frost
 
-Start with README.md and [Build Firmware](docs/Build%20Firmware.md). Follow
-AGENTS.md whether working manually or with an AI assistant.
+Start with README.md and [Build Firmware](docs/Build%20Firmware.md), then
+follow the rules below.
 
 For a new effect, follow [Build an effect](docs/Build%20effect.MD).
 
@@ -40,6 +40,18 @@ For a new effect, follow [Build an effect](docs/Build%20effect.MD).
 Never commit captures, user IR WAVs, firmware binaries, compiler downloads,
 generated model headers, backups or secrets. Fixtures must be synthetic or
 redistributable. Retain attribution when adapting third-party source.
+
+## Code rules
+
+- Never allocate memory, block or write flash inside the audio callback.
+- Keep protocol IDs, wire formats and preset storage compatible; add, never
+  reassign. Transitions stay bounded and faults are handled, not hidden.
+- Keep the controls: PARA turn selects, PARA press edits; on the Chain and
+  Stomp screens the footswitch bypasses only the selected block.
+- Keep the approved Frost logo and blue colours.
+- Converted capture models are approximations; Frost does not run native NAM.
+  AMP plus five effects is a target, not a guarantee for every chain.
+- docs/ holds only the six maintained guides; build/ stays empty.
 
 ## Reporting problems
 

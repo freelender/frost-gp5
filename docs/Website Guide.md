@@ -134,7 +134,7 @@ The list shows saved pedal presets, not a separate browser preset bank.
 - **Load:** play that saved preset. Unsaved live edits are replaced; the page
   asks first when it knows you edited from this page. It waits for recall to
   finish and refreshes the chain. Close the tuner and finish file transfers
-  first. Requires Frost 0.1.0-beta.2 or newer. Edits made only on the pedal
+  first. Edits made only on the pedal
   cannot be detected reliably by the page's unsaved-edit indicator.
 - **Rename:** enter the new name (up to 16 characters) and confirm.
 - **Up/down:** move/reorder stored sounds using the available list controls.
