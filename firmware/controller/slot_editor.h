@@ -667,6 +667,48 @@ static int fw_flash_load(unsigned preset)
     if(current_preset!=preset){current_preset=preset;last_preset_dirty=1;}
     return 1;
 }
+/* Power-cycle memory (beta.11): the preset you land on is the boot preset.
+ * A settings write erases controller flash and pauses the IR link, so the
+ * cabinet IR drops out while it runs. The write waits until the preset has
+ * been kept FROST_LAST_PRESET_HOLD_MS, the editor is idle and, while an IR
+ * stream is running, its input has stayed under -40 dBFS for
+ * FROST_LAST_PRESET_QUIET_MS. Browsing several presets costs one write. */
+#define FROST_LAST_PRESET_HOLD_MS 2000u
+#define FROST_LAST_PRESET_QUIET_MS 1500u
+#define FROST_LAST_PRESET_RETRY_MS 5000u
+#define FROST_LAST_PRESET_QUIET_Q23 83886   /* -40 dBFS of the Q23 IR input */
+static uint32_t last_preset_since,last_preset_quiet,last_preset_next;
+static unsigned last_preset_seen=255u;
+#ifdef FROST_IR_LINK
+/* Main loop only. The IRQ owns irl_in: a torn read misjudges one look. */
+static unsigned last_preset_loud(void)
+{
+    uint32_t streams=irl.streams;unsigned j,n;
+    if(!irl.started)return 0;
+    for(j=0;j<FROST_IRL_STREAMS;++j)if(streams&(1u<<j))
+        for(n=0;n<FROST_IRL_BLOCK;++n){
+            int32_t v=irl_in[FROST_IRL_W_AUDIO+j*FROST_IRL_BLOCK+n];
+            if(v>FROST_LAST_PRESET_QUIET_Q23 || v<-FROST_LAST_PRESET_QUIET_Q23)return 1;
+        }
+    return 0;
+}
+#else
+static unsigned last_preset_loud(void){return 0;}
+#endif
+static void last_preset_service(uint32_t now)
+{
+    unsigned old;
+    if(last_preset_loud())last_preset_quiet=now;
+    if(current_preset!=last_preset_seen){last_preset_seen=current_preset;last_preset_since=now;}
+    if(!last_preset_dirty || !boot_load_done || recall_pending || !fw_editor_ready())return;
+    if(current_preset>=FROST_PRESETS || current_preset==globals.last_preset){last_preset_dirty=0;return;}
+    if((uint32_t)(now-last_preset_since)<FROST_LAST_PRESET_HOLD_MS ||
+       (uint32_t)(now-last_preset_quiet)<FROST_LAST_PRESET_QUIET_MS ||
+       (int32_t)(now-last_preset_next)<0)return;
+    old=globals.last_preset;globals.last_preset=current_preset;
+    if(globals_save(now))last_preset_dirty=0;
+    else {globals.last_preset=old;last_preset_next=now+FROST_LAST_PRESET_RETRY_MS;}
+}
 #include "midi_control.h"
 /* Setlist selection only commits after the preset/asset clients settle. */
 static int setlist_start(unsigned order,unsigned part)
@@ -1114,8 +1156,7 @@ int fw_draw(unsigned knob,int force)
             else {tuner_home=view;view=TUNER;tuner_client.want=1;tuner_client.have=0;tuner_ref_unlocked=0;}++generation;
         }
         if(view==CHAIN && globals.home!=HOME_CHAIN && !para_down && !foot_down && (uint32_t)(now-last_input_ms)>=FROST_HOME_RETURN_MS && editor_editable(&editor)){view=home_view();++generation;}
-        /* Preset selection is RAM-only. Background flash writes stop the IR
-         * audio IRQ; persist the boot selection only on explicit SAVE/settings. */
+        /* The boot preset is written by last_preset_service once playing pauses. */
         {uint32_t old_crc=set_crc,old_addr=set_addr,old_epoch=set_epoch;unsigned old_count=set_count;setlist_refresh();
          if(old_crc!=set_crc || old_count!=set_count || old_addr!=set_addr ||
             (old_epoch==UINT32_MAX)!=(set_epoch==UINT32_MAX))++generation;}
@@ -1137,6 +1178,7 @@ int fw_draw(unsigned knob,int force)
                 if(editor_queue_route(&editor,types,order,editor.pre))++generation;}
 #endif
         }
+        last_preset_service(now);
     }
 #ifdef FROST_DSP_USAGE
     if(frost_dsp_usage_tick(&dsp_usage,gp5_ms()))dsp_usage_dirty=1;

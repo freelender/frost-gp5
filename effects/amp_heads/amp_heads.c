@@ -5,7 +5,13 @@
 
 /* Original behavioral parameters, not extracted weights or component values.
  * Deluxe/Twin blackface, AC30 Top Boost, JC clean, 2203 crunch,
- * Rectifier Modern lead, 5150III 6L6 lead are the intended starting voices. */
+ * Rectifier Modern lead, 5150III 6L6 lead are the intended starting voices.
+ * beta.11: the lead voices (UK-800, CALI, BROWN) are tighter, like the real amps.
+ * A second input high-pass pole (once per input sample) and higher inter-stage high-passes keep a
+ * single-coil neck pickup's bass out of the clipping stages (host two-tone
+ * 82 Hz + 700 Hz IMD at GAIN 80: CALI +2.6 -> -14.4 dB, BROWN +1.1 -> -19.6,
+ * UK-800 -7.6 -> -28.9); a post-clip ~120 Hz shelf restores the low end,
+ * sag is reduced and the trims keep the old loudness within about 0.5 dB. */
 FROST_XCODE FROST_COLD void frost_amphead_reset(FrostAmpHead *s,unsigned voice)
 {
     static const float cfg[7][12]={
@@ -14,9 +20,9 @@ FROST_XCODE FROST_COLD void frost_amphead_reset(FrostAmpHead *s,unsigned voice)
         {30,  45,  4,1.2f,1.0f,.05f,.06f,.55f,160,1000,.65f,.85f},
         {65, 100, 10,1.8f,1.8f,.16f,.22f,.75f,250,1500,.85f,.65f},
         {20,  30,  2,1.0f,1.0f,   0,   0,1.0f,160,1800,.30f,1.15f},
-        {70, 180, 24,2.8f,1.4f,.08f,.15f,1.1f,250,1600,.55f,.60f},
-        {45, 115, 48,3.6f,1.5f,.18f,.30f,.65f,160,1200,.35f,.60f},
-        {85, 220, 60,4.2f,1.3f,.10f,.12f,.85f,210,1700,.65f,.58f}
+        {120,250, 28,2.8f,1.4f,.08f,.08f,1.1f,250,1600,.55f,.55f},
+        {110,220, 55,3.6f,1.5f,.18f,.12f,.65f,160,1200,.35f,.54f},
+        {140,300, 69,4.2f,1.3f,.10f,.06f,.85f,210,1700,.65f,.51f}
     };
     const float *c;
     if(voice>6u)voice=0;
@@ -25,7 +31,7 @@ FROST_XCODE FROST_COLD void frost_amphead_reset(FrostAmpHead *s,unsigned voice)
     s->drive=c[2];s->stage_drive=c[3];s->power_drive=c[4];s->bias=c[5];
     s->sag=c[6];s->mid_voice=c[7];s->low_hz=frost_onepole(c[8]*.5f);
     s->high_hz=frost_onepole(c[9]*.5f);s->brightness=c[10];s->trim=c[11];
-    s->stages=voice>=4u?3u:1u;s->voice=voice;
+    s->voice=voice;
     s->zero=frost_soft_clip(s->bias);
 }
 
@@ -50,15 +56,18 @@ FROST_NOINLINE FROST_OVL(ampheads) float frost_amphead_sample(FrostAmpHead *s,fl
      * decimation low-passes at their true 8 kHz on the 2x rate (they were
      * set for 44.1 kHz, i.e. ~16 kHz). Measured on the host at GAIN 80:
      * aliasing 26-33 dB -> 43-51 dB below the note. Clean voices unchanged. */
-    unsigned lead=s->stages>1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
+    unsigned lead=s->voice>=4u,stages=lead?3u:1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
     unsigned sub,j;
+    /* Second pre-clip pole once per input sample (2x the 2x-rate coefficient). */
+    if(lead)x=frost_hp(&s->tight,x,2.0f*s->input_hp);
     /* Two nonlinear substeps, linear interpolation and two-pole reduction.
      * Reduces aliasing; does not make high gain alias-free. Tone position is
      * pre-power for cleans/chime, post-cascade for the lead voices. */
     for(sub=0;sub<2u;++sub){
         y=sub?x:.5f*(s->previous+x);
-        y=frost_hp(&s->hp[0],y,s->input_hp)*drive;
-        for(j=0;j<s->stages;++j){
+        y=frost_hp(&s->hp[0],y,s->input_hp);
+            y*=drive;
+        for(j=0;j<stages;++j){
             if(j)y=frost_hp(&s->hp[j],y,s->inter_hp)*s->stage_drive;
             if(lead)y=frost_lp(&s->miller[j],y,ml);
             /* Asymmetric smooth triode-like stages with zero at zero input. */
@@ -71,7 +80,7 @@ FROST_NOINLINE FROST_OVL(ampheads) float frost_amphead_sample(FrostAmpHead *s,fl
         /* AC30 CUT rises toward darker; other voices add presence/brightness. */
         y+=a*(s->voice==2u?-1.5f*detail:s->brightness*2.0f*detail);
         a=frost_lp(&s->bass,y,frost_onepole(60.0f));
-        y+=(s->voice>=5u?.25f:.05f)*a;
+        y+=(lead?1.0f:.05f)*a;
         y=frost_lp(&s->aa[0],y,aa);
         wet+=frost_lp(&s->aa[1],y,aa);
     }
@@ -92,15 +101,17 @@ FROST_NOINLINE FROST_OVL(ampheads) void frost_amphead_block(void *state,const fl
     float low=.2f+2.4f*b*b,mid=.12f+2.0f*m*m,high=.2f+2.4f*t*t;
     float denominator=.7f+.25f*b+.2f*t,level=frost_level(p[6]);
     float presence=s->voice==2u?-1.5f*detail:s->brightness*2.0f*detail;
-    unsigned lead=s->stages>1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
+    unsigned lead=s->voice>=4u,stages=lead?3u:1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
+    float tight=2.0f*s->input_hp;
     (void)p_start;
     for(i=0;i<n;++i){
-        float input=x[i],supply=1.0f/(1.0f+s->sag*s->envelope),y,a,wet=0.0f;
+        float input=lead?frost_hp(&s->tight,x[i],tight):x[i],supply=1.0f/(1.0f+s->sag*s->envelope),y,a,wet=0.0f;
         for(sub=0;sub<2u;++sub){
             float lo,rest,md,hi;
             y=sub?input:.5f*(s->previous+input);
-            y=frost_hp(&s->hp[0],y,s->input_hp)*drive;
-            for(j=0;j<s->stages;++j){
+            y=frost_hp(&s->hp[0],y,s->input_hp);
+            y*=drive;
+            for(j=0;j<stages;++j){
                 if(j)y=frost_hp(&s->hp[j],y,s->inter_hp)*s->stage_drive;
                 if(lead)y=frost_lp(&s->miller[j],y,ml);
                 y=frost_soft_clip(y+s->bias)-s->zero;
@@ -110,7 +121,7 @@ FROST_NOINLINE FROST_OVL(ampheads) void frost_amphead_block(void *state,const fl
             y=(lo*low+md*s->mid_voice*mid+hi*high)/denominator;
             a=power*supply;y=frost_soft_clip(y*a)/(.2f+s->power_drive);
             a=y-frost_lp(&s->presence,y,frost_onepole(1500.0f));y+=a*presence;
-            a=frost_lp(&s->bass,y,frost_onepole(60.0f));y+=(s->voice>=5u?.25f:.05f)*a;
+            a=frost_lp(&s->bass,y,frost_onepole(60.0f));y+=(lead?1.0f:.05f)*a;
             y=frost_lp(&s->aa[0],y,aa);
             wet+=frost_lp(&s->aa[1],y,aa);
         }

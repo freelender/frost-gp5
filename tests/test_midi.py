@@ -42,7 +42,7 @@ class MidiTests(live_tests.LiveHostTests):
         for packet in ((11,0xb1,32,127),(27,0xb0,32,127),(12,0xb0,32,127),(11,0xb0,32,255),(11,0xb0,39,127)):
             self.c.ge_midi(*packet)
         self.settle();self.assertEqual(self.slot(0),before)
-        self.assertEqual(self.host([0x7e,0x1e]),b'\x7e\x1e\x01FROST_FW:0.1.0-beta.10\x00')
+        self.assertEqual(self.host([0x7e,0x1e]),b'\x7e\x1e\x01FROST_FW:0.1.0-beta.11\x00')
     def test_scene_is_one_revision_and_replays_after_lost_reply(self):
         before=self.chain()[3]
         expected=[int(t!=255 and bool(21&(1<<s))) for s,t in enumerate(self.chain()[0])]
@@ -51,20 +51,25 @@ class MidiTests(live_tests.LiveHostTests):
         self.assertEqual(self.chain()[2],expected)
         self.assertEqual([self.c.ge_actual_enabled(s) for s in range(6)],expected)
         before=self.chain();self.cc(89,64);self.settle();self.assertEqual(self.chain(),before)
-    def test_program_change_mailbox_website_recall_and_navigation_do_not_write_flash(self):
+    def test_program_change_mailbox_website_recall_and_navigation_write_flash_once_settled(self):
+        """Quick switching never writes flash (a write pauses the IR link); beta.11:
+        the preset you stop on is written once after 2 s and is the boot preset."""
         for preset in (2,5,9):
             self.assertEqual(self.c.ge_flash_save(preset),1);self.settle()
-        writes=self.c.ge_flash_ops()
-        self.pc(2);self.pc(5);self.settle();self.assertEqual(self.c.ge_current_preset(),5)
+        writes=self.c.ge_flash_ops();quick=lambda:self.settle(40)          # 0.8 s per step
+        self.pc(2);self.pc(5);quick();self.assertEqual(self.c.ge_current_preset(),5)
         self.assertEqual(self.c.ge_flash_ops(),writes)
-        self.pc(127);self.settle();self.assertEqual(self.c.ge_current_preset(),5)
-        self.cc(87,127);self.settle();self.assertEqual(self.c.ge_current_preset(),9)
-        self.cc(87,0);self.settle();self.assertEqual(self.c.ge_current_preset(),9)
-        self.cc(88,127);self.settle();self.assertEqual(self.c.ge_current_preset(),5)
-        self.assertEqual(self.host([0x7e,0x1d,2]),b'\x7e\x1d\x01');self.settle()
+        self.pc(127);quick();self.assertEqual(self.c.ge_current_preset(),5)
+        self.cc(87,127);quick();self.assertEqual(self.c.ge_current_preset(),9)
+        self.cc(87,0);quick();self.assertEqual(self.c.ge_current_preset(),9)
+        self.cc(88,127);quick();self.assertEqual(self.c.ge_current_preset(),5)
+        self.assertEqual(self.host([0x7e,0x1d,2]),b'\x7e\x1d\x01');quick()
         status=self.host([0x7e,0x1c]);self.assertEqual(status[3:7],bytes([2,255,0,0]))
         self.assertEqual(self.host([0x7e,0x1d,60]),b'\x7e\x1d\x00')
         self.assertEqual(self.c.ge_flash_ops(),writes)
+        self.settle();self.assertGreater(self.c.ge_flash_ops(),writes);self.assertEqual(self.c.ge_global(6),2)
+        once=self.c.ge_flash_ops();self.settle();self.assertEqual(self.c.ge_flash_ops(),once)
+        self.c.ge_reboot();self.settle();self.assertEqual(self.c.ge_current_preset(),2)
     def test_tuner_bypass_and_preserved_effect_states(self):
         before=self.chain()[2]
         self.cc(90,127);self.settle();self.assertEqual(self.c.ge_dsp_global_flags()&2,2)

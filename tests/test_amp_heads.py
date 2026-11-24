@@ -133,6 +133,20 @@ class AmpHeadTests(unittest.TestCase):
             self.assertLess(max(abs(v*.5-w) for v,w in zip(a,b)),
                             max(map(abs,a))*1e-5+1e-8)
 
+    def test_lead_heads_keep_neck_pickup_bass_out_of_the_clipping(self):
+        # Beta feedback: a Strat neck pickup made UK-800/CALI/BROWN flubby and
+        # gritty. Neck-like 4:1 low E (82 Hz) + 700 Hz at GAIN 80: the 700 Hz
+        # carrier must stay well above its 82 Hz intermodulation sidebands.
+        n=16384
+        x=[.16*math.sin(2*math.pi*82.41*i/ne.FS)+.04*math.sin(2*math.pi*700*i/ne.FS) for i in range(n)]
+        for t,limit in ((49,-22),(50,-10),(51,-14)):
+            y=self.render(t,x,{0:80})[8192:]
+            carrier=tone_amp(y,700)
+            side=math.sqrt(sum(tone_amp(y,700+s*82.41*k)**2 for k in (1,2,3) for s in (-1,1)))
+            self.assertLess(20*math.log10(side/carrier),limit,t)
+            # The low end returns after the clipping: BASS still shapes 100 Hz.
+            self.assertGreater(self.h.gain(t,100,{0:0,1:100}),self.h.gain(t,100,{0:0,1:0})*1.4,t)
+
     def test_clean_heads_retain_upper_band_for_external_cabinet_ir(self):
         for t in (45,46,47,48):
             low=self.h.gain(t,1000,{0:0,3:100,4:0})

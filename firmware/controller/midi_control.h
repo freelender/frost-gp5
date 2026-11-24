@@ -73,7 +73,7 @@ static void midi_service(void)
 {
     if(midi_preset<FROST_PRESETS && midi_editable() && fw_editor_ready() && !tuner_client.dsp_active && view!=TUNER){
         if(fw_flash_load(midi_preset)){
-            midi_preset=255;boot_load_done=1;changed=0;last_preset_dirty=0;
+            midi_preset=255;boot_load_done=1;changed=0;   /* last_preset_service saves it */
             midi_tempo_pending=midi_clock_enabled && midi_tempo;
             if(view==SETLIST_HOME)view=CHAIN;
             ++generation;

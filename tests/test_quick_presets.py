@@ -53,15 +53,18 @@ class QuickPresetTests(unittest.TestCase):
             n=len(self.packet());rows.append(dict(preset=i+1,request_bytes=n,simulated_ticks=ticks,nominal_pacing_idle_max_ms=((n+4+7)//8-1)*3))
         folder=ROOT/'build/quick-presets';folder.mkdir(exist_ok=True)
         (folder/'factory-framing.json').write_text(json.dumps(dict(scope='native simulation and UART pacing arithmetic; NOT physical latency',presets=rows),indent=2)+'\n',encoding='utf-8')
-    def test_selection_never_schedules_a_delayed_flash_write(self):
+    def test_selection_is_written_once_after_it_settles(self):
+        """beta.11 (user): the selected preset survives a power cycle; one write."""
         c=self.lib;self.load(0);before=c.ge_flash_ops()
-        self.load(1);c.ge_advance(15000);c.ge_tick_draw();self.settle()
-        self.assertEqual(c.ge_flash_ops(),before)
-        self.assertEqual(c.ge_global(6),255)
-    def test_last_preset_persists_on_explicit_save_or_global_exit(self):
+        self.load(1);c.ge_tick_draw();self.assertEqual(c.ge_flash_ops(),before)   # not at once
+        c.ge_advance(15000);c.ge_tick_draw();self.settle()
+        self.assertGreater(c.ge_flash_ops(),before);self.assertEqual(c.ge_global(6),1)
+        once=c.ge_flash_ops();c.ge_advance(15000);c.ge_tick_draw();self.settle()
+        self.assertEqual(c.ge_flash_ops(),once)
+    def test_last_preset_persists_on_save_selection_or_global_exit(self):
         c=self.lib;self.load(0);c.ge_flash_save(0);self.settle();self.assertEqual(c.ge_global(6),0)
-        self.load(1);c.ge_advance(15000);c.ge_tick_draw();self.assertEqual(c.ge_global(6),0)
-        c.ge_reboot();self.settle();self.assertEqual(c.ge_current_preset(),0)
+        self.load(1);c.ge_tick_draw();c.ge_advance(15000);c.ge_tick_draw();self.settle();self.assertEqual(c.ge_global(6),1)
+        c.ge_reboot();self.settle();self.assertEqual(c.ge_current_preset(),1)
         self.load(2);c.ge_long_press();settings_nav.leave(c);self.settle();self.assertEqual(c.ge_global(6),2)
         c.ge_reboot();self.settle();self.assertEqual(c.ge_current_preset(),2)
     def test_lost_acceptance_retries_identical_mutation_once(self):

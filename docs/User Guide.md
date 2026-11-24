@@ -198,12 +198,17 @@ Single-coil pickups put out less signal, so high-gain amps (UK-800, CALI,
 BROWN) and drives sound cleaner and thinner, and clean patches quieter.
 Humbuckers put out more, so cleans break up sooner.
 
+The high-gain heads cut deep bass before their gain stages and restore it
+afterwards, like the amps that inspired them, so neck pickups stay tight on
+power chords and triads. If a neck pickup still sounds woolly, lower BASS on
+the amp rather than INPUT GAIN on every preset.
+
 Match your guitar once with GLOBAL SETTINGS → AUDIO → **INPUT GAIN**, rather
 than raising GAIN on every preset:
 
 | Guitar | Try INPUT GAIN |
 |---|---|
-| Vintage-style single coils (Strat, Tele) | +3 to +6 dB |
+| Vintage-style single coils (Strat, Tele) | +3 dB; up to +6 dB for cleans and drives |
 | Hot single coils, P-90s | 0 to +3 dB |
 | Medium humbuckers | 0 dB |
 | High-output or active humbuckers | -3 to -6 dB |
@@ -294,8 +299,11 @@ and press again. PRESET home offers quicker footswitch/PARA navigation.
 The website's **Presets** page can rename, reorder and delete stored presets.
 Live-editor changes still need the on-pedal SAVE operation.
 
-The boot preset is remembered on explicit preset SAVE or when leaving Global
-settings; simply browsing presets does not continuously save a new boot choice.
+The pedal remembers the preset you are on and starts with it after a power
+cycle. It stores your choice once you have stayed on a preset for about two
+seconds and stopped playing for a moment, because saving briefly interrupts
+the cabinet IR. Quickly browsing through presets stores only the one you stop
+on. Unsaved edits are not kept: SAVE the preset to keep them.
 
 ### Factory sounds
 

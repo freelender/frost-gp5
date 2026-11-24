@@ -15,8 +15,10 @@
  * (frost_load_rv6_mode): a preset uses its stored mode, a route change the
  * slot's current mode, and a MODE edit is refused when the new mode would not
  * fit (frost_slots_apply). Checked against the pedal while playing:
- *   SCREAM UK-800 IR DIGI SPACE(mode 2)  272,400  measured 272-278k, late blocks (refused now)
- *   BOOST  UK-800 IR DIGI SPACE(mode 2)  247,900  (factory Singing Lead since beta.10)
+ *   SCREAM UK-800 IR DIGI SPACE(mode 2)  274,100  measured 272-278k, late blocks (refused now)
+ *   BOOST  UK-800 IR DIGI SPACE(mode 2)  248,000  (factory Singing Lead since beta.10)
+ * UK-800/CALI/BROWN re-measured silent after the tightening (2026-11-24,
+ * candidate amp1): 81,674 each; their cost does not depend on the signal.
  * Re-measure when an effect's cost changes
  * (each effect alone on the pedal with the slot-load meter, while playing). */
 #include "engine/metadata.h"
@@ -38,7 +40,7 @@ static const uint32_t frost_load_cost[FROST_EFFECTS] FROST_XDATA={
      22200, 38600, 35800, 88700, 33500, 32400,   /* 30..35 */
      28300, 12800, 12100, 21700, 15200, 29600,   /* 36..41 */
      52700, 42200, 45800, 53800, 55900, 53100,   /* 42..47 */
-     54500, 81600, 78900, 78900,   /* 48..51 */
+     54500, 81700, 81700, 81700,   /* 48..51 */
      /* 52..58 ROTARY RING CRUSH H-TREM MUFF BOOST SWELL */
      32900, 13100,  9700, 18700, 36100,  8800, 16200
 };
