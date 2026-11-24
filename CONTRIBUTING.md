@@ -20,7 +20,7 @@ For a new effect, follow [Build an effect](docs/Build%20effect.MD).
 | tests/ | Native fixtures and browser/protocol regression tests |
 | presets/ | Factory presets and compatibility identities |
 | assets/branding/ | Approved logo and embedded startup image |
-| docs/ | Six maintained user/developer guides, including MIDI commands |
+| docs/ | Seven maintained user/developer guides, including the effects list and MIDI commands |
 | build/ | Transient output; empty in a prepared source checkout |
 
 ## Development workflow
@@ -51,7 +51,8 @@ redistributable. Retain attribution when adapting third-party source.
 - Keep the approved Frost logo and blue colours.
 - Converted capture models are approximations; Frost does not run native NAM.
   AMP plus five effects is a target, not a guarantee for every chain.
-- docs/ holds only the six maintained guides; build/ stays empty.
+- docs/ holds only the seven maintained guides; build/ stays empty. A new or
+  changed effect also updates the [Effects list](docs/Effects%20list.md).
 
 ## Reporting problems
 

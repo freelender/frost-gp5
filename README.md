@@ -6,7 +6,7 @@
 
 <p align="center">
 
-[Installation](docs/Installation%20Guide.MD) · [Pedal guide](docs/User%20Guide.md) · [Website guide](docs/Website%20Guide.md) · [MIDI commands](docs/Midi%20Command.md) · [Build firmware](docs/Build%20Firmware.md)
+[Installation](docs/Installation%20Guide.MD) · [Pedal guide](docs/User%20Guide.md) · [Effects list](docs/Effects%20list.md) · [Website guide](docs/Website%20Guide.md) · [MIDI commands](docs/Midi%20Command.md) · [Build firmware](docs/Build%20Firmware.md)
 
 </p>
 
@@ -62,8 +62,9 @@ reinstall it if you need them.
 
 1. Follow the [Installation Guide](docs/Installation%20Guide.MD) to back up
    your sounds and install the matching firmware file.
-2. Read the [User Guide](docs/User%20Guide.md) for controls, presets, effects,
-   tuning and performance workflows.
+2. Read the [User Guide](docs/User%20Guide.md) for controls, presets, tuning
+   and performance workflows, and the [Effects list](docs/Effects%20list.md)
+   for every effect and amp.
 3. Open [Frost Studio](https://frost.fretlexwins.workers.dev/) and follow the
    [Website Guide](docs/Website%20Guide.md) to connect and manage your pedal.
 
@@ -81,7 +82,7 @@ Private captures, user IR files, compiler archives and stock firmware are not
 distributed as source. Valeton and GP-5 are trademarks of their respective
 owners; Frost is an independent project. Frost's effect and amp models use
 their own names; the products that inspired them are listed in the
-[User Guide](docs/User%20Guide.md#available-effects) only to describe their sound.
+[Effects list](docs/Effects%20list.md) only to describe their sound.
 All such names are trademarks of their respective owners, who are not
 affiliated with or endorsing Frost.
 

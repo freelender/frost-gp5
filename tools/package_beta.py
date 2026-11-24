@@ -20,7 +20,7 @@ def package(stage,baseline,out,notes=None):
     name='Frost_GP5_'+version
     (testers/(name+'.bin')).write_bytes(data)
     (testers/'SHA256SUMS.txt').write_text(digest+'  '+name+'.bin\n',encoding='utf-8')
-    for source,dest in [('Installation Guide.MD','Installation Guide.MD'),('User Guide.md','User Guide.md'),('Website Guide.md','Website Guide.md'),('Build Firmware.md','Build Firmware.md'),('Build effect.MD','Build effect.MD')]:
+    for source,dest in [('Installation Guide.MD','Installation Guide.MD'),('User Guide.md','User Guide.md'),('Effects list.md','Effects list.md'),('Website Guide.md','Website Guide.md'),('Build Firmware.md','Build Firmware.md'),('Build effect.MD','Build effect.MD')]:
         shutil.copy2(ROOT/'docs'/source,testers/dest)
     for filename in ('LICENSE','THIRD_PARTY_NOTICES.md'):shutil.copy2(ROOT/filename,testers/filename)
     if notes:shutil.copy2(notes,testers/'RELEASE_NOTES.md')   # tester notes, kept outside the repository

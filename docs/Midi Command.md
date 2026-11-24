@@ -362,7 +362,8 @@ may not apply every intermediate message. An unused control number is ignored.
 
 ## Effect control lookup
 
-Find the effect's label below. **1, 2, 3… are control positions, not CC
+Find the effect's label below; the [Effects list](Effects%20list.md) describes
+each effect. **1, 2, 3… are control positions, not CC
 numbers or MIDI values.** Use those positions with the block table above.
 Ranges are pedal values; named choices appear in selection order.
 For example, COMP+ **2 LEVEL** means use the **Control 2** column.

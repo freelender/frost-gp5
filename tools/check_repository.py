@@ -3,7 +3,7 @@ import argparse,os,re
 from pathlib import Path
 from urllib.parse import unquote
 ROOT=Path(__file__).resolve().parents[1]
-GUIDES={'Installation Guide.MD','Build Firmware.md','Build effect.MD','Website Guide.md','User Guide.md','Midi Command.md'}
+GUIDES={'Installation Guide.MD','Build Firmware.md','Build effect.MD','Website Guide.md','User Guide.md','Midi Command.md','Effects list.md'}
 ROOT_ITEMS={'.git','.github','.gitattributes','.gitignore','.deps','.venv','AGENTS.md','CONTRIBUTING.md','README.md','LICENSE','THIRD_PARTY_NOTICES.md','CMakeLists.txt','dependencies.lock.json','assets','build','docs','effects','engine','firmware','presets','tests','tools','web'}
 GENERATED={'.bin','.elf','.dll','.so','.pyc','.wav','.nam','.fcm','.fcap','.fbank','.frostbackup','.npz','.zip','.txz','.o','.obj','.a','.lib','.map','.log'}
 
@@ -12,7 +12,7 @@ def check(empty=False):
     for p in ROOT.iterdir():
         if p.name not in ROOT_ITEMS:errors.append('Unexpected root item: '+p.name)
     actual={p.name for p in (ROOT/'docs').iterdir()}
-    if actual!=GUIDES:errors.append('docs/ must contain only the six maintained guides')
+    if actual!=GUIDES:errors.append('docs/ must contain only the seven maintained guides')
     if empty and (ROOT/'build').exists() and any((ROOT/'build').iterdir()):errors.append('build/ is not empty')
     for folder,dirs,names in os.walk(ROOT):
         dirs[:]=[d for d in dirs if d not in ('.git','.deps','.venv','build')]

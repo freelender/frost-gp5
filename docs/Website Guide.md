@@ -53,8 +53,8 @@ a preset.
 The pedal can refuse an unsupported combination, such as a second amp or a
 resource configuration it cannot accept; the previous block then remains.
 Six visible slots do not guarantee that every heavy chain fits the DSP budget.
-See the [User Guide](User%20Guide.md) for effect families and pedal-side
-position changes.
+See the [Effects list](Effects%20list.md) for every effect and its controls,
+and the [User Guide](User%20Guide.md) for pedal-side position changes.
 
 ### Cabinet selector
 

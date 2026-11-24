@@ -144,4 +144,4 @@ damage it. Frost cannot apply the fix itself. If you are not comfortable
 with this, keep Valeton's firmware. Please report the result, and the
 pedal's purchase date, so we can track which units are affected.
 
-Next: [User Guide](User%20Guide.md) · [Website Guide](Website%20Guide.md).
+Next: [User Guide](User%20Guide.md) · [Effects list](Effects%20list.md) · [Website Guide](Website%20Guide.md).

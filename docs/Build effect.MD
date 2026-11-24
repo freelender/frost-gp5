@@ -232,7 +232,7 @@ data; do not add a separate browser-only effect definition. If website cache
 versions change, keep entry points and shared imports aligned.
 
 Add the effect's ID/folder/status to `effects/catalog.json`, and update the
-effect reference in [User Guide](User%20Guide.md). For optional offline
+[Effects list](Effects%20list.md). For optional offline
 `tools/chain_wav.py --effects trim` support, add `trim` with its actual ID to
 that tool's `LIBRARY_TYPES`; this CLI mapping is separate from registration.
 
