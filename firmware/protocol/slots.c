@@ -9,6 +9,27 @@
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
 #endif
+#ifdef FROST_LOAD_ADMIT
+/* beta.10: SPACE MODE of each slot for the load estimate (route changes keep
+ * the slot's current mode; a new SPACE starts at its default). */
+FROST_XCODE static void frost_slots_modes(const FrostChain *chain,const unsigned *types,unsigned *modes)
+{
+    unsigned i;
+    for(i=0;i<FROST_SLOTS;++i)modes[i]=types[i]==FROST_RV6 && chain->slots[i].type==FROST_RV6?
+        (unsigned)(chain->slots[i].target[3]+0.5f):FROST_LOAD_MODE_UNKNOWN;
+}
+/* A MODE edit of SPACE in slot: refused only when the chain would not fit and
+ * the new mode costs more than the current one. */
+unsigned frost_slots_mode_fits(const FrostChain *chain,unsigned slot,float mode);
+FROST_XCODE unsigned frost_slots_mode_fits(const FrostChain *chain,unsigned slot,float mode)
+{
+    unsigned i,types[FROST_SLOTS],modes[FROST_SLOTS],m=(unsigned)(mode+0.5f);
+    for(i=0;i<FROST_SLOTS;++i)types[i]=chain->slots[i].type;
+    frost_slots_modes(chain,types,modes);
+    if(m>4u || modes[slot]>4u || frost_load_rv6_mode[m]<=frost_load_rv6_mode[modes[slot]])return 1;
+    modes[slot]=m;return frost_load_fits_modes(types,modes);
+}
+#endif
 void frost_slots_init(FrostSlotProtocol *s)
 { s->revision=1;s->cached=0; }
 void frost_slots_legacy_changed(FrostSlotProtocol *s)
@@ -23,7 +44,7 @@ FROST_COLD unsigned frost_slots_request_route(FrostSlotProtocol *s,FrostChain *c
     if(!FROST_ROUTE_ADMIT(types))return FROST_SLOT_CHAIN_FULL;
 #endif
 #ifdef FROST_LOAD_ADMIT
-    if(!frost_load_fits(types))return FROST_SLOT_DSP_LIMIT;
+    {unsigned modes[FROST_SLOTS];frost_slots_modes(chain,types,modes);if(!frost_load_fits_modes(types,modes))return FROST_SLOT_DSP_LIMIT;}
 #endif
     if(!frost_chain_request_route(chain,types,order,pre_count))return FROST_SLOT_BAD_ROUTE;
     frost_slots_legacy_changed(s);return FROST_SLOT_APPLIED;
@@ -39,7 +60,8 @@ FROST_COLD unsigned frost_slots_request_preset(FrostSlotProtocol *s,FrostChain *
      if(!FROST_ROUTE_ADMIT(types))return FROST_SLOT_CHAIN_FULL;
 #endif
 #ifdef FROST_LOAD_ADMIT
-     if(!frost_load_fits(types))return FROST_SLOT_DSP_LIMIT;
+     {unsigned modes[FROST_SLOTS];for(i=0;i<FROST_SLOTS;++i)modes[i]=types[i]==FROST_RV6?(unsigned)(preset->parameters[i][3]+0.5f):FROST_LOAD_MODE_UNKNOWN;
+      if(!frost_load_fits_modes(types,modes))return FROST_SLOT_DSP_LIMIT;}
 #endif
     }
 #endif
@@ -77,6 +99,9 @@ FROST_CTL_RAM static unsigned frost_slots_apply(FrostSlotProtocol *s,FrostChain 
     if(v[2]==FROST_SLOT_PARAMETER){
         union { uint32_t u;float f; } value;value.u=v[7];
         if(v[6]>=d->parameter_count)return FROST_SLOT_BAD_PARAMETER;
+#ifdef FROST_LOAD_ADMIT
+        if(slot->type==FROST_RV6 && v[6]==3u && !frost_slots_mode_fits(chain,v[4],value.f))return FROST_SLOT_DSP_LIMIT;
+#endif
         if(!frost_chain_set(chain,v[4],v[6],value.f))return FROST_SLOT_BAD_VALUE;
     }else{
         if(v[6]!=FROST_SLOT_UNUSED)return FROST_SLOT_BAD_PARAMETER;

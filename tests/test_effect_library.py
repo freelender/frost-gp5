@@ -39,7 +39,7 @@ def corr(a,b):
 class LibraryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.c=c=ct.CDLL(str(build(ROOT/('build/effect_library'+('.dll' if os.name=='nt' else '.so')),ROOT/'tests/library_host.c')))
+        cls.c=c=ct.CDLL(str(build(ROOT/('build/effect_library'+('.dll' if os.name=='nt' else '.so')),ROOT/'tests/library_host.c',flags=['-DFROST_NO_TAILS'])))   # kernels vs reference; tails: test_tails.py
         c.lib_bound.restype=ct.c_float;c.lib_bound.argtypes=[ct.c_uint,ct.c_uint,ct.c_uint]
         c.lib_set.argtypes=[ct.c_uint,ct.c_uint,ct.c_uint,ct.c_float]
         for f in ('lib_name','lib_parameter_name'):getattr(c,f).restype=ct.c_char_p
@@ -67,7 +67,8 @@ class LibraryTests(unittest.TestCase):
     def test_registry_appends_ids_and_keeps_original_nine(self):
         c=self.c;self.assertEqual(c.lib_effect_count(),59)
         self.assertEqual([c.lib_parameter_count(t) for t in range(9)],[1,1,3,3,3,3,3,3,3])
-        counts={TS:4,BD2:3,KLON:3,BB:3,OCD:4,DS1:3,RAT:3,DISTPLUS:2,DD3:5,DM2:3,RV6:4,SPRING:3,PH90:2,CE2:2,
+        counts={TS:4,BD2:3,KLON:3,BB:3,OCD:4,DS1:3,RAT:3,DISTPLUS:2,DD3:6,DM2:4,RV6:5,SPRING:4,   # beta.10: +TAIL on delays/reverbs
+                PH90:2,CE2:2,
                 MISTRESS:4,M117:4,VIBE:4,VB2:4,TR2:3,POG:3,DYNA:2,COMPPLUS:5,GE7:8,NS2:3,FCM:6}
         self.assertEqual({t:c.lib_parameter_count(t) for t in counts},counts)
         for t in counts:
@@ -367,7 +368,7 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual([c.lib_type(1,i) for i in range(4)],[GE7,DD3,VB2,TS]);self.assertEqual(c.lib_target(1,0,6),-7.5)
         c.lib_snapshot_set_version(1);self.assertEqual(c.lib_recall(1),0) # new types need version 2
         c.lib_snapshot_set_version(2);c.lib_snapshot_set_parameter(3,3,.5);self.assertEqual(c.lib_recall(1),0) # stepped
-        c.lib_snapshot_set_parameter(3,3,1.);c.lib_snapshot_set_parameter(1,5,1.);self.assertEqual(c.lib_recall(1),0) # unused
+        c.lib_snapshot_set_parameter(3,3,1.);c.lib_snapshot_set_parameter(1,6,1.);self.assertEqual(c.lib_recall(1),0) # unused (DD3 has 6 since beta.10 TAIL)
     def word_exchange(self,fn,c,fmt,*v):
         payload=struct.pack(fmt,*v);return ct.string_at(fn(c,payload,len(payload)),48)
     def test_wire_v2_upload_download_exact_and_v1_unchanged(self):

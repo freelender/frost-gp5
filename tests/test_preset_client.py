@@ -98,12 +98,35 @@ class PresetClientTests(unittest.TestCase):
         c=self.lib;c.ge_load_estimate.argtypes=[ct.POINTER(ct.c_uint)]
         def est(types):
             a=(ct.c_uint*6)(*(list(types)+[255]*(6-len(types))));return c.ge_load_estimate(a)
+        c.ge_load_estimate_modes.argtypes=[ct.POINTER(ct.c_uint),ct.POINTER(ct.c_uint)]
+        def est_modes(chain):
+            t=[b['type'] for b in chain]+[255]*(6-len(chain));m=[int(b['params'].get('MODE',1)) if b['type']==19 else 255 for b in chain]+[255]*(6-len(chain))
+            return c.ge_load_estimate_modes((ct.c_uint*6)(*t),(ct.c_uint*6)(*m))
         budget=c.ge_load_default()
         self.assertLessEqual(est([30,45,3,20]),budget)
         self.assertGreater(est([33,28,13,45]),budget)
         self.assertGreater(est([33,28,13,45])/278494,1.1)
         for row in json.loads((ROOT/'presets/factory.json').read_text())['presets']:
             self.assertLessEqual(est([b['type'] for b in row['chain']]),budget,row['name'])
+            self.assertLessEqual(est_modes(row['chain']),budget,row['name'])          # beta.10: SPACE costed by its MODE
+        # beta.10: the old Singing Lead (SCREAM, SPACE PLATE) overloaded while playing (272-278k measured)
+        old=[dict(type=9,params={}),dict(type=49,params={}),dict(type=3,params={}),dict(type=17,params={}),dict(type=19,params={'MODE':2})]
+        self.assertGreater(est_modes(old),budget)
+    def test_space_mode_edit_is_refused_when_the_chain_would_not_fit(self):
+        """beta.10: SPACE MODE costs 61-106k cycles (measured while playing). On a
+        full chain a costlier MODE is refused with the DSP LIMIT popup and the
+        old mode keeps playing; a cheaper MODE is always accepted."""
+        c=self.lib;c.ge_message.restype=ct.c_char_p
+        try:
+            c.ge_load_budget(10**9)
+            for slot,t in enumerate((57,49,3,17,19)):self.assertEqual(c.ge_type_change(slot,t),1);self.settle()
+            c.ge_load_budget(c.ge_load_chain()+5000)           # MODE 1 (default) fits, SHIMMER does not
+            self.assertEqual(c.ge_value(4,3),1)
+            self.assertEqual(c.ge_queue(4,3,4),1);self.settle()
+            self.assertEqual(c.ge_error(),5);self.assertEqual(c.ge_message(),b'DSP LIMIT');self.assertEqual(c.ge_value(4,3),1)
+            self.draw();self.assertEqual(c.ge_popup(),2)
+            self.assertEqual(c.ge_queue(4,3,0),1);self.settle();self.assertEqual(c.ge_value(4,3),0)   # ROOM: cheaper, accepted
+        finally:c.ge_load_budget(c.ge_load_default())
     def open_bank(self):
         c=self.lib;c.ge_press();c.ge_turn(-1);c.ge_press();self.assertEqual(c.ge_view(),3)
     def test_all_profiles_reach_real_dsp_assets_policies_parameters_and_mute(self):

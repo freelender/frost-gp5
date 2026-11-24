@@ -1,14 +1,14 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
-import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.5.0';
-import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.5.0';
-import { convertIr, readWav } from './ir.js?v=1.5.0';
-import { LiveView, loadCatalog } from './live.js?v=1.5.0';
-import { initFirmware, isBusy } from './firmware.js?v=1.5.0';
-import { SetlistView } from './setlist_view.js?v=1.5.0';
-import { simulatedPedal } from './sim.js?v=1.5.0';
+import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.6.0';
+import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.6.0';
+import { convertIr, readWav } from './ir.js?v=1.6.0';
+import { LiveView, loadCatalog } from './live.js?v=1.6.0';
+import { initFirmware, isBusy } from './firmware.js?v=1.6.0';
+import { SetlistView } from './setlist_view.js?v=1.6.0';
+import { simulatedPedal } from './sim.js?v=1.6.0';
 
-export const VERSION = '1.5.0';
+export const VERSION = '1.6.0';
 const $ = id => document.getElementById(id);
 const pad2 = i => String(i).padStart(2, '0');
 const state = {
@@ -251,7 +251,7 @@ $('amp-name').oninput = () => { $('amp-name').value = $('amp-name').value.replac
 $('amp-convert').onclick = () => {
   if (!state.nam || state.worker) return;
   const name = ($('amp-name').value || 'AMP').slice(0, 15), workers = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  const w = new Worker(new URL('./convert_worker.js?v=1.5.0', import.meta.url), { type: 'module' }); state.worker = w;
+  const w = new Worker(new URL('./convert_worker.js?v=1.6.0', import.meta.url), { type: 'module' }); state.worker = w;
   const t0 = performance.now(), prog = (s, v) => { $('amp-progress').hidden = false; $('amp-bar').style.width = `${Math.round(100 * v)}%`; $('amp-stage').textContent = `${s} · ${Math.round((performance.now() - t0) / 1000)} s`; };
   const stop = () => { state.worker = null; w.terminate(); updateButtons(); };
   prog('Starting', 0);

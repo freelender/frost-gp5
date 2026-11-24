@@ -300,7 +300,7 @@ static int editor_reply(FrostEditor *e,const uint8_t *p,unsigned n,uint32_t now)
         if(slot<6){
             if(parameter==UINT32_MAX){if(e->desired_enabled[slot]==value)e->dirty[slot]&=(uint16_t)~EDITOR_DIRTY_ENABLE;}
             else if(parameter<FROST_PARAMETERS && e->desired[slot][parameter]==value)e->dirty[slot]&=(uint16_t)~(1u<<parameter);
-        }e->error=3;
+        }e->error=status==FROST_SLOT_DSP_LIMIT?5:3;if(e->error==5)++e->refusals;   /* beta.10: SPACE MODE over budget -> DSP LIMIT popup */
     }
     e->saved_len=0;
 refresh:

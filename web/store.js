@@ -5,7 +5,7 @@
 //   AMP models: firmware FFCM, amp-0..amp-6, 10 x 400-byte records (MODEL 0..63)
 //   presets:    firmware FPST, pst-0..pst-3, 15 x 264-byte records (1..60)
 // Legacy single amp-NN files (Frost 31s/31t3) are migrated into the groups.
-import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.5.0';
+import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.6.0';
 
 export const GROUPS = {
   amp: { firm: 0x4d434646, prefix: 'amp-', files: 7, slots: 10, size: 400 },

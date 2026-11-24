@@ -147,7 +147,7 @@ static float frost_ir_fft_spectrum[FROST_IR_FFT_PARTS][FROST_IR_FFT_SIZE];
  * (frost_ovl_fits, the loader's own size arithmetic; FROST_SLOT_CHAIN_FULL
  * otherwise). Before the first load every entry is NULL and overlay types
  * pass their input; a module that still does not fit counts an overflow. */
-#define FROST_OVL_POOL 8704u   /* 32l: was 8960; 256 bytes moved to frost_ovl_kernel (LARGE) */
+#define FROST_OVL_POOL 7936u   /* 32l: was 8960; 256 bytes to frost_ovl_kernel; beta.10: 768 to the tail code (LARGE) */
 static uint32_t frost_ovl_pool[FROST_OVL_POOL/4u] GP5_LARGE;
 #define FROST_OVL_MODULES(M) \
     M(ts,FROST_TS,frost_ts_sample) \

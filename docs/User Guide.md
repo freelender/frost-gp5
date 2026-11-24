@@ -2,7 +2,7 @@
 
 # Frost for Valeton GP-5 — User Guide
 
-Beta: **0.1.0-beta.9** · Website: **1.5.0** · Updated: 24 November 2026
+Beta: **0.1.0-beta.10** · Website: **1.6.0** · Updated: 24 November 2026
 
 Website: [Frost GP-5 Studio](https://frost.fretlexwins.workers.dev/)
 
@@ -141,13 +141,28 @@ and shows **CHAIN TOO BIG**: the previous chain keeps playing, and a preset
 that does not fit is not loaded. Replace one of the larger effects.
 
 The pedal also estimates the processing load of a chain before it plays, from
-costs measured for each effect. A chain estimated above about 90% of the DSP
-is refused with **DSP LIMIT**, so it does not overload and mute. The heaviest
-effects are OCTAVE (about 40% on its own), NAM capture (about 31%), the UK-800,
-CALI and BROWN heads (about 28%) and the reverbs (about 18–21%). Both
-refusals appear as a popup for about 2.5 seconds. Settings that cost more
-than an effect's defaults, such as SPACE in SHIMMER mode, are not part of this
-estimate; overload protection still covers them.
+costs measured for each effect while playing guitar. A chain estimated above
+about 90% of the DSP is refused with **DSP LIMIT**, so it does not overload,
+crackle or mute. The heaviest effects are OCTAVE (about 40% on its own), NAM
+capture (about 32%), the UK-800, CALI and BROWN heads (about 29%) and the
+reverbs (REVERB 25%, SPRING 24%). SPACE depends on its MODE: ROOM and HALL
+about 23%, PLATE 29%, MOD 35% and SHIMMER 38%. Changing SPACE to a costlier
+MODE on a full chain is refused with DSP LIMIT and the old mode keeps
+playing. Both refusals appear as a popup for about 2.5 seconds.
+
+### Delay and reverb tails
+
+DIGI, BBD, TAPE, SPACE and SPRING have a **TAIL** setting (OFF by default):
+
+- **TAIL OFF:** switching the effect off fades it out within a few
+  milliseconds. While it is off it uses no DSP, and when you switch it on
+  again it starts fresh, without echoes of what you played meanwhile.
+- **TAIL ON:** switching the effect off stops feeding it your playing, but the
+  echoes or reverb already in it keep ringing out naturally. Once the tail has
+  died away, the effect rests and uses no DSP.
+
+TAIL is saved with the preset. The generic DELAY and REVERB behave as TAIL OFF.
+On a preset change, tails are cut with the usual short crossfade.
 
 ### Read the DSP meter
 
@@ -350,7 +365,7 @@ and exits.
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
 | DISPLAY | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set its tempo and a hold switches it on/off; the light flashes on the beat |
-| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.9 |
+| SYSTEM | FIRMWARE | Release version; this beta displays 0.1.0-BETA.10 |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 
@@ -476,9 +491,9 @@ clipping adds. The clipped sound is a touch softer in the top octave
 | Label | Sound / function | Controls | Inspired by |
 |---|---|---|---|
 | DELAY | Mono Delay | TIME, REPEAT, MIX | — |
-| DIGI | Digital Delay | E.LEVEL, F.BACK, TIME, HOLD, FOOT | Boss DD-3 |
-| BBD | Bucket Brigade Delay | RATE, ECHO, INTENS | Boss DM-2 |
-| TAPE | Tape Echo | TIME, REPEAT, MIX, WOW, AGE, DRIVE | — |
+| DIGI | Digital Delay | E.LEVEL, F.BACK, TIME, HOLD, FOOT, TAIL | Boss DD-3 |
+| BBD | Bucket Brigade Delay | RATE, ECHO, INTENS, TAIL | Boss DM-2 |
+| TAPE | Tape Echo | TIME, REPEAT, MIX, WOW, AGE, DRIVE, TAIL | — |
 
 #### Reverb
 
@@ -504,8 +519,8 @@ shimmer, which can sound up to about a semitone out of tune.
 | Label | Sound / function | Controls | Inspired by |
 |---|---|---|---|
 | REVERB | Mono Reverb | DECAY, TONE, MIX | — |
-| SPACE | Space Reverb 5 Modes | E.LEVEL, TONE, TIME, MODE | Boss RV-6 |
-| SPRING | Tube Spring Reverb | DWELL, MIX, TONE | Fender 6G15 reverb unit |
+| SPACE | Space Reverb 5 Modes | E.LEVEL, TONE, TIME, MODE, TAIL | Boss RV-6 |
+| SPRING | Tube Spring Reverb | DWELL, MIX, TONE, TAIL | Fender 6G15 reverb unit |
 
 #### Modulation
 

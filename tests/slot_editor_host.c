@@ -186,6 +186,7 @@ API void ge_full_type(unsigned type){host_full_type=type;}
 API void ge_load_budget(uint32_t cycles){host_load_budget=cycles;}
 API uint32_t ge_load_default(void){return FROST_LOAD_BUDGET_DEFAULT;}
 API uint32_t ge_load_estimate(const unsigned *types){return frost_load_estimate(types);}
+API uint32_t ge_load_estimate_modes(const unsigned *types,const unsigned *modes){return frost_load_estimate_modes(types,modes);}
 API uint32_t ge_load_chain(void){unsigned i,t[6];for(i=0;i<6;++i)t[i]=frost_chain.slots[i].type;return frost_load_estimate(t);}
 API unsigned ge_popup(void){return popup_kind;}
 API const char *ge_message(void){const char *m=editor_message();return m?m:"";}

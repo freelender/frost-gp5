@@ -16,7 +16,7 @@ class StageMajorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.c=ct.CDLL(str(build(ROOT/('build/stage_major_host'+('.dll' if os.name=='nt' else '.so')),
-                              ROOT/'tests/stage_major_host.c',includes=[ROOT/'tests/stubs'])))
+                              ROOT/'tests/stage_major_host.c',includes=[ROOT/'tests/stubs'],flags=['-DFROST_NO_TAILS'])))   # kernels vs reference; tails: test_tails.py
         cls.c.sm_set.argtypes=[ct.c_uint,ct.c_uint,ct.c_float];cls.c.sm_bound.restype=ct.c_float
         cls.c.sm_block.argtypes=[ct.POINTER(ct.c_float),ct.c_uint,ct.c_uint,ct.c_uint]
     def block(self,values,amp=0,inplace=0):

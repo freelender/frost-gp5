@@ -395,17 +395,17 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| DIGI | **1 E.LEVEL** (0–100); **2 F.BACK** (0–100); **3 TIME** (13–800 ms); **4 HOLD** (OFF / ON); **5 FOOT** (BYPASS / HOLD) |
-| BBD | **1 RATE** (20–300 ms); **2 ECHO** (0–100); **3 INTENS** (0–100) |
+| DIGI | **1 E.LEVEL** (0–100); **2 F.BACK** (0–100); **3 TIME** (13–800 ms); **4 HOLD** (OFF / ON); **5 FOOT** (BYPASS / HOLD); **6 TAIL** (OFF / ON) |
+| BBD | **1 RATE** (20–300 ms); **2 ECHO** (0–100); **3 INTENS** (0–100); **4 TAIL** (OFF / ON) |
 | DELAY | **1 TIME** (1–500 ms); **2 REPEAT** (0–100); **3 MIX** (0–100) |
-| TAPE | **1 TIME** (20–800 ms); **2 REPEAT** (0–100); **3 MIX** (0–100); **4 WOW** (0–100); **5 AGE** (0–100); **6 DRIVE** (0–100) |
+| TAPE | **1 TIME** (20–800 ms); **2 REPEAT** (0–100); **3 MIX** (0–100); **4 WOW** (0–100); **5 AGE** (0–100); **6 DRIVE** (0–100); **7 TAIL** (OFF / ON) |
 
 ### Reverb
 
 | Effect label | Controls in order (pedal range or choices) |
 |---|---|
-| SPACE | **1 E.LEVEL** (0–100); **2 TONE** (0–100); **3 TIME** (0–100); **4 MODE** (ROOM / HALL / PLATE / MOD / SHIMMER) |
-| SPRING | **1 DWELL** (0–100); **2 MIX** (0–100); **3 TONE** (0–100) |
+| SPACE | **1 E.LEVEL** (0–100); **2 TONE** (0–100); **3 TIME** (0–100); **4 MODE** (ROOM / HALL / PLATE / MOD / SHIMMER); **5 TAIL** (OFF / ON) |
+| SPRING | **1 DWELL** (0–100); **2 MIX** (0–100); **3 TONE** (0–100); **4 TAIL** (OFF / ON) |
 | REVERB | **1 DECAY** (0–100); **2 TONE** (0–100); **3 MIX** (0–100) |
 
 ### Modulation

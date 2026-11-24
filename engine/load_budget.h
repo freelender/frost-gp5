@@ -8,14 +8,17 @@
  *
  * Estimate = FROST_LOAD_BASE_CYCLES + sum of the per-type costs of every
  * non-empty slot (bypassed slots included: they can be switched on later).
- * Costs are the slot-load meter maxima measured on the pedal (2026-11-23,
- * build 32h, each type alone with default settings, IR over the controller
- * link), rounded up to 100 cycles. Settings that cost more than the defaults
- * (e.g. RV-6 SHIMMER mode) are not part of a route change; the overload
- * protection still covers them. Check against the pedal:
- *   COMP+ DELUXE IR SPRING   estimate 175,100  measured peak ~165,000  (fits)
- *   NAM POG OCD DELUXE       estimate 326,400  meter ~120%, overload  (refused)
- * Re-measure when an effect's cost changes (frost-shimmer-32a/measure/sweep_costs.py). */
+ * Costs are the slot-load meter maxima measured on the pedal, each type alone
+ * with default settings, rounded up to 100 cycles: the larger of the silent
+ * sweep (2026-11-23, build 32h) and a sweep WHILE PLAYING (2026-11-24, build
+ * 32v; reverbs and delays cost more with a signal). SPACE is costed per MODE
+ * (frost_load_rv6_mode): a preset uses its stored mode, a route change the
+ * slot's current mode, and a MODE edit is refused when the new mode would not
+ * fit (frost_slots_apply). Checked against the pedal while playing:
+ *   SCREAM UK-800 IR DIGI SPACE(mode 2)  272,400  measured 272-278k, late blocks (refused now)
+ *   BOOST  UK-800 IR DIGI SPACE(mode 2)  247,900  (factory Singing Lead since beta.10)
+ * Re-measure when an effect's cost changes
+ * (frost-shimmer-32a/measure/sweep_costs2.py, while playing). */
 #include "engine/metadata.h"
 #include "engine/hot_code.h"
 /* Table and estimate live in dsp-data flash (FROST_XDATA/FROST_XCODE): DSP
@@ -27,26 +30,33 @@
 #define FROST_LOAD_BUDGET_CYCLES FROST_LOAD_BUDGET_DEFAULT
 #endif
 static const uint32_t frost_load_cost[FROST_EFFECTS] FROST_XDATA={
-      3100,  7900,  5500, 23900, 10800, 23100,   /*  0.. 5 */
-     22600, 22500, 59600, 32400, 40600, 36800,   /*  6..11 */
-     26500, 56700, 40400, 43600, 40200, 29200,   /* 12..17 */
-     52400, 49500, 55300, 17600, 24000, 28800,   /* 18..23 */
-     27300, 37300, 32800, 10900,110600, 11500,   /* 24..29 */
-     22100, 38600, 35800, 85300, 33500, 31800,   /* 30..35 */
-     27500, 12800, 12100, 21700, 15200, 29600,   /* 36..41 */
-     49900, 39600, 45800, 53800, 55900, 53100,   /* 42..47 */
-     54500, 79500, 78900, 78900,   /* 48..51 */
-     /* 52..58 ROTARY RING CRUSH H-TREM MUFF BOOST SWELL: measured on the
-      * pedal 2026-11-23 (build 32l), same method */
-     32900, 13100,  9700, 18700, 34900,  8800, 13200
+      3700,  8200,  6200, 23900, 10800, 23100,   /*  0.. 5 */
+     22600, 22500, 70200, 33300, 40600, 37900,   /*  6..11 */
+     27300, 56700, 40400, 43600, 41700, 32000,   /* 12..17 */
+     55000, 63500, 65600, 18300, 24000, 28800,   /* 18..23 */
+     29900, 41900, 33500, 12200,110700, 12200,   /* 24..29 */
+     22200, 38600, 35800, 88700, 33500, 32400,   /* 30..35 */
+     28300, 12800, 12100, 21700, 15200, 29600,   /* 36..41 */
+     52700, 42200, 45800, 53800, 55900, 53100,   /* 42..47 */
+     54500, 81600, 78900, 78900,   /* 48..51 */
+     /* 52..58 ROTARY RING CRUSH H-TREM MUFF BOOST SWELL */
+     32900, 13100,  9700, 18700, 36100,  8800, 16200
 };
 typedef char FrostLoadCostTable[(sizeof frost_load_cost/sizeof frost_load_cost[0]==FROST_EFFECTS)?1:-1];
-uint32_t frost_load_estimate(const unsigned *types);
-FROST_XCODE uint32_t frost_load_estimate(const unsigned *types)
+/* SPACE (RV-6) by MODE 0..4, measured while playing (2026-11-24). */
+static const uint32_t frost_load_rv6_mode[5] FROST_XDATA={61400,63500,81600,97000,106200};
+#define FROST_LOAD_MODE_UNKNOWN 255u
+/* modes[i]: SPACE MODE of slot i (FROST_LOAD_MODE_UNKNOWN = the default cost); may be NULL. */
+uint32_t frost_load_estimate_modes(const unsigned *types,const unsigned *modes);
+FROST_XCODE uint32_t frost_load_estimate_modes(const unsigned *types,const unsigned *modes)
 {
     unsigned i;uint32_t sum=FROST_LOAD_BASE_CYCLES;
-    for(i=0;i<FROST_SLOTS;++i)if(types[i]<FROST_EFFECTS)sum+=frost_load_cost[types[i]];
+    for(i=0;i<FROST_SLOTS;++i)if(types[i]<FROST_EFFECTS)
+        sum+=types[i]==FROST_RV6 && modes && modes[i]<5u?frost_load_rv6_mode[modes[i]]:frost_load_cost[types[i]];
     return sum;
 }
+static inline uint32_t frost_load_estimate(const unsigned *types){return frost_load_estimate_modes(types,0);}
 static inline int frost_load_fits(const unsigned *types){return frost_load_estimate(types)<=FROST_LOAD_BUDGET_CYCLES;}
+static inline int frost_load_fits_modes(const unsigned *types,const unsigned *modes)
+{return frost_load_estimate_modes(types,modes)<=FROST_LOAD_BUDGET_CYCLES;}
 #endif

@@ -102,6 +102,7 @@ static inline const char *frost_library_hint(unsigned type,unsigned p)
     const FrostControlEffect *d=frost_control_find(type);const char *name;
     if(!d || p>=d->count)return 0;name=d->p[p].name;
 #define FROST_IS(a) (name[0]==(a)[0] && name[1]==(a)[1] && name[2]==(a)[2])
+    if(FROST_IS("TAI") && name[3]=='L' && !name[4])return "ON: RINGS OUT WHEN OFF";   /* beta.10 */
     if(type==FROST_RAT && p==1)return "CW BRIGHTER: RAT REVERSED";
     if(type==FROST_DD3 && p==3)return "FREEZE LOOP OF LAST TIME";
     if(type==FROST_DD3 && p==4)return "HOLD = MOMENTARY FOOT";

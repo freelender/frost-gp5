@@ -19,7 +19,7 @@ class IRFFTTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.c=ct.CDLL(str(build(ROOT/('build/'+getattr(cls,'library_name','ir_fft_host')+('.dll' if os.name=='nt' else '.so')),
-                              ROOT/'tests/ir_fft_host.c',includes=[ROOT/'tests/stubs'],flags=getattr(cls,'build_flags',()))))
+                              ROOT/'tests/ir_fft_host.c',includes=[ROOT/'tests/stubs'],flags=('-DFROST_NO_TAILS',)+tuple(getattr(cls,'build_flags',())))))   # kernels vs reference; tails: test_tails.py
         c=cls.c
         c.k_load.argtypes=[ct.POINTER(F),ct.c_uint]
         c.k_process.argtypes=[ct.POINTER(F),ct.POINTER(F),ct.POINTER(F),ct.c_uint,ct.c_uint,ct.c_uint]

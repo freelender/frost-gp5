@@ -789,10 +789,83 @@ FROST_NOINLINE FROST_HOT FROST_AUDIO_RAM static unsigned ovl_settled(FrostInstan
 /* Stage 2b Cabinet Override: while set, every IR block passes its input (changed
  * only at a silent route commit, engine/chain.c frost_chain_request_ir_bypass). */
 unsigned frost_ir_bypass;
+/* Tails (beta.10). Delays and reverbs that are switched off or fading. TAIL is
+ * the last parameter of DIGI, BBD, TAPE, SPACE and SPRING (OFF by default; the
+ * generic DELAY/REVERB have no switch and behave as OFF).
+ *  TAIL OFF: the usual wet fade (KEEP path); once the wet level is below
+ *   FROST_TAIL_CUT the block rests: state cleared, input passes, no DSP work.
+ *  TAIL ON: the input to the effect fades out (FROST_TAIL_STEP per sample)
+ *   while its output keeps playing at full level, so echoes and the reverb
+ *   ring out; after FROST_TAIL_QUIET_BLOCKS quiet blocks the block rests.
+ *   Switching on again fades the input back in.
+ * suspended: 0 active, FROST_TAIL_REST resting, FROST_TAIL_QUIET+k k quiet
+ * blocks of a ringing tail. Code in LARGE (FROST_AUDIO_RAM): it runs every
+ * block a delay/reverb is off or fading (dsp-data flash cost ~8.6k cycles per
+ * call on the pedal, 32w). */
+#define FROST_TAIL_PASS 0xffffffffu
+#define FROST_TAIL_REST 1u
+#define FROST_TAIL_QUIET 2u
+#define FROST_TAIL_QUIET_BLOCKS 345u      /* 0.5 s below the floor */
+#define FROST_TAIL_FLOOR 3.0e-5f          /* about -90 dBFS */
+#define FROST_TAIL_CUT 1.0e-4f
+#define FROST_TAIL_STEP (1.0f/1024.0f)    /* 23 ms input fade */
+#define FROST_TAIL_BLOCK 64u
+unsigned frost_tail_process(FrostInstance *s,float *x,unsigned count);
+/* 1 when this block's TAIL switch is ON. */
+FROST_AUDIO_RAM static unsigned frost_tail_on(const FrostInstance *s,const FrostEffect *d)
+{
+    switch(s->type){
+    case FROST_DD3:case FROST_DM2:case FROST_TAPE:case FROST_RV6:case FROST_SPRING:
+        return d->parameter_count && s->target[d->parameter_count-1u]>=0.5f;
+    default:return 0;
+    }
+}
+/* Rest: clear the state, then run one silent sample so a reverb does its
+ * deferred memory clear now (the block does no other work) rather than in the
+ * first block after it is switched on again. */
+FROST_XCODE static unsigned frost_tail_rest(FrostInstance *s,const FrostEffect *d,unsigned count)
+{
+    d->reset(&s->state);(void)d->sample(&s->state,0.0f,s->current);
+    s->wet=0.0f;s->suspended=FROST_TAIL_REST;return count;
+}
+FROST_AUDIO_RAM unsigned frost_tail_process(FrostInstance *s,float *x,unsigned count)
+{
+    const FrostEffect *d;float g,target,peak=0.0f,in[FROST_TAIL_BLOCK],u[FROST_TAIL_BLOCK];unsigned n,r,quiet;
+    if(!frost_type_is_delay(s->type) && !frost_type_is_reverb(s->type))return FROST_TAIL_PASS;
+    d=frost_effect_find(s->type);target=s->wet_target;
+    if(!d || count>FROST_TAIL_BLOCK)return FROST_TAIL_PASS;
+    if(!frost_tail_on(s,d)){
+        if(target!=0.0f){if(s->suspended)s->suspended=0;return FROST_TAIL_PASS;}   /* on again: fresh state, wet ramps up */
+        if(s->suspended==FROST_TAIL_REST)return count;
+        if(s->wet>FROST_TAIL_CUT)return FROST_TAIL_PASS;                               /* the usual fade */
+        return frost_tail_rest(s,d,count);
+    }
+    if(target==0.0f && s->suspended==FROST_TAIL_REST)return count;
+    quiet=s->suspended>=FROST_TAIL_QUIET?s->suspended-FROST_TAIL_QUIET:0u;
+    g=s->suspended==FROST_TAIL_REST?0.0f:s->wet;
+    for(n=0;n<count;++n){
+        if(g<target){g+=FROST_TAIL_STEP;if(g>target)g=target;}
+        else if(g>target){g-=FROST_TAIL_STEP;if(g<target)g=target;}
+        u[n]=in[n]=x[n]*g;
+    }
+    s->wet=s->wet_target=1.0f;                     /* full wet on the gated input: the normal block path */
+    r=frost_instance_process(s,u,count);
+    s->wet=g;s->wet_target=target;
+    for(n=0;n<r;++n){float w=u[n]-in[n];x[n]+=w;if(w<0.0f)w=-w;if(w>peak)peak=w;}
+    if(r<count){s->suspended=0;return r;}
+    if(target!=0.0f || g!=0.0f){s->suspended=0;return count;}
+    if(peak<FROST_TAIL_FLOOR){if(++quiet>=FROST_TAIL_QUIET_BLOCKS)return frost_tail_rest(s,d,count);}
+    else quiet=0;
+    s->suspended=quiet?FROST_TAIL_QUIET+quiet:0u;
+    return count;
+}
 FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstance *s,float *x,unsigned count)
 {
     unsigned n;const FrostEffect *d=frost_effect_find(s->type);
     if(!d || (frost_ir_bypass && s->type==FROST_IR))return count;
+#ifndef FROST_NO_TAILS   /* only host tests that compare block kernels with the per-sample reference */
+    if(s->wet_target!=1.0f || s->wet!=1.0f){n=frost_tail_process(s,x,count);if(n!=FROST_TAIL_PASS)return n;}   /* beta.10 tails */
+#endif
 #ifdef FROST_IR_LINK
     if(frost_ir_remote && s->type==FROST_IR && count==FROST_IR_FFT_BLOCK && d->parameter_count==FROST_IR_PARAMETER_COUNT &&
        !(s->bypass_policy==FROST_BYPASS_CUT_AND_SUSPEND && s->wet==0.0f && s->wet_target==0.0f))

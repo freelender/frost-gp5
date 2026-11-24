@@ -13,8 +13,12 @@ API int chain_set(unsigned e,unsigned p,float v){return frost_chain_set(&state,e
 API int chain_enable(unsigned e,unsigned on){return frost_chain_enable(&state,e,on);}
 API int chain_bypass_policy(unsigned slot,unsigned policy){return frost_chain_set_bypass_policy(&state,slot,policy);}
 API void chain_process(const float *x,float *y,unsigned n){frost_chain_process(&state,x,y,n);}
+/* The pedal's block path (64-sample blocks). */
+API int chain_process_block(const float *x,float *y,unsigned n){return frost_chain_process_guarded(&state,x,y,n,0);}
 API unsigned chain_bytes(void){return sizeof(state);}
 API unsigned chain_faults(void){return state.faults;}
+API unsigned chain_suspended(unsigned slot){return slot<FROST_SLOTS?state.slots[slot].suspended:0;}
+API float chain_wet(unsigned slot){return slot<FROST_SLOTS?state.slots[slot].wet:0.0f;}
 API unsigned chain_effect_count(void){return FROST_EFFECTS;}
 API unsigned chain_workspace_capacity(unsigned group)
 {return group==0?FROST_IR_WORKSPACES:group==1?FROST_DELAY_WORKSPACES:group==2?FROST_MOD_WORKSPACES:group==3?FROST_REVERB_WORKSPACES:0;}
