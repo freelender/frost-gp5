@@ -5,7 +5,7 @@
 //   AMP models: firmware FFCM, amp-0..amp-6, 10 x 400-byte records (MODEL 0..63)
 //   presets:    firmware FPST, pst-0..pst-3, 15 x 264-byte records (1..60)
 // Legacy single amp-NN files (Frost 31s/31t3) are migrated into the groups.
-import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.6.0';
+import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.7.8';
 
 export const GROUPS = {
   amp: { firm: 0x4d434646, prefix: 'amp-', files: 7, slots: 10, size: 400 },
@@ -149,16 +149,21 @@ export class Store {
   async presetPut(i, rec) { if (rec) checkPreset(rec); if (!(i >= 0 && i < PRESETS)) throw new Error('preset must be 1..60'); await this.putSlot('pst', i, rec); }
   async presetRename(i, name) { const r = await this.presetGet(i); if (!r) throw new Error('empty preset'); await this.presetPut(i, renamePreset(r, name)); }
   presetDelete(i) { return this.presetPut(i, null); }
-  /** Swap presets a and b (either may be empty). */
+  /** Swap presets a and b (either may be empty). beta.12: one scan and one read
+   * per group file, then one write per group (was three scans and reads first). */
   async presetSwap(a, b) {
     if (a === b) return;
-    const ra = await this.presetGet(a), rb = await this.presetGet(b), ga = Math.floor(a / 15), gb = Math.floor(b / 15);
-    if (ga === gb) {
-      const d = Uint8Array.from((await this.readGroup('pst', ga)) || new Uint8Array(3960));
-      d.fill(0, (a % 15) * 264, (a % 15 + 1) * 264); d.fill(0, (b % 15) * 264, (b % 15 + 1) * 264);
-      if (rb) d.set(rb, (a % 15) * 264); if (ra) d.set(ra, (b % 15) * 264);
-      await this.writeGroup('pst', ga, d);
-    } else { await this.presetPut(b, ra); await this.presetPut(a, rb); }
+    if (!(a >= 0 && a < PRESETS && b >= 0 && b < PRESETS)) throw new Error('preset must be 1..60');
+    const files = await this.scan(), ga = Math.floor(a / 15), gb = Math.floor(b / 15), name = g => 'pst-' + g;
+    const seq = g => this.newest(files, GROUPS.pst.firm, name(g))?.seq ?? null;
+    const da = Uint8Array.from((await this.readGroup('pst', ga, files)) || new Uint8Array(3960));
+    const db = ga === gb ? da : Uint8Array.from((await this.readGroup('pst', gb, files)) || new Uint8Array(3960));
+    const at = (d, i) => d.subarray((i % 15) * 264, (i % 15 + 1) * 264), keep = r => isPreset(r) ? Uint8Array.from(r) : null;
+    const ra = keep(at(da, a)), rb = keep(at(db, b));
+    at(da, a).fill(0); at(db, b).fill(0);
+    if (rb) at(da, a).set(rb); if (ra) at(db, b).set(ra);
+    await this.writeGroup('pst', ga, da, undefined, seq(ga));
+    if (gb !== ga) await this.writeGroup('pst', gb, db, undefined, seq(gb));
   }
   // ---- backup / restore (all group files) ----
   async backup() {

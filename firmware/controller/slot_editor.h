@@ -122,6 +122,13 @@ static unsigned editor_position(unsigned slot)
  * parameters, TYPE, POSITION, REMOVE EFFECT (any non-empty block), BACK, PRESETS.
  * PRESETS stays last (one turn back from the first row). */
 enum { ROW_PARAM, ROW_CAB, ROW_TYPE, ROW_POSITION, ROW_REMOVE, ROW_BACK, ROW_PRESETS };
+/* beta.12 PRESETS list, top to bottom: SAVE CURRENT PRESET, presets 01..60, BACK.
+ * preset_choice keeps the preset index (FROST_PRESETS = BACK, PRESET_ROW_SAVE =
+ * the save row); the list opens on the current preset. */
+#define PRESET_ROW_SAVE (FROST_PRESETS+1u)
+#define PRESET_ROWS (FROST_PRESETS+2u)
+static unsigned preset_row_pos(unsigned c){return c==PRESET_ROW_SAVE?0u:c>=FROST_PRESETS?FROST_PRESETS+1u:c+1u;}
+static unsigned preset_row_at(unsigned pos){return pos==0u?PRESET_ROW_SAVE:pos>FROST_PRESETS?FROST_PRESETS:pos-1u;}
 static unsigned row_has_cab(void){return editor.types[selected]==FROST_IR;}
 static unsigned row_has_remove(void){return editor.types[selected]!=FROST_EMPTY;}
 static unsigned row_total(const FrostControlEffect *e){return e->count+4u+row_has_cab()+row_has_remove();}
@@ -474,12 +481,14 @@ static void render(void)
         char label[24];
         text(5,3,"PRESETS",INK);line(4,12,155,12,WIRE);
         if(view==PRESETS){
-            unsigned first=preset_choice>=4?preset_choice-3:0;
-            for(i=first;i<FROST_PRESETS+1 && i<first+4;++i){
-                int y=18+(int)(i-first)*12;
-                if(i==preset_choice){rect(3,y-2,154,11,SELECTION);text(5,y,">",FOCUS);}
-                if(i<FROST_PRESETS)preset_label(i,label);
-                text(15,y,i==FROST_PRESETS?"BACK":label,i<FROST_PRESETS && !store_preset(i)?WIRE:INK);
+            unsigned at=preset_row_pos(preset_choice),first=at>=4?at-3:0;
+            for(i=first;i<PRESET_ROWS && i<first+4;++i){
+                unsigned c=preset_row_at(i);int y=18+(int)(i-first)*12;
+                if(c==preset_choice){rect(3,y-2,154,11,SELECTION);text(5,y,">",FOCUS);}
+                if(c<FROST_PRESETS)preset_label(c,label);
+                if(c==PRESET_ROW_SAVE)text(15,y,"SAVE CURRENT PRESET",current_preset<FROST_PRESETS?INK:WIRE);
+                else text(15,y,c==FROST_PRESETS?"BACK":label,c<FROST_PRESETS && !store_preset(c)?WIRE:INK);
+                if(c<FROST_PRESETS && c==current_preset)text(147,y,"*",FOCUS);
             }
             text(5,72,message?message:"PARA: SELECT / OPEN",INK);
         }else{
@@ -1028,6 +1037,7 @@ void fw_para_push(void)
     if(view==CHAIN){view=PARAMETERS;parameter=0;}
     else if(view==PRESETS){
         if(preset_choice==FROST_PRESETS)view=PARAMETERS;
+        else if(preset_choice==PRESET_ROW_SAVE){if(current_preset<FROST_PRESETS && fw_flash_save(current_preset))view=home_view();}
         else {view=PRESET_CONFIRM;preset_action=0;}
     }else if(view==PRESET_CONFIRM){
         if(!preset_action)view=PRESETS;
@@ -1056,7 +1066,7 @@ void fw_para_push(void)
         if(kind==ROW_BACK)view=home_view();
         else if(kind==ROW_TYPE && editor_editable(&editor)){view=TYPE_CATEGORY;pick_category=frost_type_category(editor.types[selected]);}
         else if(kind==ROW_CAB){choice=ir_cabs[selected];view=VALUE;}
-        else if(kind==ROW_PRESETS){view=PRESETS;preset_choice=0;}
+        else if(kind==ROW_PRESETS){view=PRESETS;preset_choice=current_preset<FROST_PRESETS?current_preset:0u;}
         else if(kind==ROW_REMOVE){if(editor_editable(&editor))view=VALUE;}  /* asks first: CONFIRM? */
         else if(editor_editable(&editor)){
             choice=kind==ROW_TYPE?editor.types[selected]:editor_position(selected);view=VALUE;
@@ -1099,7 +1109,7 @@ void fw_para_turn(int detents)
     }
     if(view==CHAIN || view==STOMP){int pos=(int)editor_position(selected);selected=editor.order[(pos+detents%6+6)%6];}
     else if(ir_file_client.state || preset_client.state || capture_client.state)return;
-    else if(view==PRESETS){int count=(int)FROST_PRESETS+1;preset_choice=(unsigned)(((int)preset_choice+detents%count+count)%count);}
+    else if(view==PRESETS){int count=(int)PRESET_ROWS;preset_choice=preset_row_at((unsigned)(((int)preset_row_pos(preset_choice)+detents%count+count)%count));}
     else if(view==PRESET_CONFIRM)preset_action=(unsigned)(((int)preset_action+detents%3+3)%3);
     else if(view==TYPE_CATEGORY){int count=FROST_CATEGORIES+1;pick_category=(unsigned)(((int)pick_category+detents%count+count)%count);}
     else if(view==TYPE_MODEL){int count=(int)picker_count(pick_category)+1;pick_model=(unsigned)(((int)pick_model+detents%count+count)%count);}

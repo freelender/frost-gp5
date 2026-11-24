@@ -12,6 +12,11 @@
 #define FROST_EDITOR_POLL_MS 100u
 #endif
 #endif
+/* Re-read spacing while the DSP reports a route change still in progress
+ * (fade/commit, a few ms). Independent of the idle poll above. */
+#ifndef FROST_EDITOR_BUSY_POLL_MS
+#define FROST_EDITOR_BUSY_POLL_MS 20u
+#endif
 /* Minimum spacing of PARAMETER writes while a knob turns (line-test build).
  * Each DSP slot write costs ~55-85k cycles and evicts cached audio code; on a
  * heavily loaded chain every write overruns the block deadline (revision 23h
@@ -236,7 +241,10 @@ static int editor_reply(FrostEditor *e,const uint8_t *p,unsigned n,uint32_t now)
         phase=frost_wire_get32(p+20);if((status==FROST_SLOT_BUSY)!=(phase!=0))goto invalid;
         e->next_poll=now+FROST_EDITOR_POLL_MS;
         if(e->recover){e->recover=0;e->retry_ready=1;return 1;}
-        if(phase){e->ready=0;e->busy=1;e->scan=EDITOR_ROUTE_READ;return 1;}
+        /* beta.12: a route still fading on the DSP is asked again soon. With the
+         * line-test 60 s idle poll, a reorder whose read-back landed inside the
+         * fade left the editor (and the website) busy for up to a minute. */
+        if(phase){e->ready=0;e->busy=1;e->scan=EDITOR_ROUTE_READ;e->next_poll=now+FROST_EDITOR_BUSY_POLL_MS;return 1;}
         if(e->route_state==2){
             if(revision!=e->route_revision || !editor_same_route(types,e->route_types,order,e->route_order,pre,e->route_pre))e->error=2;
             e->route_state=0;e->ready=0;

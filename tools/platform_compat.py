@@ -108,6 +108,23 @@ def patch_dsp_link(text,dsp_usage=False):
     old='    gp5_uart0_send(tx, len, 100);           /* 404 bytes take 9 ms at 460800 baud */'
     if text.count(old)!=1:raise ValueError('Pinned raw UART send hook mismatch')
     text=text.replace(old,'#include "paced_uart.inc"')
+    # beta.12: the receive interrupt fires only for the first byte into an empty
+    # 4-byte FIFO. A flash write stalls this CPU while the DSP keeps sending; the
+    # bytes then wait in a full FIFO and the post-write interrupt clear removes the
+    # only trigger, so the link never drained again (DSP replies, reports and the
+    # IR-link resume all lost until power-off; seen on the pedal 2026-11-24).
+    # The main-loop poll now also takes any waiting bytes, with interrupts held
+    # off for those few microseconds so it cannot race the handler on the ring.
+    # beta.12c: not by masking only the UART line. The IR-link interrupt (lowest
+    # priority, ~0.7 ms of FIR work) could preempt the drain while the UART line
+    # was masked, so DSP replies overran the 4-byte FIFO (seen on the pedal with
+    # a 512-tap IR last: UART errors and bad frames at 255, the editor never
+    # synced). With interrupts off the IR work waits until after the drain, and
+    # the UART line, which has the higher priority, can interrupt it as designed.
+    old='    if (dsp_irq_off) drain();           /* only after the safety net in UART0_Interrupt tripped */'
+    if text.count(old)!=1:raise ValueError('Pinned DSP link poll drain mismatch')
+    text=text.replace(old,'    if (dsp_irq_off) drain();           /* only after the safety net in UART0_Interrupt tripped */\n'
+                      '    else { int gie = GIE_STATE_GET(); GIE_DISABLE(); drain(); if (gie) GIE_ENABLE(); }   /* bytes left without an interrupt */')
     if dsp_usage:
         anchor='#include "dsp_link.h"'
         if text.count(anchor)!=1:raise ValueError('Pinned DSP report callback include mismatch')

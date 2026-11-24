@@ -17,7 +17,7 @@ class LiveHostTests(unittest.TestCase):
     def host(self,q):
         a=(ct.c_uint8*len(q))(*q);o=(ct.c_uint8*100)();n=self.c.ge_host(a,len(q),o);return bytes(o[:n]) if n else None
     def chain(self):
-        r=self.host([0x7e,0x18]);self.assertEqual(len(r),26);self.assertEqual(r[2],1)
+        r=self.host([0x7e,0x18]);self.assertEqual(len(r),28);self.assertEqual(r[2],1)
         return list(r[3:9]),list(r[9:15]),list(r[15:21]),struct.unpack_from('<I',r,21)[0],r[25]
     def slot(self,s):
         r=self.host([0x7e,0x14,s]);self.assertEqual(len(r),24)
@@ -37,6 +37,14 @@ class LiveHostTests(unittest.TestCase):
         self.assertEqual(self.slot(4)['values'][0],1);self.assertAlmostEqual(self.c.ge_actual_value(4,0),1.0,places=5)
         self.assertEqual(self.host([0x7e,0x15,4,1,*struct.pack('<h',999)]),b'\x7e\x15\x01');self.settle()  # clamped to 100
         self.assertEqual(self.slot(4)['values'][1],100)
+    def test_chain_reply_reports_dsp_limit_refusals_for_the_website_popup(self):
+        c=self.c;r=self.host([0x7e,0x18]);count=r[26];self.assertEqual(r[27],0)
+        try:
+            c.ge_load_budget(c.ge_load_chain()+1000)                         # POG (110k) no longer fits
+            self.assertEqual(self.host([0x7e,0x17,4,28]),b'\x7e\x17\x01');self.settle()   # queued, then refused
+            r=self.host([0x7e,0x18]);self.assertEqual(r[26],(count+1)&255);self.assertEqual(r[27],2)
+            self.assertNotEqual(r[3+4],28)                                    # the block stays as it was
+        finally:c.ge_load_budget(0xffffffff)
     def test_reorder_moves_blocks_and_keeps_their_settings(self):
         """32p 7E 1F: drag-and-drop on the website reorders the live chain."""
         ok=lambda c:bytes([0x7e,c,1])

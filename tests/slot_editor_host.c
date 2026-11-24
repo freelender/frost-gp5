@@ -175,6 +175,9 @@ API int ge_type_change(unsigned slot,unsigned type){uint8_t types[6],order[6];un
     for(i=0;i<6;++i){types[i]=editor.types[i];order[i]=editor.order[i];}types[slot]=(uint8_t)type;
     return editor_queue_route(&editor,types,order,editor.pre);}
 API int ge_wire(unsigned cmd,const uint8_t *p,unsigned n){response_bytes=0;return fw_command(cmd,p,n);}
+/* beta.12: the website's reorder (7E 1F o0..o5); returns its ok byte. */
+API unsigned ge_web_order(unsigned o0,unsigned o1,unsigned o2,unsigned o3,unsigned o4,unsigned o5)
+{uint8_t q[8]={0x7e,0x1f,(uint8_t)o0,(uint8_t)o1,(uint8_t)o2,(uint8_t)o3,(uint8_t)o4,(uint8_t)o5},r[8]={0};return fw_files_host(q,8,r,sizeof r)==3u?r[2]:255u;}
 static uint8_t prepared[128];static unsigned prepared_bytes;
 API unsigned ge_prepare(void){prepared_bytes=fw_editor_request(prepared);return prepared_bytes;}
 API void ge_deliver(void){uint8_t r[48],status;unsigned n=dsp_link_raw(prepared,prepared_bytes,r,sizeof(r),100,&status);fw_editor_reply(status==1?r:0,status==1?n:0);}

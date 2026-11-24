@@ -320,4 +320,26 @@ class SlotEditorTests(unittest.TestCase):
         for _ in range(12):c.ge_turn(1);self.assertEqual(c.ge_paint(),0)
         self.assertTrue(c.ge_muted())
 
+class SlowIdlePollTests(unittest.TestCase):
+    """beta.12 on the pedal: the line-test build polls an idle DSP every 60 s.
+    A website reorder whose read-back met the DSP mid-fade waited for that
+    poll, leaving the editor (and the website) busy for up to a minute."""
+    @classmethod
+    def setUpClass(cls):
+        cls.lib=ct.CDLL(str(build(ROOT/('build/generic_editor_slowpoll.dll' if os.name=='nt' else 'build/generic_editor_slowpoll.so'),
+            ROOT/'tests/slot_editor_host.c',includes=[ROOT/'tests/stubs'],flags=['-DFROST_EDITOR_POLL_MS=60000u'])))
+    def test_reorder_read_back_retries_soon_while_the_dsp_fades(self):
+        c=self.lib;c.ge_init()
+        for _ in range(100):
+            c.ge_pump(1)
+            if c.ge_ready():break
+        self.assertTrue(c.ge_ready())
+        self.assertEqual(c.ge_web_order(0,1,3,2,4,5),1)   # move block 3 one place later
+        for _ in range(25):                                # 0.5 s of 20 ms main-loop passes
+            c.ge_pump(1)
+            if c.ge_ready():break
+        self.assertTrue(c.ge_ready(),'editor still busy after the DSP finished the reorder')
+        self.assertEqual([c.ge_order(i) for i in range(6)],[0,1,3,2,4,5])
+        self.assertEqual([c.ge_actual_order(i) for i in range(6)],[0,1,3,2,4,5])
+
 if __name__=='__main__':unittest.main()

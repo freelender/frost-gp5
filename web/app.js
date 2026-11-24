@@ -1,14 +1,14 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
-import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.6.0';
-import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.6.0';
-import { convertIr, readWav } from './ir.js?v=1.6.0';
-import { LiveView, loadCatalog } from './live.js?v=1.6.0';
-import { initFirmware, isBusy } from './firmware.js?v=1.6.0';
-import { SetlistView } from './setlist_view.js?v=1.6.0';
-import { simulatedPedal } from './sim.js?v=1.6.0';
+import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.7.8';
+import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.7.8';
+import { convertIr, readWav } from './ir.js?v=1.7.8';
+import { LiveView, loadCatalog } from './live.js?v=1.7.8';
+import { initFirmware, isBusy } from './firmware.js?v=1.7.8';
+import { SetlistView } from './setlist_view.js?v=1.7.8';
+import { simulatedPedal } from './sim.js?v=1.7.8';
 
-export const VERSION = '1.6.0';
+export const VERSION = '1.7.8';
 const $ = id => document.getElementById(id);
 const pad2 = i => String(i).padStart(2, '0');
 const state = {
@@ -82,6 +82,8 @@ const live = new LiveView($('chain-strip'), $('inspector'), {
   state: t => { $('live-state').textContent = t; },
   edited: () => { if (!state.dirty) { state.dirty = true; renderDirty(); } },
   refused: t => toast(t, 'bad'),
+  limit: kind => limitPopup(kind),
+  changed: () => { if (!state.op) refreshCurrent(); },   // the chain changed (maybe a preset switched on the pedal)
   confirm: (title, text) => ask(title, text, 'Remove', { danger: true }),
   lost: () => lost(),
 });
@@ -150,12 +152,13 @@ document.querySelector('[data-connect]').onclick = connect;
 $('demo').onclick = () => demo();
 
 /** Run a device operation exclusively: other writes, connect and firmware installs wait for it. */
-async function exclusive(what, fn) {
+/** refresh: what to read back afterwards (default everything; preset work reads only the presets). */
+async function exclusive(what, fn, refresh = refreshAll) {
   if (state.op || isBusy()) { toast('Another operation is running. Wait until it finishes.', 'bad'); return false; }
   state.op = what; live.pause(true); showStatus(); updateButtons();
   try { await fn(); return true; }
   catch (e) { notice(`${what} failed: ${e.message || e}`); toast(`${what} failed.`, 'bad'); return false; }
-  finally { state.op = null; live.pause(false); showStatus(); if (state.store) await refreshAll(); updateButtons(); }
+  finally { state.op = null; live.pause(false); showStatus(); if (state.store) await refresh(); updateButtons(); }
 }
 
 initFirmware({
@@ -177,15 +180,41 @@ async function refreshAll() {
   } catch (e) { notice('Could not read the pedal: ' + (e.message || e)); }
   renderLists();
 }
-function renderLists() { renderAmps(); renderCabs(); renderPresets(); fillSlots(); fillPresetSlots(); }
+function renderLists() { renderAmps(); renderCabs(); renderPresets(); fillSlots(); fillPresetSlots(); renderPresetNav(); }
+// beta.12: preset work reads back only the presets (the AMP and cabinet groups are
+// most of the storage and took seconds to read after every move).
+async function refreshPresets() {
+  if (!state.store) { renderLists(); return; }
+  try {
+    state.presets = await state.store.presets();
+    await readCurrent();
+    await setlists.attach(state.store, state.presets);
+  } catch (e) { notice('Could not read the pedal: ' + (e.message || e)); }
+  renderPresets(); fillPresetSlots(); renderPresetNav();
+}
+async function readCurrent() { try { state.current = (await live.live?.presetStatus())?.current; } catch { state.current = null; } }
+async function refreshCurrent() {
+  const was = state.current; await readCurrent();
+  if (state.current !== was) { renderPresets(); fillPresetSlots(); renderPresetNav(); }
+}
+/** The pedal's own refusal popup, mirrored (slot_editor.h popup: CHAIN TOO BIG / DSP LIMIT). */
+let limitTimer = null;
+function limitPopup(kind) {
+  const p = $('limit-popup');
+  $('limit-title').textContent = kind === 1 ? 'CHAIN TOO BIG' : 'DSP LIMIT';
+  $('limit-text').textContent = kind === 1 ? "These effects do not fit together in the pedal's effect memory. Remove an effect or choose a smaller one."
+    : 'Together these effects would overload the audio processor. Remove an effect or choose a lighter one. The block stays as it was.';
+  p.hidden = false; clearTimeout(limitTimer); limitTimer = setTimeout(() => { p.hidden = true; }, 4000);
+}
+$('limit-close').onclick = () => { clearTimeout(limitTimer); $('limit-popup').hidden = true; };
 
 // ---------- shared list rendering ----------
 const offlineText = () => state.mode === 'demo' ? 'The demo has no storage. Connect a pedal running Frost to see it.' : 'Connect a pedal running Frost to see what is on it.';
 function list(ul, rows, empty) {
   ul.textContent = '';
   if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = empty; ul.appendChild(li); return; }
-  for (const { tag, name, sub, buttons } of rows) {
-    const li = document.createElement('li');
+  for (const { tag, name, sub, buttons, current } of rows) {
+    const li = document.createElement('li'); if (current) { li.className = 'current'; li.setAttribute('aria-current', 'true'); }
     const icon = document.createElement('div'); icon.className = 'libicon'; icon.textContent = tag;
     const info = document.createElement('div'); info.className = 'info';
     const b = document.createElement('b'); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
@@ -251,7 +280,7 @@ $('amp-name').oninput = () => { $('amp-name').value = $('amp-name').value.replac
 $('amp-convert').onclick = () => {
   if (!state.nam || state.worker) return;
   const name = ($('amp-name').value || 'AMP').slice(0, 15), workers = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  const w = new Worker(new URL('./convert_worker.js?v=1.6.0', import.meta.url), { type: 'module' }); state.worker = w;
+  const w = new Worker(new URL('./convert_worker.js?v=1.7.8', import.meta.url), { type: 'module' }); state.worker = w;
   const t0 = performance.now(), prog = (s, v) => { $('amp-progress').hidden = false; $('amp-bar').style.width = `${Math.round(100 * v)}%`; $('amp-stage').textContent = `${s} · ${Math.round((performance.now() - t0) / 1000)} s`; };
   const stop = () => { state.worker = null; w.terminate(); updateButtons(); };
   prog('Starting', 0);
@@ -330,34 +359,108 @@ $('cab-write').onclick = async () => {
 };
 
 // ---------- presets ----------
+/** Load preset i (0..59) on the pedal; asks first when live edits would be lost. */
+async function loadPreset(i) {
+  if (state.dirty && !await ask(`Load preset ${pad2(i + 1)}?`, 'Unsaved live edits will be replaced.', 'Load')) return false;
+  const ok = await exclusive('Loading preset', async () => {
+    try { await live.live.loadPreset(i); } finally { await live.ackRefusals(); }   // its own error says why; no second popup
+    state.dirty = false; renderDirty();
+    const c = await live.live.chain(); if (c) await live.render(c);
+  }, refreshCurrent);
+  if (ok) toast(`Preset ${pad2(i + 1)} loaded.`, 'ok');
+  return ok;
+}
+/** Previous/next stored preset from the current one, wrapping like the pedal's PRESET home screen. */
+function presetStep(dir) {
+  const used = Object.keys(state.presets).map(Number).sort((a, b) => a - b);
+  if (!used.length) return null;
+  const from = state.current != null && state.current < PRESETS ? state.current : dir > 0 ? -1 : PRESETS;
+  return dir > 0 ? (used.find(i => i > from) ?? used[0]) : ([...used].reverse().find(i => i < from) ?? used[used.length - 1]);
+}
+function renderPresetNav() {
+  const nav = $('preset-nav'), on = !!state.store && live.attached, cur = state.current, p = cur != null ? state.presets[cur] : null;
+  nav.hidden = !on; if (!on) return;
+  $('preset-nav-name').textContent = cur != null && cur < PRESETS ? `${pad2(cur + 1)} · ${p ? p.name || '(no name)' : 'empty'}` : 'No preset';
+  const none = !Object.keys(state.presets).length || !!state.op;
+  $('preset-prev').disabled = $('preset-next').disabled = none;
+  $('preset-nav-open').disabled = !!state.op;
+  if (!pick.el.hidden) { if (state.op) pickOpen(false); else pickRender(); }
+}
+// Preset picker: the live editor's preset name opens a searchable list; one click loads.
+const pick = { el: $('preset-pick'), list: $('preset-pick-list'), search: $('preset-pick-search'), active: -1, rows: [] };
+function pickRender() {
+  const q = pick.search.value.trim().toLowerCase(), all = Object.keys(state.presets).map(Number).sort((a, b) => a - b);
+  pick.rows = all.filter(i => !q || (state.presets[i].name || '').toLowerCase().includes(q) || pad2(i + 1).includes(q) || String(i + 1) === q);
+  if (!pick.rows.includes(pick.rows[pick.active])) pick.active = Math.max(0, pick.rows.indexOf(state.current));
+  pick.list.textContent = '';
+  pick.rows.forEach((i, k) => {
+    const li = document.createElement('li'); li.role = 'option'; li.id = `pick-${i}`; li.dataset.i = i;
+    li.className = (i === state.current ? 'current' : '') + (k === pick.active ? ' active' : '');
+    li.setAttribute('aria-selected', i === state.current);
+    const n = document.createElement('span'); n.className = 'picknum'; n.textContent = pad2(i + 1);
+    const t = document.createElement('span'); t.className = 'pickname'; t.textContent = state.presets[i].name || '(no name)';
+    li.append(n, t);
+    if (i === state.current) { const m = document.createElement('span'); m.className = 'pickmark'; m.textContent = 'playing'; li.append(m); }
+    li.onclick = () => pickChoose(i);
+    pick.list.appendChild(li);
+  });
+  if (!pick.rows.length) { const li = document.createElement('li'); li.className = 'pickempty'; li.textContent = all.length ? 'No preset matches.' : 'No presets saved yet.'; pick.list.appendChild(li); }
+  $('preset-pick-count').textContent = `${pick.rows.length} of ${all.length} presets${q ? ' match' : ''} · click to load`;
+  const a = pick.rows[pick.active]; pick.search.setAttribute('aria-activedescendant', a != null ? `pick-${a}` : '');
+  pick.list.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+}
+function pickOpen(on) {
+  if (on && (state.op || !state.store)) return;
+  pick.el.hidden = !on; $('preset-nav-open').setAttribute('aria-expanded', on);
+  if (on) { pick.search.value = ''; pick.active = -1; pickRender(); pick.search.focus(); }
+}
+function pickChoose(i) { pickOpen(false); $('preset-nav-open').focus(); if (i !== state.current) loadPreset(i); }
+$('preset-nav-open').onclick = () => pickOpen(pick.el.hidden);
+pick.search.oninput = () => { pick.active = 0; pickRender(); };
+pick.search.onkeydown = e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (pick.rows.length) { pick.active = (pick.active + (e.key === 'ArrowDown' ? 1 : -1) + pick.rows.length) % pick.rows.length; pickRender(); } }
+  else if (e.key === 'Enter') { e.preventDefault(); const i = pick.rows[pick.active]; if (i != null) pickChoose(i); }
+  else if (e.key === 'Escape') { e.preventDefault(); pickOpen(false); $('preset-nav-open').focus(); }
+};
+document.addEventListener('pointerdown', e => { if (!pick.el.hidden && !$('preset-nav').contains(e.target)) pickOpen(false); });
+$('preset-prev').onclick = () => { const i = presetStep(-1); if (i != null) loadPreset(i); };
+$('preset-next').onclick = () => { const i = presetStep(1); if (i != null) loadPreset(i); };
+$('preset-search').oninput = () => renderPresets();
+/** Move preset i by d (-1 up, +1 down): the list changes at once, the pedal follows. */
+function movePreset(i, d) {
+  const j = i + d, s = state.store, a = state.presets[i], b = state.presets[j];
+  return exclusive('Moving a preset', async () => {
+    if (b) state.presets[i] = b; else delete state.presets[i];
+    if (a) state.presets[j] = a; else delete state.presets[j];
+    renderPresets();
+    await s.presetSwap(i, j);
+  }, refreshPresets);
+}
 function renderPresets() {
-  const idx = Object.keys(state.presets).map(Number).sort((a, b) => a - b), s = state.store;
-  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', sub: `Preset ${pad2(i + 1)} · saved on the pedal`, buttons: [
-    ['Load', 'primary', async () => {
-      if (state.dirty && !await ask(`Load preset ${pad2(i + 1)}?`, 'Unsaved live edits will be replaced.', 'Load')) return;
-      if (await exclusive('Loading preset', async () => {
-        await live.live.loadPreset(i);state.dirty=false;renderDirty();
-        const c=await live.live.chain();if(c)await live.render(c);
-      })) toast(`Preset ${pad2(i + 1)} loaded.`, 'ok');
-    }, `Load preset ${pad2(i + 1)}`],
-    ['↑', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i - 1)), `Move preset ${pad2(i + 1)} up`, i === 0],
-    ['↓', 'ghost', () => exclusive('Moving a preset', () => s.presetSwap(i, i + 1)), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],
+  const q = ($('preset-search').value || '').trim().toLowerCase(), s = state.store;
+  const all = Object.keys(state.presets).map(Number).sort((a, b) => a - b);
+  const idx = all.filter(i => !q || (state.presets[i].name || '').toLowerCase().includes(q) || pad2(i + 1).includes(q) || String(i + 1) === q);
+  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', sub: `Preset ${pad2(i + 1)} · ${i === state.current ? 'playing now' : 'saved on the pedal'}`, current: i === state.current, buttons: [
+    ['Load', 'primary', () => loadPreset(i), `Load preset ${pad2(i + 1)}`],
+    ['↑', 'ghost', () => movePreset(i, -1), `Move preset ${pad2(i + 1)} up`, i === 0],
+    ['↓', 'ghost', () => movePreset(i, 1), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],
     ['Download', 'ghost', () => exclusive('Downloading a preset', async () => {
       const rec = await s.presetGet(i); if (!rec) throw new Error('the preset could not be read');
       const name = presetName(rec), file = JSON.stringify({ format: 'frost-preset', version: 1, number: i + 1, name, record: b64(rec) }, null, 1);
       save(new TextEncoder().encode(file), `frost-preset-${pad2(i + 1)}-${(name || 'preset').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'preset'}.frostpreset`);
       toast(`Preset ${pad2(i + 1)} downloaded.`, 'ok');
-    }), `Download preset ${pad2(i + 1)}`],
+    }, async () => {}), `Download preset ${pad2(i + 1)}`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
-      if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)))) toast('Preset renamed.', 'ok');
+      if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)), refreshPresets)) toast('Preset renamed.', 'ok');
     }, `Rename preset ${pad2(i + 1)}`],
     ['Delete', 'danger', async () => {
       if (await ask(`Delete preset ${pad2(i + 1)}?`, `"${state.presets[i].name}" is deleted from the pedal. This cannot be undone unless you have a backup.`, 'Delete', { danger: true }))
-        if (await exclusive('Deleting a preset', () => s.presetDelete(i))) toast('Preset deleted.', 'ok');
+        if (await exclusive('Deleting a preset', () => s.presetDelete(i), refreshPresets)) toast('Preset deleted.', 'ok');
     }, `Delete preset ${pad2(i + 1)}`],
-  ] })), state.store ? 'No presets yet. Save one from the Live editor or on the pedal: PRESETS → SAVE.' : offlineText());
-  $('presets-summary').textContent = state.store ? `${idx.length} of ${PRESETS} used` : 'Not connected';
+  ] })), !state.store ? offlineText() : all.length ? `No preset matches "${$('preset-search').value.trim()}".` : 'No presets yet. Save one from the Live editor or on the pedal: PRESETS → SAVE.');
+  $('presets-summary').textContent = state.store ? `${all.length} of ${PRESETS} used` + (q ? ` · ${idx.length} shown` : '') : 'Not connected';
+  $('preset-search').disabled = !state.store;
 }
 const b64 = b => { let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
 function fillPresetSlots() {
@@ -375,7 +478,7 @@ $('save-name').oninput = () => { $('save-name').value = $('save-name').value.rep
 $('save-preset').onclick = async () => {
   const i = Number($('save-slot').value), name = ($('save-name').value.trim() || `PRESET ${pad2(i + 1)}`).slice(0, 16), old = state.presets[i];
   if (!(await ask(`Save as preset ${pad2(i + 1)}?`, `The current sound is saved on the pedal as "${name}"${old ? `, replacing "${old.name}"` : ''}.`, 'Save'))) return;
-  if (await exclusive('Saving a preset', async () => { await live.live.savePreset(i, name); state.dirty = false; renderDirty(); delete $('save-name').dataset.edited; })) toast(`Saved as preset ${pad2(i + 1)}.`, 'ok');
+  if (await exclusive('Saving a preset', async () => { await live.live.savePreset(i, name); state.dirty = false; renderDirty(); delete $('save-name').dataset.edited; }, refreshPresets)) toast(`Saved as preset ${pad2(i + 1)}.`, 'ok');
 };
 $('import-file').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f || !state.store) return;
@@ -387,7 +490,7 @@ $('import-file').onchange = async e => {
   } catch (err) { toast(`${f.name}: ${err instanceof SyntaxError ? 'not a Frost preset file' : err.message}`, 'bad'); return; }
   const i = Number($('import-slot').value), old = state.presets[i];
   if (!(await ask(`Import "${name}" as preset ${pad2(i + 1)}?`, old ? `This replaces "${old.name}" on the pedal.` : 'The preset is written to the pedal.', 'Import', { danger: !!old }))) return;
-  if (await exclusive('Importing a preset', () => state.store.presetPut(i, rec))) toast(`"${name}" is now preset ${pad2(i + 1)}.`, 'ok');
+  if (await exclusive('Importing a preset', () => state.store.presetPut(i, rec), refreshPresets)) toast(`"${name}" is now preset ${pad2(i + 1)}.`, 'ok');
 };
 function save(bytes, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $('backup').onclick = () => exclusive('Backing up', async () => {
@@ -428,6 +531,7 @@ function updateButtons() {
   $('live-panel').inert = !!op;
   $('setlist-editor').inert = !!op;
   for (const b of document.querySelectorAll('.library .btn')) b.disabled = !!op || b.dataset.off === '1';
+  renderPresetNav();
 }
 renderLists(); setLivePanel(); updateButtons();
 if (new URLSearchParams(location.search).has('demo')) demo(false);

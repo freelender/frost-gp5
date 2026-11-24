@@ -12,6 +12,7 @@ import fcm_bank as B
 import fcm_files as F
 from test_fcm import model
 PRESETS,CONFIRM,CHAIN,PARAMS=3,4,0,1
+SAVE_ROW=61
 class FlashPresetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -39,8 +40,32 @@ class FlashPresetTests(unittest.TestCase):
         c=self.lib;self.open_presets();self.assertEqual(c.ge_paint(),0)
         self.assertEqual(c.ge_preset_label(0),b'01 ----');self.assertEqual(c.ge_preset_label(59),b'60 ----')
         c.ge_turn(60);self.assertEqual(c.ge_preset_choice(),60);self.assertEqual(c.ge_paint(),0)      # BACK
-        c.ge_turn(1);self.assertEqual(c.ge_preset_choice(),0);c.ge_turn(-1);self.assertEqual(c.ge_preset_choice(),60)
-        c.ge_turn(-3*61-5);self.assertEqual(c.ge_paint(),0);c.ge_turn(60-c.ge_preset_choice());self.assertEqual(c.ge_preset_choice(),60);c.ge_press();self.assertEqual(c.ge_view(),PARAMS)
+        c.ge_turn(1);self.assertEqual(c.ge_preset_choice(),SAVE_ROW);self.assertEqual(c.ge_paint(),0)   # wraps to the top row
+        c.ge_turn(1);self.assertEqual(c.ge_preset_choice(),0);c.ge_turn(-2);self.assertEqual(c.ge_preset_choice(),60)
+        c.ge_turn(-3*62-5);self.assertEqual(c.ge_paint(),0);c.ge_turn(-1);c.ge_turn(1)
+        while c.ge_preset_choice()!=60:c.ge_turn(1)
+        c.ge_press();self.assertEqual(c.ge_view(),PARAMS)
+    def test_menu_opens_on_the_current_preset(self):
+        c=self.lib
+        for i in (6,40):self.assertEqual(c.ge_flash_save(i),1);self.settle()
+        self.assertEqual(c.ge_flash_load(40),1);self.settle();self.assertEqual(c.ge_current_preset(),40)
+        self.open_presets();self.assertEqual(c.ge_preset_choice(),40);self.assertEqual(c.ge_paint(),0);self.settle()   # first draw: start-up recall of the same preset
+        c.ge_turn(-41);self.assertEqual(c.ge_preset_choice(),SAVE_ROW)            # the save row sits above 01
+    def test_save_current_preset_overwrites_the_current_number_in_one_press(self):
+        c=self.lib;self.assertEqual(c.ge_flash_save(8),1);self.settle()
+        self.assertEqual(self.host([0x7e,0x20,8,*b'MY LEAD'])[2],1);self.settle()   # named MY LEAD
+        self.assertEqual(c.ge_current_preset(),8);old=self.record(8)
+        c.ge_queue_raw(1,0,1750);self.settle();edited=self.chain()
+        self.open_presets();self.assertEqual(c.ge_preset_choice(),8)
+        c.ge_turn(-9);self.assertEqual(c.ge_preset_choice(),SAVE_ROW);c.ge_press();self.settle()
+        self.assertEqual(c.ge_capture_error(),0);self.assertNotEqual(c.ge_view(),PRESETS)
+        self.assertNotEqual(self.record(8),old);self.assertEqual(c.ge_preset_label(8),b'09 MY LEAD')   # name kept
+        self.assertEqual([c.ge_store_preset(i) for i in (7,9)],[0,0])
+        c.ge_queue_raw(1,0,2250);self.settle();self.assertEqual(c.ge_flash_load(8),1);self.settle();self.assertEqual(self.chain(),edited)
+    def test_save_current_preset_does_nothing_without_a_current_preset(self):
+        c=self.lib;self.assertEqual(c.ge_current_preset(),255)
+        self.open_presets();self.assertEqual(c.ge_preset_choice(),0);c.ge_turn(-1);self.assertEqual(c.ge_preset_choice(),SAVE_ROW)
+        c.ge_press();self.settle();self.assertEqual(c.ge_view(),PRESETS);self.assertFalse(any(c.ge_store_preset(i) for i in range(60)))
     def test_save_load_and_power_cycle_through_the_menu(self):
         c=self.lib;before=c.ge_actual_revision()
         c.ge_queue_raw(1,0,1750);self.settle();saved=self.chain()
@@ -52,7 +77,8 @@ class FlashPresetTests(unittest.TestCase):
         c.ge_queue_raw(1,0,2250);self.settle();self.assertNotEqual(self.chain(),saved)
         c.ge_reboot();self.settle();self.assertNotEqual(self.chain(),saved)  # power cycle: defaults again
         self.assertEqual(c.ge_store_preset(4),1)                             # ...but the preset is still stored
-        self.open_presets();c.ge_turn(4);c.ge_press();c.ge_turn(1);c.ge_press();self.settle()   # LOAD 05
+        self.open_presets();self.assertEqual(c.ge_preset_choice(),4)                          # opens on the remembered 05
+        c.ge_press();c.ge_turn(1);c.ge_press();self.settle()   # LOAD 05
         self.assertEqual(self.chain(),saved)
     def test_confirm_defaults_to_cancel_load_empty_does_nothing_and_foot_is_selected_only(self):
         c=self.lib;rev=c.ge_actual_revision();self.open_presets();c.ge_press();self.assertEqual(c.ge_view(),CONFIRM)

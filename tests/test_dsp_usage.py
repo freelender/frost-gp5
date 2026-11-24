@@ -60,7 +60,7 @@ class DSPUsageTests(unittest.TestCase):
         self.assertEqual([c.du_ui_enabled(i) for i in (0,1,3,4,5)],[enabled[i] for i in (0,1,3,4,5)])
     def test_callback_patch_is_opt_in_and_preserves_receive_copy(self):
         from platform_compat import patch_dsp_link
-        source='#include "dsp_link.h"\n    gp5_uart0_send(tx, len, 100);           /* 404 bytes take 9 ms at 460800 baud */\n    for (i = 0; i < dsp_unsol_len; i++) dsp_unsol[i] = pl[i];'
+        source='#include "dsp_link.h"\n    gp5_uart0_send(tx, len, 100);           /* 404 bytes take 9 ms at 460800 baud */\n    for (i = 0; i < dsp_unsol_len; i++) dsp_unsol[i] = pl[i];\n    if (dsp_irq_off) drain();           /* only after the safety net in UART0_Interrupt tripped */'
         self.assertNotIn('fw_dsp_report',patch_dsp_link(source))
         result=patch_dsp_link(source,True);self.assertIn('fw_dsp_report(pl,n);',result)
         self.assertIn('dsp_unsol[i] = pl[i]',result)

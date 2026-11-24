@@ -18,7 +18,7 @@ class WebStoreTests(unittest.TestCase):
         c=cls.lib=ct.CDLL(str(build(ROOT/('build/web_store_editor.dll' if os.name=='nt' else 'build/web_store_editor.so'),ROOT/'tests/slot_editor_host.c',includes=[ROOT/'tests/stubs'])))
         c.ge_host.argtypes=[ct.POINTER(ct.c_uint8),ct.c_uint,ct.POINTER(ct.c_uint8)]
         c.ge_fcm_label.restype=ct.c_char_p;c.ge_fcm_label.argtypes=[ct.c_int];c.ge_preset_label.restype=ct.c_char_p
-    def setUp(self):self.lib.ge_init();self.settle()
+    def setUp(self):self.lib.ge_init();self.settle();self.asked=[]
     def settle(self,n=300):
         for _ in range(n):
             self.lib.ge_pump(1)
@@ -33,6 +33,7 @@ class WebStoreTests(unittest.TestCase):
             if not line:raise AssertionError('proxy ended early: '+p.stderr.read())
             m=json.loads(line)
             if 'done' in m:p.stdin.close();p.wait(10);p.stdout.close();p.stderr.close();self.lib.ge_advance(2500);return m['done']
+            if hasattr(self,'asked'):self.asked.append(bytes.fromhex(m['q'])[:2])   # request log (swap test)
             r=self.host(bytes.fromhex(m['q']));p.stdin.write(json.dumps({'r':r.hex() if r is not None else None})+'\n');p.stdin.flush()
     def rec(self,name,gain):
         p=ROOT/f'build/store_{name}.fcm';r=B.pack_record(name,model(gain=gain));p.write_bytes(r);return str(p)
@@ -57,6 +58,23 @@ class WebStoreTests(unittest.TestCase):
         self.assertEqual(c.ge_preset_label(0),b'01 CLEAN LEAD');self.assertEqual(c.ge_store_preset(1),1)
         self.assertNotEqual(self.js(['get',0])[0],before)
         self.assertEqual(c.ge_flash_load(0),1);self.settle()                                      # the renamed preset still loads
+    def test_swap_within_and_across_groups_reads_each_group_once(self):
+        """beta.12: moving a preset was slow (three scans and reads before the
+        write, then every AMP and cabinet group read back). One scan, one read
+        per group file, one write per group."""
+        c=self.lib
+        for i in (3,4,16):c.ge_queue_raw(1,0,1000+100*i);self.settle();self.assertEqual(c.ge_flash_save(i),1);self.settle()
+        names={i:c.ge_preset_label(i) for i in (3,4,16)}
+        self.asked=[];self.js(['swap',3,4]);reads=self.asked.count(b'\x7e\x05')
+        self.assertEqual((c.ge_preset_label(3)[3:],c.ge_preset_label(4)[3:]),(names[4][3:],names[3][3:]))
+        self.asked=[];self.js(['presets']);listing=self.asked.count(b'\x7e\x05')
+        self.asked=[];self.js(['get',3]);one=self.asked.count(b'\x7e\x05')
+        # the swap = one scan + one group read + the write's own scan and read-back
+        self.assertLessEqual(reads,2*one+10,(reads,one,listing))   # was ~5x one read
+        self.js(['swap',16,17]);self.assertEqual(c.ge_store_preset(16),0);self.assertEqual(c.ge_store_preset(17),1)   # into an empty slot
+        self.assertEqual(c.ge_preset_label(17)[3:],names[16][3:])
+        self.js(['swap',4,15]);self.assertEqual(c.ge_store_preset(4),0);self.assertEqual(c.ge_preset_label(15)[3:],names[3][3:])   # across pst-0/pst-1
+        self.assertEqual(self.files(),['glb-0','pst-0','pst-1'])
     def test_backup_and_restore_everything(self):
         c=self.lib;self.js(['ampPut',7,self.rec('BAK',1.7)]);c.ge_flash_save(5);self.settle()
         bak=str(ROOT/'build/store_test.frostbackup');self.js(['backup',bak])

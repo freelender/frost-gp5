@@ -29,7 +29,13 @@ Bluetooth yet: USB carries only MIDI, for this website and for controllers.
 
 ## Live editor
 
-<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Live editor: the chain strip (top) and the selected block's controls" width="760"><br><sub>Live editor: the chain strip (top) and the selected block's controls</sub></p>
+<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Live editor: the signal chain from guitar input to output, the selected block's knobs, and the Effects library (right)" width="760"><br><sub>Live editor: the signal chain from guitar input to output, the selected block's knobs, and the Effects library (right)</sub></p>
+
+The **◀ ▶** arrows at the top of the Live editor load the previous or next
+stored preset; between them is the preset now playing. Click its name to open
+a list of every stored preset with a search box (name or number); one click
+loads a preset, and ↑/↓, Enter and Esc work from the keyboard. Like **Load**,
+the arrows and the list ask first when you have unsaved changes from this page.
 
 The chain strip shows the six slots in input-to-output order. Click a block
 to select it; the inspector below shows its controls. Left/right keyboard
@@ -44,14 +50,21 @@ a preset.
 ### Choose and edit an effect
 
 1. Select a block.
-2. Open **Effect in this block** and choose an effect from its category.
+2. In the **Effects library** on the right, search or pick a category, then
+   click an effect to load it into the selected block. You can also **drag an
+   effect** from the library onto any block.
 3. A newly chosen effect starts off. Use its switch to enable it.
-4. Adjust its knobs, sliders or labelled choices. Changes play immediately.
-5. Use **Remove** to clear the block after confirming. Choosing Empty also
-   leaves that slot without an effect.
+4. Turn its knobs: drag up or down, or scroll on a knob (hold Shift for fine
+   steps); double-click a knob for its default; the arrow keys also work on a
+   focused knob. Labelled choices are drop-downs. Changes play immediately.
+5. Use **Remove** to clear the block after confirming.
 
 The pedal can refuse an unsupported combination, such as a second amp or a
 resource configuration it cannot accept; the previous block then remains.
+When it refuses an effect because the chain would overload the audio processor,
+the page shows the same **DSP LIMIT** popup as the pedal's screen (or **CHAIN
+TOO BIG** when the effects do not fit its effect memory). Remove an effect or
+choose a lighter one. The popup needs Frost 0.1.0-beta.12 or later.
 Six visible slots do not guarantee that every heavy chain fits the DSP budget.
 See the [Effects list](Effects%20list.md) for every effect and its controls,
 and the [User Guide](User%20Guide.md) for pedal-side position changes.
@@ -129,7 +142,9 @@ If a cabinet seems bypassed, check the block switch and the pedal's Global
 
 ## Presets
 
-The list shows saved pedal presets, not a separate browser preset bank.
+The list shows saved pedal presets, not a separate browser preset bank. Type
+in the search box above it to show only the presets whose name or number
+matches. The preset now playing is marked "playing now".
 
 - **Load:** play that saved preset. Unsaved live edits are replaced; the page
   asks first when it knows you edited from this page. It waits for recall to
@@ -137,7 +152,8 @@ The list shows saved pedal presets, not a separate browser preset bank.
   first. Edits made only on the pedal
   cannot be detected reliably by the page's unsaved-edit indicator.
 - **Rename:** enter the new name (up to 16 characters) and confirm.
-- **Up/down:** move/reorder stored sounds using the available list controls.
+- **Up/down:** swap a preset with the number above or below it. The list
+  changes at once; the pedal follows in about a second.
 - **Delete:** remove that stored preset after confirmation.
 - **Download:** save that preset as a `.frostpreset` file, for sharing or
   keeping single sounds.

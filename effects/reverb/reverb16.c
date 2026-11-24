@@ -38,11 +38,11 @@ void frost_reverb16_reset(FrostReverb16 *s)
     for(i=0;i<12;++i)s->error[i]=0.0f;
 }
 FROST_HOT FROST_LARGE_ONLY FROST_NOFMA float reverb16_read(const FrostReverb16 *s,unsigned line,unsigned offset)
-{return s->valid[line]<frost_reverb_lengths[line]?0.0f:frost_reverb16_load(s->samples[offset+s->position[line]],1.0f/2048.0f);}
+{return s->valid[line]<frost_reverb_lengths[line]?0.0f:frost_rv16f_get(s->samples[offset+s->position[line]]);}
 FROST_HOT FROST_LARGE_ONLY FROST_NOFMA void reverb16_write(FrostReverb16 *s,unsigned line,unsigned offset,float value)
 {
     unsigned length=frost_reverb_lengths[line];
-    s->samples[offset+s->position[line]]=frost_reverb16_quantize_fast(reverb16_limit(value),2048.0f,&s->error[line]);
+    s->samples[offset+s->position[line]]=frost_rv16f_put(reverb16_limit(value),&s->error[line]);
     if(++s->position[line]==length)s->position[line]=0;
     if(s->valid[line]<length)++s->valid[line];
 }
@@ -104,11 +104,11 @@ FROST_HOT FROST_DSP_RAM_NOFMA FROST_COLD void reverb16_block_steady(FrostReverb1
             if(end>n)end=n;
             position+=end-k;
             for(;k<end;++k,++q){
-                float a=1.0f-0.95f*p[k][1],delayed=frost_reverb16_load(*q,1.0f/2048.0f);
+                float a=1.0f-0.95f*p[k][1],delayed=frost_rv16f_get(*q);
                 damped+=a*(delayed-damped);
                 float feedback=damped;
                 feedback=frost_reverb_bass(&s->model.z[2+i],feedback,1.0f-p[k][0]);
-                *q=frost_reverb16_quantize_fast(reverb16_limit(0.25f*send[k]+p[k][0]*feedback),2048.0f,&s->error[i]);
+                *q=frost_rv16f_put(reverb16_limit(0.25f*send[k]+p[k][0]*feedback),&s->error[i]);
                 wet[k]+=delayed;
             }
             if(position==length)position=0;
@@ -124,8 +124,8 @@ FROST_HOT FROST_DSP_RAM_NOFMA FROST_COLD void reverb16_block_steady(FrostReverb1
             if(end>n)end=n;
             position+=end-k;
             for(;k<end;++k,++q){
-                float delayed=frost_reverb16_load(*q,1.0f/2048.0f),output=delayed-0.5f*wet[k];
-                *q=frost_reverb16_quantize_fast(reverb16_limit(wet[k]+0.5f*output),2048.0f,&s->error[i]);
+                float delayed=frost_rv16f_get(*q),output=delayed-0.5f*wet[k];
+                *q=frost_rv16f_put(reverb16_limit(wet[k]+0.5f*output),&s->error[i]);
                 wet[k]=output;
             }
             if(position==length)position=0;
@@ -146,11 +146,11 @@ FROST_HOT FROST_AUDIO_RAM_NOFMA FROST_COLD void frost_reverb16_block(FrostReverb
         int16_t *line=s->samples+offset;float damped=s->damped[i];
         unsigned position=s->position[i],valid=s->valid[i];
         for(k=0;k<n;++k){
-            float a=1.0f-0.95f*p[k][1],delayed=valid<length?0.0f:frost_reverb16_load(line[position],1.0f/2048.0f);
+            float a=1.0f-0.95f*p[k][1],delayed=valid<length?0.0f:frost_rv16f_get(line[position]);
             damped+=a*(delayed-damped);
             float feedback=damped;
                 feedback=frost_reverb_bass(&s->model.z[2+i],feedback,1.0f-p[k][0]);
-            line[position]=frost_reverb16_quantize_fast(reverb16_limit(0.25f*send[k]+p[k][0]*feedback),2048.0f,&s->error[i]);
+            line[position]=frost_rv16f_put(reverb16_limit(0.25f*send[k]+p[k][0]*feedback),&s->error[i]);
             if(++position==length)position=0;
             if(valid<length)++valid;
             wet[k]+=delayed;
@@ -162,8 +162,8 @@ FROST_HOT FROST_AUDIO_RAM_NOFMA FROST_COLD void frost_reverb16_block(FrostReverb
         const unsigned length=frost_reverb_lengths[i];
         int16_t *line=s->samples+offset;unsigned position=s->position[i],valid=s->valid[i];
         for(k=0;k<n;++k){
-            float delayed=valid<length?0.0f:frost_reverb16_load(line[position],1.0f/2048.0f),output=delayed-0.5f*wet[k];
-            line[position]=frost_reverb16_quantize_fast(reverb16_limit(wet[k]+0.5f*output),2048.0f,&s->error[i]);
+            float delayed=valid<length?0.0f:frost_rv16f_get(line[position]),output=delayed-0.5f*wet[k];
+            line[position]=frost_rv16f_put(reverb16_limit(wet[k]+0.5f*output),&s->error[i]);
             if(++position==length)position=0;
             if(valid<length)++valid;
             wet[k]=output;

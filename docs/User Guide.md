@@ -289,11 +289,15 @@ your own sounds. Updating firmware preserves an existing Frost bank.
 ### Save the current sound
 
 1. Finish editing on the pedal or website.
-2. On the pedal, open a block's parameters and select **PRESETS**.
-3. Choose the destination preset number and press PARA.
-4. Select **SAVE**, then press PARA. Saving to an occupied slot replaces it.
+2. On the pedal, open a block's parameters and select **PRESETS**. The list
+   opens on the preset you are playing, marked with `*`.
+3. To keep the preset's number and name, turn PARA one step back to the top
+   row, **SAVE CURRENT PRESET**, and press PARA. It saves at once.
+4. To save under another number, choose that number, press PARA, select
+   **SAVE** and press PARA again. Saving to an occupied number replaces it.
 
-To load through this menu, choose the preset number, press PARA, select **LOAD**
+SAVE CURRENT PRESET is greyed out until a preset has been loaded or saved. To
+load through this menu, choose the preset number, press PARA, select **LOAD**
 and press again. PRESET home offers quicker footswitch/PARA navigation.
 
 The website's **Presets** page can rename, reorder and delete stored presets.

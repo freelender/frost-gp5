@@ -10,7 +10,7 @@ export function simulatedPedal(catalog) {
     async ask(q) {
       await new Promise(r => setTimeout(r, 15));
       const [, op, s, a, lo, hi] = q, ok = s < 6;
-      if (op === 0x18) return Uint8Array.from([0x7e, 0x18, 1, ...types, ...order, ...enabled, revision & 255, (revision >> 8) & 255, 0, 0, 1]);
+      if (op === 0x18) return Uint8Array.from([0x7e, 0x18, 1, ...types, ...order, ...enabled, revision & 255, (revision >> 8) & 255, 0, 0, 1, 0, 0]);   // no refusals in the demo
       if (op === 0x14) {
         const v = values[s] || [], out = [0x7e, 0x14, 1, s, types[s], enabled[s], order.indexOf(s), v.length];
         for (let i = 0; i < 8; i++) { const x = v[i] ?? 0; out.push(x & 255, (x >> 8) & 255); }

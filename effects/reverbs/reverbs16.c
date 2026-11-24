@@ -64,12 +64,13 @@ FROST_HOT FROST_LARGE_ONLY FROST_NOFMA FROST_NOINLINE float r16_line_read(const 
 {
     const FrostReverbModelState *m=&w->model;unsigned pos=m->position[line];
     if(delay>m->valid[line] || !delay)return 0.0f;
-    return frost_reverb16_load(w->samples[offset+(pos>=delay?pos-delay:pos+length-delay)],1.0f/4096.0f);
+    return frost_rv16f_get(w->samples[offset+(pos>=delay?pos-delay:pos+length-delay)]);
 }
 FROST_HOT FROST_LARGE_ONLY FROST_NOFMA FROST_NOINLINE void r16_line_write(FrostReverb16 *w,unsigned line,unsigned offset,unsigned length,float v)
 {
     FrostReverbModelState *m=&w->model;
-    w->samples[offset+m->position[line]]=frost_reverb16_quantize_fast(frost_rail(v,8.0f),4096.0f,&w->error[line]);
+    w->samples[offset+m->position[line]]=line==8u?frost_reverb16_quantize_fast(frost_rail(v,8.0f),4096.0f,&w->error[line])   /* SHIMMER pitch: linear */
+                                                 :frost_rv16f_put(frost_rail(v,8.0f),&w->error[line]);
     if(++m->position[line]==length)m->position[line]=0;
     if(m->valid[line]<length)++m->valid[line];
 }
@@ -216,7 +217,7 @@ float frost_16_rv6_sample_reference(FrostReverbModel16 *s,float x,const float *p
  * returns the same +0.0f the counter check returned (no RV-6 read uses delay 0
  * or a delay beyond its line), so outputs are identical. */
 FROST_HOT FROST_LARGE_ONLY FROST_NOFMA float r16_rv6_get(const int16_t *b,unsigned pos,unsigned length,unsigned delay)
-{if(!delay)return 0.0f;return frost_reverb16_load(b[pos>=delay?pos-delay:pos+length-delay],1.0f/4096.0f);}
+{if(!delay)return 0.0f;return frost_rv16f_get(b[pos>=delay?pos-delay:pos+length-delay]);}
 FROST_HOT FROST_LARGE_ONLY FROST_NOFMA FROST_NOINLINE FROST_COLD float r16_rv6_get_frac(const int16_t *b,unsigned pos,unsigned length,float delay)
 {
     unsigned d=(unsigned)delay;float f=delay-(float)d,a=r16_rv6_get(b,pos,length,d);
@@ -257,22 +258,22 @@ FROST_HOT FROST_CORE FROST_NOINLINE FROST_DSP_RAM_NOFMA FROST_COLD void r16_rv6_
         for(k=0;k<n;++k){
             float in=0.35f*xs[k]+fb,r0,r1,r2,r3,sum,wet;
             in=frost_reverb_send(&z[16],in);
-            for(i=0;i<nap;++i){float d=frost_reverb16_load(ap[i][k],1.0f/4096.0f),y=d-ap_gain*in;ap[i][k]=frost_reverb16_quantize_fast(r16_rv6_rail(in+ap_gain*y),4096.0f,&error[4+i]);in=y;}
+            for(i=0;i<nap;++i){float d=frost_rv16f_get(ap[i][k]),y=d-ap_gain*in;ap[i][k]=frost_rv16f_put(r16_rv6_rail(in+ap_gain*y),&error[4+i]);in=y;}
             /* 32f MOD: lines 0 and 2 read at their chorused fractional delay,
              * from the slot about to be written (same reads as the old
              * per-sample MOD loop); other lines and modes read at length. */
-            r0=frost_lp(&l0,mod!=0.0f?r16_rv6_mod_read(samples+offs[0],pos[0]+k,len[0],mod,z[10]):frost_reverb16_load(f0[k],1.0f/4096.0f),a)*g0;
-            r1=frost_lp(&l1,frost_reverb16_load(f1[k],1.0f/4096.0f),a)*g1;
-            r2=frost_lp(&l2,mod!=0.0f?r16_rv6_mod_read(samples+offs[2],pos[2]+k,len[2],mod,z[11]):frost_reverb16_load(f2[k],1.0f/4096.0f),a)*g2;
-            r3=frost_lp(&l3,frost_reverb16_load(f3[k],1.0f/4096.0f),a)*g3;
+            r0=frost_lp(&l0,mod!=0.0f?r16_rv6_mod_read(samples+offs[0],pos[0]+k,len[0],mod,z[10]):frost_rv16f_get(f0[k]),a)*g0;
+            r1=frost_lp(&l1,frost_rv16f_get(f1[k]),a)*g1;
+            r2=frost_lp(&l2,mod!=0.0f?r16_rv6_mod_read(samples+offs[2],pos[2]+k,len[2],mod,z[11]):frost_rv16f_get(f2[k]),a)*g2;
+            r3=frost_lp(&l3,frost_rv16f_get(f3[k]),a)*g3;
             {
                 r0=frost_reverb_bass(&z[18],r0,1.0f-g0);r1=frost_reverb_bass(&z[19],r1,1.0f-g1);
                 r2=frost_reverb_bass(&z[20],r2,1.0f-g2);r3=frost_reverb_bass(&z[21],r3,1.0f-g3);
             }
             if(mod!=0.0f){z[10]=frost_phase_advance(z[10],0.7f);z[11]=frost_phase_advance(z[11],0.93f);}
             sum=0.5f*(r0+r1+r2+r3);
-            f0[k]=frost_reverb16_quantize_fast(r16_rv6_rail(r0-sum+in),4096.0f,&error[0]);f1[k]=frost_reverb16_quantize_fast(r16_rv6_rail(r1-sum+in),4096.0f,&error[1]);
-            f2[k]=frost_reverb16_quantize_fast(r16_rv6_rail(r2-sum+in),4096.0f,&error[2]);f3[k]=frost_reverb16_quantize_fast(r16_rv6_rail(r3-sum+in),4096.0f,&error[3]);
+            f0[k]=frost_rv16f_put(r16_rv6_rail(r0-sum+in),&error[0]);f1[k]=frost_rv16f_put(r16_rv6_rail(r1-sum+in),&error[1]);
+            f2[k]=frost_rv16f_put(r16_rv6_rail(r2-sum+in),&error[2]);f3[k]=frost_rv16f_put(r16_rv6_rail(r3-sum+in),&error[3]);
             wet=0.6f*(r0-r1+r2-r3);
             fb=0.0f;
             if(shim){   /* 32b SHIMMER: same operations as the reference */
@@ -379,14 +380,14 @@ FROST_HOT FROST_LARGE_ONLY FROST_NOFMA FROST_NOINLINE void frost_16_spring_block
         in=xk+0.8f*frost_hp(&z0,xk,frost_onepole(1000.0f));
         in=0.5f*frost_soft_clip(in*drive)/den;
         in=frost_hp(&z7,in,frost_onepole(180.0f));in=frost_hp(&z10,in,frost_onepole(180.0f));
-        ra=va<SPRING_A?0.0f:frost_reverb16_load(la[pa],1.0f/4096.0f);
-        rb=vb<SPRING_B?0.0f:frost_reverb16_load(lb[pb],1.0f/4096.0f);
+        ra=va<SPRING_A?0.0f:frost_rv16f_get(la[pa]);
+        rb=vb<SPRING_B?0.0f:frost_rv16f_get(lb[pb]);
         ca=frost_hp(&z3,frost_lp(&z1,r16_spring_chain(w,0,ra,0.62f),a),frost_onepole(100.0f));
         cb=frost_hp(&z4,frost_lp(&z2,r16_spring_chain(w,1,rb,0.66f),a),frost_onepole(100.0f));
         if(++m->index==FROST_SPRING_STRETCH)m->index=0;
-        la[pa]=frost_reverb16_quantize_fast(frost_rail(in+0.8905f*ca,8.0f),4096.0f,&w->error[0]);
+        la[pa]=frost_rv16f_put(frost_rail(in+0.8905f*ca,8.0f),&w->error[0]);
         if(++pa==SPRING_A)pa=0;if(va<SPRING_A)++va;
-        lb[pb]=frost_reverb16_quantize_fast(frost_rail(in+0.8725f*cb,8.0f),4096.0f,&w->error[1]);
+        lb[pb]=frost_rv16f_put(frost_rail(in+0.8725f*cb,8.0f),&w->error[1]);
         if(++pb==SPRING_B)pb=0;if(vb<SPRING_B)++vb;
         wet=frost_hp(&z5,ca+cb,frost_onepole(150.0f));
         wet=frost_lp(&z6,wet,tone);

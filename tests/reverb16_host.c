@@ -12,6 +12,8 @@ API unsigned rv16_bytes(unsigned compact){return compact?sizeof(FrostReverb16):s
 API int rv16_store(float x,float scale){return frost_reverb16_store(x,scale);}
 API float rv16_load(int value,float scale){return frost_reverb16_load((int16_t)value,scale);}
 API float rv16_model_z(unsigned i){return rv16_compact.w.model.z[i];}
+API unsigned rv16_half(float x){return frost_rv16f_float_to_half(x);}
+API float rv16_half_value(unsigned h){return frost_rv16f_half_to_float(h&0xffffu);}
 API int rv16_quantizer_case(float value,float scale,float residual)
 {
     float a=residual,b=residual;

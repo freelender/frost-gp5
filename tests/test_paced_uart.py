@@ -38,8 +38,12 @@ class PacedUartTests(unittest.TestCase):
         self.assertEqual((c.paced_value(0,0),c.paced_value(1,0),c.paced_value(2,0)),(3,16,0))
     def test_guarded_source_hook_rejects_unexpected_driver(self):
         old='    gp5_uart0_send(tx, len, 100);           /* 404 bytes take 9 ms at 460800 baud */'
-        self.assertEqual(patch_dsp_link(old),'#include "paced_uart.inc"')
-        for source in ('',old+old,old.replace('100','99',1)):
+        poll='    if (dsp_irq_off) drain();           /* only after the safety net in UART0_Interrupt tripped */'
+        nl=chr(10)
+        out=patch_dsp_link(old+nl+poll)
+        self.assertTrue(out.startswith('#include "paced_uart.inc"'+nl+poll+nl))
+        self.assertIn('else { int gie = GIE_STATE_GET(); GIE_DISABLE(); drain(); if (gie) GIE_ENABLE(); }',out)   # beta.13 poll drain: interrupts off, not just the UART line
+        for source in ('',old+old,old.replace('100','99',1),old,old+nl+poll+poll):
             with self.assertRaises(ValueError):patch_dsp_link(source)
     def test_fifo_timing_model_exhibits_burst_loss_and_pacing_reduces_it(self):
         # Hypothetical16-byte FIFO with drain every3ms; not a hardware measurement.

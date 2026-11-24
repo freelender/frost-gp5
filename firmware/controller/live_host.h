@@ -4,6 +4,8 @@
  * commands handled by the controller, through the same editor queue as the
  * PARA knob, so the pedal screen, SAVE and the DSP stay consistent.
  *   7E 18             chain:   7E 18 ok types[6] order[6] enabled[6] revision u32 editable
+ *                              refusals refused   (beta.12: refusal counter mod 256, and why:
+ *                              1 CHAIN TOO BIG, 2 DSP LIMIT, 0 none; the website's popup)
  *   7E 14 slot        slot:    7E 14 ok slot type enabled position count values[8] (int16, UI units)
  *   7E 15 slot p v16  set parameter (clamped to the control's range)  -> 7E 15 ok
  *   7E 16 slot on     enable/bypass                                  -> 7E 16 ok
@@ -19,11 +21,12 @@ static unsigned live_host(const uint8_t *q,unsigned n,uint8_t *pl,unsigned max)
     unsigned i,ok=0,slot=n>=3?q[2]:6u;
     if(n<2 || q[0]!=0x7e || q[1]<0x14 || q[1]>0x1a)return 0;
     pl[0]=0x7e;pl[1]=q[1];
-    if(q[1]==0x18 && n==2 && max>=27u){
+    if(q[1]==0x18 && n==2 && max>=28u){
         pl[2]=editor.ready;
         for(i=0;i<6;++i){pl[3+i]=editor.types[i];pl[9+i]=editor.order[i];pl[15+i]=editor.desired_enabled[i];}
         for(i=0;i<4;++i)pl[21+i]=(uint8_t)(editor.revision>>(8*i));
-        pl[25]=(uint8_t)(editor_editable(&editor) && fw_editor_ready());return 26;
+        pl[25]=(uint8_t)(editor_editable(&editor) && fw_editor_ready());
+        pl[26]=(uint8_t)editor.refusals;pl[27]=(uint8_t)refusal_code();return 28;
     }
     if(slot>=6u){pl[2]=0;return 3;}
     if(q[1]==0x19 && n==3 && max>=25u){
