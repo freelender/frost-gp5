@@ -10,6 +10,7 @@ typedef struct {
     float low_hz,high_hz,brightness,trim;
     float zero;
     uint32_t stages,voice;
+    float miller[3];   /* beta.10+: pre-clip low-pass per cascaded stage (lead voices) */
 } FrostAmpHead;
 void frost_amphead_reset(FrostAmpHead *s,unsigned voice);
 float frost_amphead_sample(FrostAmpHead *s,float x,const float *p);

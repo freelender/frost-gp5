@@ -45,6 +45,12 @@ FROST_NOINLINE FROST_OVL(ampheads) float frost_amphead_sample(FrostAmpHead *s,fl
     float gain=p[0]*.01f,master=p[5]*.02f,detail=p[4]*.01f;
     float drive=.2f+s->drive*gain*gain,wet=0.0f;
     float supply=1.0f/(1.0f+s->sag*s->envelope),y,a;
+    /* Cascaded lead voices (UK-800, CALI, BROWN): a ~5 kHz low-pass before
+     * each clipping stage (like a tube stage's Miller roll-off) and the
+     * decimation low-passes at their true 8 kHz on the 2x rate (they were
+     * set for 44.1 kHz, i.e. ~16 kHz). Measured on the host at GAIN 80:
+     * aliasing 26-33 dB -> 43-51 dB below the note. Clean voices unchanged. */
+    unsigned lead=s->stages>1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
     unsigned sub,j;
     /* Two nonlinear substeps, linear interpolation and two-pole reduction.
      * Reduces aliasing; does not make high gain alias-free. Tone position is
@@ -54,6 +60,7 @@ FROST_NOINLINE FROST_OVL(ampheads) float frost_amphead_sample(FrostAmpHead *s,fl
         y=frost_hp(&s->hp[0],y,s->input_hp)*drive;
         for(j=0;j<s->stages;++j){
             if(j)y=frost_hp(&s->hp[j],y,s->inter_hp)*s->stage_drive;
+            if(lead)y=frost_lp(&s->miller[j],y,ml);
             /* Asymmetric smooth triode-like stages with zero at zero input. */
             y=frost_soft_clip(y+s->bias)-s->zero;
         }
@@ -65,8 +72,8 @@ FROST_NOINLINE FROST_OVL(ampheads) float frost_amphead_sample(FrostAmpHead *s,fl
         y+=a*(s->voice==2u?-1.5f*detail:s->brightness*2.0f*detail);
         a=frost_lp(&s->bass,y,frost_onepole(60.0f));
         y+=(s->voice>=5u?.25f:.05f)*a;
-        y=frost_lp(&s->aa[0],y,frost_onepole(8000.0f));
-        wet+=frost_lp(&s->aa[1],y,frost_onepole(8000.0f));
+        y=frost_lp(&s->aa[0],y,aa);
+        wet+=frost_lp(&s->aa[1],y,aa);
     }
     s->previous=x;y=.5f*wet;
     a=frost_absf(y);s->envelope+=(a-s->envelope)*frost_time_ms(a>s->envelope?20.0f:180.0f);
@@ -85,6 +92,7 @@ FROST_NOINLINE FROST_OVL(ampheads) void frost_amphead_block(void *state,const fl
     float low=.2f+2.4f*b*b,mid=.12f+2.0f*m*m,high=.2f+2.4f*t*t;
     float denominator=.7f+.25f*b+.2f*t,level=frost_level(p[6]);
     float presence=s->voice==2u?-1.5f*detail:s->brightness*2.0f*detail;
+    unsigned lead=s->stages>1u;float aa=lead?frost_onepole(4000.0f):frost_onepole(8000.0f),ml=frost_onepole(2500.0f);
     (void)p_start;
     for(i=0;i<n;++i){
         float input=x[i],supply=1.0f/(1.0f+s->sag*s->envelope),y,a,wet=0.0f;
@@ -94,6 +102,7 @@ FROST_NOINLINE FROST_OVL(ampheads) void frost_amphead_block(void *state,const fl
             y=frost_hp(&s->hp[0],y,s->input_hp)*drive;
             for(j=0;j<s->stages;++j){
                 if(j)y=frost_hp(&s->hp[j],y,s->inter_hp)*s->stage_drive;
+                if(lead)y=frost_lp(&s->miller[j],y,ml);
                 y=frost_soft_clip(y+s->bias)-s->zero;
             }
             lo=frost_lp(&s->low,y,s->low_hz);rest=y-lo;
@@ -102,8 +111,8 @@ FROST_NOINLINE FROST_OVL(ampheads) void frost_amphead_block(void *state,const fl
             a=power*supply;y=frost_soft_clip(y*a)/(.2f+s->power_drive);
             a=y-frost_lp(&s->presence,y,frost_onepole(1500.0f));y+=a*presence;
             a=frost_lp(&s->bass,y,frost_onepole(60.0f));y+=(s->voice>=5u?.25f:.05f)*a;
-            y=frost_lp(&s->aa[0],y,frost_onepole(8000.0f));
-            wet+=frost_lp(&s->aa[1],y,frost_onepole(8000.0f));
+            y=frost_lp(&s->aa[0],y,aa);
+            wet+=frost_lp(&s->aa[1],y,aa);
         }
         s->previous=input;y=.5f*wet;
         a=frost_absf(y);s->envelope+=(a-s->envelope)*frost_time_ms(a>s->envelope?20.0f:180.0f);

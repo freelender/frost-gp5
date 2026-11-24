@@ -198,6 +198,27 @@ amp styles (trademarks of their owners; see the notice in section 11):
 - CALI: Mesa/Boogie Dual Rectifier
 - BROWN: EVH 5150
 
+### Single coils and humbuckers
+
+The factory presets and amp voicings are balanced for a medium-output guitar.
+Single-coil pickups put out less signal, so high-gain amps (UK-800, CALI,
+BROWN) and drives sound cleaner and thinner, and clean patches quieter.
+Humbuckers put out more, so cleans break up sooner.
+
+Match your guitar once with GLOBAL SETTINGS → AUDIO → **INPUT GAIN**, rather
+than raising GAIN on every preset:
+
+| Guitar | Try INPUT GAIN |
+|---|---|
+| Vintage-style single coils (Strat, Tele) | +3 to +6 dB |
+| Hot single coils, P-90s | 0 to +3 dB |
+| Medium humbuckers | 0 dB |
+| High-output or active humbuckers | -3 to -6 dB |
+
+A quick check: on the Deluxe Clean preset, a hard strum should just begin to
+break up.
+INPUT GAIN affects every preset and is saved with your global settings.
+
 These are **amp heads only**. Use a separate IR block for the cabinet when
 listening through headphones, an audio interface or a full-range speaker.
 With a physical guitar cabinet, choose whether to bypass the IR for your setup.
@@ -354,7 +375,7 @@ and exits.
 
 | Menu | Setting | Purpose |
 |---|---|---|
-| AUDIO | INPUT GAIN | Adjust input level from -20 to +20 dB |
+| AUDIO | INPUT GAIN | Adjust input level from -20 to +20 dB; match your pickups (single coils about +3 to +6 dB, see section 4) |
 | AUDIO | OUTPUT LEVEL | Scale overall output, 0–100% |
 | AUDIO | OUTPUT MODE | Mono/stereo preference; current effect processing is mono |
 | AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
@@ -413,6 +434,7 @@ not a firmware image.
 | NO SETLIST | Add library songs to performance order and Save to pedal |
 | Part will not load | Check that its referenced preset exists |
 | Quiet or distorted sound | Check input/output gain, amp/IR levels, physical volume and downstream input level |
+| High-gain amps sound thin with single coils, or cleans break up with humbuckers | Match your pickups with INPUT GAIN (section 4, "Single coils and humbuckers") |
 | Overload or repeated cuts | Select a lighter preset; report the exact chain and reproduction steps |
 | CHAIN TOO BIG | The chosen effects do not fit together; replace one of the larger effects (see section 3) |
 | DSP LIMIT | The chain would overload the audio processor; replace a heavy effect (see section 3) |

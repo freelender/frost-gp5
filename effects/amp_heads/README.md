@@ -11,5 +11,5 @@ These are compact approximations inspired by the named amps, not measured
 matches, circuit solvers, manufacturer implementations or endorsements.
 
 Controls: GAIN, BASS, MID, TREBLE, BRIGHT/CUT/PRESENCE, MASTER, LEVEL.
-Each instance uses 108 bytes inside the unchanged 120-byte state union.
+Each instance uses 120 bytes, the whole unchanged 120-byte state union.
 All seven types share one relocatable module and need no external workspace.
