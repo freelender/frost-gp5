@@ -56,20 +56,24 @@ static unsigned foot_down,foot_long,foot_toggled,tuner_ref_dirty,tuner_ref_unloc
 static uint32_t foot_down_ms;
 static unsigned tuner_home;                      /* the home view to return to */
 /* Stage 2b: global settings menu, home screens, long press (docs/User%20Guide.md). */
-enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_BACK, SET_ROWS };
+enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
 /* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
  * SET_BACK (one level up; saves and leaves at the top) or a submenu. The
  * highlighted leaf stays in settings_row, so editing is unchanged. */
-enum { SM_TOP, SM_AUDIO, SM_DISPLAY, SM_SYSTEM, SM_EQ, SM_MENUS };
-enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ };
+enum { SM_TOP, SM_AUDIO, SM_DISPLAY, SM_SYSTEM, SM_EQ, SM_TAP, SM_MENUS };
+enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ, SE_TAP };
 static const uint8_t settings_menus[SM_MENUS][7]={
-    {SE_AUDIO,SE_DISPLAY,SE_SYSTEM,SET_BACK,255,255,255},
-    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_TAP_NOTE,SET_BACK},
-    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_TEMPO_LIGHT,SET_BACK,255,255},
-    {SET_TAP_TEMPO,SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255},
-    {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255}};
+    {SE_AUDIO,SE_DISPLAY,SE_TAP,SE_SYSTEM,SET_BACK,255,255},
+    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
+    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_BACK,255,255,255},
+    {SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255,255},
+    {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255},
+    {SET_TAP_TEMPO,SET_TAP_NOTE,SET_TAP_TARGET,SET_TEMPO_LIGHT,SET_BACK,255,255}};
+/* Submenu entry SE_* <-> menu SM_*: SE_AUDIO..SE_SYSTEM map in order. */
+static unsigned settings_submenu(unsigned entry){return entry==SE_EQ?SM_EQ:entry==SE_TAP?SM_TAP:SM_AUDIO+entry-SE_AUDIO;}
+static unsigned settings_menu_entry(unsigned menu){return menu==SM_EQ?SE_EQ:menu==SM_TAP?SE_TAP:SE_AUDIO+menu-SM_AUDIO;}
 static unsigned settings_menu,settings_pos;
 static unsigned factory_stage,settings_row,settings_dirty,settings_confirm,para_down,para_long,current_preset,last_preset_dirty,boot_load_done;
 static uint32_t para_down_ms,last_input_ms;
@@ -181,7 +185,7 @@ static void popup_tick(uint32_t now)
     popup_seen=editor.refusals;
     if(popup_kind && (int32_t)(now-popup_until)>=0){popup_kind=0;++generation;}
 }
-/* Footswitch tap tempo, only with GLOBAL SETTINGS -> SYSTEM -> TAP TEMPO ON
+/* Footswitch tap tempo, only with GLOBAL SETTINGS -> TAP TEMPO -> TAP TEMPO ON
  * (OFF by default: the footswitch then behaves exactly as before). On a "tempo
  * block" (a delay with a TIME/RATE in ms, or a modulation effect with a rate in
  * Hz; not the ring modulator) on the Chain/Stomp screen (32v):
@@ -189,8 +193,10 @@ static void popup_tick(uint32_t now)
  *   a press-and-hold (FROST_TAP_HOLD_MS) switches the block on/off.
  * Each tap shows the TAP TEMPO overlay (BPM and ms) for 2.5 s; the tempo is the
  * average of the last taps (30..300 BPM); TAP NOTE turns it into the delay time
- * or modulation period. The footswitch LED flashes yellow on the beat
- * (TEMPO LIGHT), on blue while the overlay is up. Controller only. */
+ * or modulation period. TAP TARGET SELECTED sets only the selected block;
+ * GLOBAL sets every tempo block in the chain (as MIDI tap and clock always do).
+ * The footswitch LED flashes yellow on the beat (TEMPO LIGHT), on blue while
+ * the overlay is up. Controller only. */
 #define FROST_TAP_TIMEOUT_MS 2500u
 #define FROST_TAP_FLASH_MS 70u
 #define FROST_TAP_HOLD_MS 500u
@@ -211,7 +217,7 @@ static int tap_param(unsigned type)
     return -1;
 }
 /* Delay time / modulation period for a beat: 1/4, dotted 1/8 (3/4) or 1/8 (1/2). */
-static unsigned tap_period(unsigned beat){return globals.tap_note==1u?beat*3u/4u:globals.tap_note==2u?beat/2u:beat;}
+static unsigned tap_period(unsigned beat){unsigned n=tap_note_now();return n==1u?beat*3u/4u:n==2u?beat/2u:beat;}
 static void tap_apply(unsigned slot,unsigned beat,uint32_t now)
 {
     int j=tap_param(editor.types[slot]),v;const Parameter *p;unsigned period=tap_period(beat);
@@ -221,6 +227,10 @@ static void tap_apply(unsigned slot,unsigned beat,uint32_t now)
     if(v<p->minimum)v=p->minimum;if(v>p->maximum)v=p->maximum;
     if(editor_queue_parameter(&editor,slot,(unsigned)j,v)){changed=1;tap_beat[slot]=beat;tap_value[slot]=v;tap_phase[slot]=now;}
 }
+/* Global tap: one beat sets the tempo control of every tempo block in the
+ * chain (footswitch with TAP TARGET GLOBAL, MIDI CC 85 and MIDI Clock). */
+static void tap_apply_all(unsigned beat,uint32_t now)
+{unsigned slot;for(slot=0;slot<6u;++slot)tap_apply(slot,beat,now);}
 static void tap_press(uint32_t now)
 {
     unsigned ms;
@@ -230,7 +240,7 @@ static void tap_press(uint32_t now)
         unsigned n=tap_count<3u?tap_count:3u;
         if(tap_count && (ms*10u<tap_beat_now*6u || ms*10u>tap_beat_now*14u)){tap_beat_now=ms;tap_count=1;}   /* an outlier restarts */
         else {tap_beat_now=tap_count?(tap_beat_now*n+ms)/(n+1u):ms;++tap_count;}
-        tap_apply(tap_slot,tap_beat_now,now);
+        if(tap_target_now())tap_apply_all(tap_beat_now,now);else tap_apply(tap_slot,tap_beat_now,now);
     }else if(tap_mark)tap_count=0;
     tap_mark=now;tap_until=now+FROST_TAP_TIMEOUT_MS;++generation;
 }
@@ -291,9 +301,10 @@ static void settings_value(unsigned row,char out[24])
     case SET_HOME:{const char *t=globals.home==HOME_SETLIST?"SETLIST":globals.home==HOME_PRESET?"PRESET":globals.home==HOME_STOMP?"STOMP":"CHAIN";while(*t)*q++=*t++;*q=0;break;}
     case SET_SETLIST_HOLD:{const char *t=globals.setlist_hold?"PREV PART":"TUNER";while(*t)*q++=*t++;*q=0;break;}
     case SET_FIRMWARE:{const char *t=FROST_FIRMWARE_TEXT;while(*t)*q++=*t++;*q=0;break;}
-    case SET_TAP_NOTE:{const char *t=globals.tap_note==1u?"DOTTED 1/8":globals.tap_note==2u?"1/8":"1/4";while(*t)*q++=*t++;*q=0;break;}
+    case SET_TAP_NOTE:{const char *t=tap_note_now()==1u?"DOTTED 1/8":tap_note_now()==2u?"1/8":"1/4";while(*t)*q++=*t++;*q=0;break;}
     case SET_TEMPO_LIGHT:{const char *t=globals.tempo_light?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
-    case SET_TAP_TEMPO:{const char *t=globals.tap_tempo?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_TAP_TEMPO:{const char *t=tap_tempo_on()?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_TAP_TARGET:{const char *t=tap_target_now()?"GLOBAL":"SELECTED";while(*t)*q++=*t++;*q=0;break;}
     default:*q=0;
     }
 }
@@ -304,9 +315,9 @@ static void settings_select(unsigned menu,unsigned pos)
 {settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
-    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","BACK"};
-    static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ"};
-    static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ"};
+    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK"};
+    static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ","TAP TEMPO"};
+    static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ","TAP TEMPO"};
     unsigned i;char value[24];
     if(view==SETTINGS || view==SETTINGS_VALUE){
         unsigned count=settings_count(settings_menu),first=settings_pos>=4?settings_pos-3:0,entry=settings_entry();
@@ -319,6 +330,7 @@ static void render_stage2b(const char *message)
             text(153-(int)length(value)*6,y,value,i==settings_pos && view==SETTINGS_VALUE?FOCUS:INK);
         }
         text(5,72,message?message:entry>=SE_AUDIO?"PRESS TO OPEN":entry==SET_SETLIST_HOLD?"SETLIST VIEW ONLY":
+             entry==SET_TAP_TARGET?(tap_target_now()?"TAP SETS EVERY TEMPO FX":"TAP SETS SELECTED FX"):
              entry==SET_BACK?(settings_menu==SM_TOP?"PRESS TO SAVE AND EXIT":"PRESS TO GO BACK"):"",INK);
     }else if(view==SETTINGS_CONFIRM){
         unsigned factory=settings_row==SET_FACTORY;
@@ -417,7 +429,7 @@ static void render_popup(void)
         if(beat){unsigned bpm=(60000u+beat/2u)/beat;q=number(q,bpm);*q++=' ';*q++='B';*q++='P';*q++='M';*q++=' ';*q++=' ';q=number(q,tap_count?tap_period(beat):beat);*q++=' ';*q++='M';*q++='S';*q=0;}
         else {const char *t="TAP ON THE BEAT";while(*t)*q++=*t++;*q=0;}
         rect(8,20,144,40,COLOR(240,212,82));rect(10,22,140,36,BG);
-        text(80-(int)length("TAP TEMPO")*3,29,"TAP TEMPO",COLOR(240,212,82));text(80-(int)length(line)*3,43,line,INK);return;
+        {const char *title=tap_target_now()?"GLOBAL TAP TEMPO":"TAP TEMPO";text(80-(int)length(title)*3,29,title,COLOR(240,212,82));}text(80-(int)length(line)*3,43,line,INK);return;
     }
     if(!popup_kind)return;
     rect(8,20,144,40,FOCUS);rect(10,22,140,36,BG);
@@ -592,7 +604,7 @@ return 0;
 unsigned fw_active(void)
 {
     unsigned on=editor.desired_enabled[selected],slot=tap_mode?tap_slot:selected,beat;uint32_t now;
-    if(!globals.tap_tempo)return on;                       /* 32u: TAP TEMPO OFF = the usual light */
+    if(!tap_tempo_on())return on;                          /* 32u: TAP TEMPO OFF = the usual light */
     if(!globals.tempo_light || !(tap_mode || (on && (view==CHAIN || view==STOMP))))return tap_mode?FROST_LED_BLUE:on;
     beat=tap_mode && !tap_count?0u:tap_flash_beat(slot);
     if(!beat)return tap_mode?FROST_LED_BLUE:on;
@@ -901,7 +913,7 @@ static void foot_press(uint32_t now)
     if(tap_mode && tap_slot!=selected){tap_mode=0;++generation;}   /* selection changed */
     if(view==SETLIST_HOME){foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;return;}
     mode=foot_mode();foot_held=0;
-    if(globals.tap_tempo && !mode && (view==CHAIN || view==STOMP) && tap_param(editor.types[selected])>=0){
+    if(tap_tempo_on() && !mode && (view==CHAIN || view==STOMP) && tap_param(editor.types[selected])>=0){
         foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;tap_pending=1;tap_press_ms=now;return;   /* 32v: tap on release, on/off on hold */
     }
     if(is_home_view(view) && !(view!=PRESET_HOME && mode)){        /* hold opens the tuner */
@@ -961,7 +973,7 @@ static void settings_open(void){view=SETTINGS;settings_select(SM_TOP,0);settings
 /* One level up: a submenu returns to its entry in the parent; the top saves and leaves. */
 static void settings_up(void)
 {
-    unsigned parent=settings_menu==SM_EQ?SM_AUDIO:SM_TOP,i,want=settings_menu==SM_EQ?SE_EQ:SE_AUDIO+settings_menu-SM_AUDIO;
+    unsigned parent=settings_menu==SM_EQ?SM_AUDIO:SM_TOP,i,want=settings_menu_entry(settings_menu);
     if(settings_menu==SM_TOP){settings_leave();return;}
     for(i=0;i<settings_count(parent);++i)if(settings_menus[parent][i]==want)break;
     settings_select(parent,i);
@@ -975,7 +987,7 @@ static void settings_press(void)
 {
     if(view==SETTINGS){
         unsigned entry=settings_entry();
-        if(entry>=SE_AUDIO)settings_select(entry==SE_EQ?SM_EQ:SM_AUDIO+entry-SE_AUDIO,0);
+        if(entry>=SE_AUDIO)settings_select(settings_submenu(entry),0);
         else if(settings_row==SET_BACK)settings_up();
         else if(settings_row==SET_FIRMWARE){}
         else if(settings_row==SET_RESET || settings_row==SET_FACTORY){view=SETTINGS_CONFIRM;settings_confirm=0;factory_stage=0;}
@@ -1007,9 +1019,10 @@ static void settings_turn(int d)
     case SET_BRIGHT:{int v=(int)globals.brightness+10*d;globals.brightness=(unsigned)(v<0?0:v>100?100:v);globals_apply_backlight();break;}
     case SET_HOME:globals.home=(unsigned)(((int)globals.home+d%HOMES+HOMES)%HOMES);break;
     case SET_SETLIST_HOLD:globals.setlist_hold=(unsigned)(((int)globals.setlist_hold+d%2+2)%2);break;
-    case SET_TAP_NOTE:globals.tap_note=(unsigned)(((int)globals.tap_note+d%3+3)%3);break;
+    case SET_TAP_NOTE:globals.tap_note=(unsigned)(((int)tap_note_now()+d%3+3)%3);midi_tap_note=255u;break;
     case SET_TEMPO_LIGHT:globals.tempo_light=(unsigned)(((int)globals.tempo_light+d%2+2)%2);break;
-    case SET_TAP_TEMPO:globals.tap_tempo=(unsigned)(((int)globals.tap_tempo+d%2+2)%2);if(!globals.tap_tempo)tap_mode=0;break;
+    case SET_TAP_TEMPO:globals.tap_tempo=(unsigned)(((int)tap_tempo_on()+d%2+2)%2);midi_tap_tempo=255u;if(!globals.tap_tempo)tap_mode=0;break;
+    case SET_TAP_TARGET:globals.tap_target=(unsigned)(((int)tap_target_now()+d%2+2)%2);midi_tap_target=255u;break;
     default:return;
     }
     settings_dirty=1;
@@ -1099,7 +1112,7 @@ void fw_para_turn(int detents)
     if(!detents)return;
     last_input_ms=gp5_ms();
     if(view==SETTINGS || view==SETTINGS_VALUE || view==SETTINGS_CONFIRM){settings_turn(detents);++generation;return;}
-    if(view==TUNER){int r;if(!tuner_ref_unlocked)return;r=detents>20?450:detents< -20?430:(int)globals.tuner_ref+detents;globals.tuner_ref=(unsigned)(r<430?430:r>450?450:r);tuner_ref_dirty=1;tuner_client_update(&tuner_client,globals.tuner_ref);++generation;return;}
+    if(view==TUNER){int r;if(!tuner_ref_unlocked)return;r=detents>20?450:detents< -20?425:(int)globals.tuner_ref+detents;globals.tuner_ref=(unsigned)(r<425?425:r>450?450:r);tuner_ref_dirty=1;tuner_client_update(&tuner_client,globals.tuner_ref);++generation;return;}
     if(view==SETLIST_HOME){setlist_step(detents>0?1:-1,1);++generation;return;}
     if(view==PRESET_HOME){
         if(!(preset_client.state || capture_client.state)){

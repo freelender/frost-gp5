@@ -11,6 +11,7 @@ static void midi_init(void)
     midi_volume=127;midi_expression_slot=midi_expression_param=midi_bypass=0;
     midi_preset=255;midi_clock_enabled=midi_clock_ticks=midi_clock_running=midi_tempo_pending=0;
     midi_tap_mark=midi_clock_mark=midi_clock_last=midi_tempo=0;
+    midi_tap_tempo=midi_tap_note=midi_tap_target=255u;
 }
 static int midi_editable(void)
 {
@@ -32,24 +33,14 @@ static int midi_parameter(unsigned position,unsigned parameter,unsigned value)
     if(!editor_queue_parameter(&editor,slot,parameter,v))return 0;
     changed=1;++generation;return 1;
 }
+/* MIDI tap and clock are the global tap tempo: `ms` is the beat; every tempo
+ * block in the chain follows it through GLOBAL SETTINGS -> TAP TEMPO -> TAP
+ * NOTE (tap_apply_all: delay TIME in ms, modulation rate in Hz, clamped). */
 static void midi_tempo_apply(unsigned ms)
 {
-    unsigned i,j;if(ms<200u || ms>2000u)return;midi_tempo=ms;midi_tempo_pending=1;
+    if(ms<200u || ms>2000u)return;midi_tempo=ms;midi_tempo_pending=1;
     if(!midi_editable())return;
-    midi_tempo_pending=0;
-    for(i=0;i<6u;++i){
-        unsigned slot=editor.order[i],type=editor.types[slot];const FrostControlEffect *e=frost_control_find(type);
-        for(j=0;e && j<e->count;++j){
-            const Parameter *p=&e->p[j];int v;
-            /* Only delay time (not reverb decay/envelopes) and explicit Hz
-             * modulation rates follow a quarter note. Clamp to effect limits. */
-            if(frost_type_is_delay(type) && p->unit[0]=='M' && p->unit[1]=='S')v=(int)ms;
-            else if(frost_type_is_modulation(type) && p->unit[0]=='H' && p->unit[1]=='Z')v=(int)((1000u*(unsigned)p->scale+ms/2u)/ms);
-            else continue;
-            if(v<p->minimum)v=p->minimum;if(v>p->maximum)v=p->maximum;
-            if(editor_queue_parameter(&editor,slot,j,v)){changed=1;++generation;}
-        }
-    }
+    midi_tempo_pending=0;tap_apply_all(ms,gp5_ms());++generation;
 }
 static void midi_clock(unsigned status)
 {
@@ -94,6 +85,10 @@ void fw_midi_event(const uint8_t *packet)
     if(cc==11u){(void)midi_parameter(midi_expression_slot,midi_expression_param,value);return;}
     if(cc>=32u && cc<=79u){(void)midi_parameter((cc-32u)/8u,(cc-32u)%8u,value);return;}
     if(cc==91u){midi_clock_enabled=value>=64u;midi_clock_running=midi_clock_enabled;midi_clock_ticks=0;return;}
+    /* Tap tempo settings: volatile overrides, like every MIDI command never saved. */
+    if(cc==92u){midi_tap_tempo=value>=64u;if(!midi_tap_tempo)tap_mode=0;++generation;return;}
+    if(cc==93u){if(value<3u){midi_tap_note=value;if(midi_clock_enabled && midi_tempo)midi_tempo_pending=1;++generation;}return;}
+    if(cc==94u){midi_tap_target=value>=64u;++generation;return;}
     if(cc==85u && value>=64u){
         unsigned ms=now-midi_tap_mark;if(midi_tap_mark && ms>=200u && ms<=2000u)midi_tempo_apply(ms);
         midi_tap_mark=now;return;

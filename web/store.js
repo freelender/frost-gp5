@@ -5,7 +5,7 @@
 //   AMP models: firmware FFCM, amp-0..amp-6, 10 x 400-byte records (MODEL 0..63)
 //   presets:    firmware FPST, pst-0..pst-3, 15 x 264-byte records (1..60)
 // Legacy single amp-NN files (Frost 31s/31t3) are migrated into the groups.
-import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.7.8';
+import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.8.0';
 
 export const GROUPS = {
   amp: { firm: 0x4d434646, prefix: 'amp-', files: 7, slots: 10, size: 400 },
@@ -32,6 +32,61 @@ export function renamePreset(rec, name) {
 }
 const b64enc = b => { let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
 const b64dec = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+// ---- preset files with their AMP models and cabinets ----
+// Record layout (firmware/controller/preset_store.h): block i at 32+36*i =
+// type, enabled, -, parameter count, float32 parameters. A NAM block (type 33)
+// keeps MODEL (1..63; 0 = built in) as parameter 0. The first two IR blocks
+// (type 3, in block order) keep their cabinet at 248/250 as a uint16 storage
+// index (CAB 1..63 = 0..62; 0xffff = built in).
+export const NAM_TYPE = 33, IR_TYPE = 3;
+function presetRefs(rec, visit) {
+  const dv = new DataView(rec.buffer, rec.byteOffset, rec.length); let b = 0;
+  for (let i = 0; i < 6; i++) {
+    const o = 32 + 36 * i, type = rec[o];
+    if (type === NAM_TYPE) {
+      const v = rec[o + 3] > 0 ? dv.getFloat32(o + 4, true) : 0, n = v >= 0.5 ? Math.min(63, Math.round(v)) : 0;
+      visit('model', n, m => { if (rec[o + 3] > 0) dv.setFloat32(o + 4, m, true); });
+    } else if (type === IR_TYPE && b < 2) {
+      const at = 248 + 2 * b++, ref = dv.getUint16(at, true);
+      visit('cab', ref < 63 ? ref + 1 : 0, c => dv.setUint16(at, c ? c - 1 : 0xffff, true));
+    }
+  }
+}
+/** The user MODEL (1..63) and CAB (1..63) numbers a preset plays; built-in ones are left out. */
+export function presetAssets(rec) {
+  checkPreset(rec); const out = { models: [], cabs: [] };
+  presetRefs(rec, (kind, n) => { const l = kind === 'model' ? out.models : out.cabs; if (n && !l.includes(n)) l.push(n); });
+  return out;
+}
+/** A copy of `rec` with MODEL and CAB numbers renumbered by the maps {old: new}. */
+export function remapPreset(rec, models = {}, cabs = {}) {
+  checkPreset(rec); const r = Uint8Array.from(rec);
+  presetRefs(r, (kind, n, set) => { const m = kind === 'model' ? models : cabs; if (n && m[n] != null && m[n] !== n) set(m[n]); });
+  new DataView(r.buffer).setUint32(260, crc32(r.subarray(0, 260)), true);
+  return r;
+}
+/** Checksum (last 4 bytes) of a stored AMP (400 B) or cabinet (1048 B) record: identifies identical files. */
+export const recordCrc = r => u32(r, r.length - 4);
+/** Parse a .frostpreset file. Included AMP models / cabinets are kept only
+ * when intact and actually used by the preset. */
+export function parsePresetFile(text) {
+  let j; try { j = JSON.parse(text); } catch { throw new Error('not a Frost preset file'); }
+  if (j?.format !== 'frost-preset' || j.version !== 1 || typeof j.record !== 'string') throw new Error('not a Frost preset file');
+  const record = b64dec(j.record); checkPreset(record);
+  const used = presetAssets(record), take = (list, kind, size) => {
+    const out = [];
+    for (const a of Array.isArray(list) ? list : []) {
+      const n = a?.number, wanted = kind === 'model' ? used.models : used.cabs;
+      if (!Number.isInteger(n) || !wanted.includes(n) || out.some(x => x.number === n) || typeof a.record !== 'string') continue;
+      let r; try { r = b64dec(a.record); } catch { continue; }
+      if (!slotOk(r, size)) continue;
+      out.push({ number: n, name: recordLabel(r), record: r });
+    }
+    return out;
+  };
+  return { record, name: presetName(record), used, models: take(j.models, 'model', GROUPS.amp.size), cabs: take(j.cabs, 'cab', GROUPS.ir.size) };
+}
 
 export class Store {
   /** files: a PedalFiles (pedal.js). */
@@ -109,7 +164,7 @@ export class Store {
     const files = await this.scan(onProgress), out = {};
     for (let g = 0; g < GROUPS.amp.files; g++) {
       const d = await this.readGroup('amp', g, files); if (!d) continue;
-      for (let s = 0; s < 10; s++) { const r = d.subarray(s * 400, s * 400 + 400); if (slotOk(r, 400)) out[g * 10 + s] = { label: recordLabel(r) }; }
+      for (let s = 0; s < 10; s++) { const r = d.subarray(s * 400, s * 400 + 400); if (slotOk(r, 400)) out[g * 10 + s] = { label: recordLabel(r), crc: recordCrc(r) }; }
     }
     for (const h of files) if (h.firm === GROUPS.amp.firm && /^amp-\d\d$/.test(h.name)) {
       const i = Number(h.name.slice(4));
@@ -125,7 +180,7 @@ export class Store {
     const files = await this.scan(), out = {};
     for (let g = 0; g < 21; g++) {
       const d = await this.readGroup('ir', g, files); if (!d) continue;
-      for (let k = 0; k < 3; k++) { const r = d.subarray(k * 1048, (k + 1) * 1048); if (slotOk(r, 1048)) out[g * 3 + k] = { label: recordLabel(r) }; }
+      for (let k = 0; k < 3; k++) { const r = d.subarray(k * 1048, (k + 1) * 1048); if (slotOk(r, 1048)) out[g * 3 + k] = { label: recordLabel(r), crc: recordCrc(r) }; }
     }
     return out;
   }
@@ -149,6 +204,24 @@ export class Store {
   async presetPut(i, rec) { if (rec) checkPreset(rec); if (!(i >= 0 && i < PRESETS)) throw new Error('preset must be 1..60'); await this.putSlot('pst', i, rec); }
   async presetRename(i, name) { const r = await this.presetGet(i); if (!r) throw new Error('empty preset'); await this.presetPut(i, renamePreset(r, name)); }
   presetDelete(i) { return this.presetPut(i, null); }
+  /** Preset i as a .frostpreset object, with the AMP models and cabinets it uses. */
+  async presetFile(i) {
+    const rec = await this.presetGet(i); if (!rec) throw new Error('the preset could not be read');
+    const used = presetAssets(rec), models = [], cabs = [];
+    for (const n of used.models) { const r = await this.ampGet(n); if (r) models.push({ number: n, name: recordLabel(r), record: b64enc(r) }); }
+    for (const n of used.cabs) { const r = await this.irGet(n - 1); if (r) cabs.push({ number: n, name: recordLabel(r), record: b64enc(r) }); }
+    return { format: 'frost-preset', version: 1, number: i + 1, name: presetName(rec), record: b64enc(rec), models, cabs };
+  }
+  /** Import a parsed preset file as preset i. `models` / `cabs` map each
+   * included file's number to {to, write}: written to MODEL/CAB `to` when
+   * `write`, and the preset renumbered to play it there. Files first, the
+   * preset last: a failed file write leaves the preset unwritten. */
+  async presetImport(i, file, models = {}, cabs = {}, say) {
+    const mm = {}, cm = {};
+    for (const a of file.models) { const c = models[a.number]; if (!c) continue; if (!(c.to >= 1 && c.to <= 63)) throw new Error('MODEL must be 1..63'); if (c.write) await this.ampPut(c.to, a.record, say); mm[a.number] = c.to; }
+    for (const a of file.cabs) { const c = cabs[a.number]; if (!c) continue; if (!(c.to >= 1 && c.to <= 63)) throw new Error('CAB must be 1..63'); if (c.write) await this.irPut(c.to - 1, a.record, say); cm[a.number] = c.to; }
+    await this.presetPut(i, remapPreset(file.record, mm, cm));
+  }
   /** Swap presets a and b (either may be empty). beta.12: one scan and one read
    * per group file, then one write per group (was three scans and reads first). */
   async presetSwap(a, b) {

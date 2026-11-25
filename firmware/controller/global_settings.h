@@ -26,23 +26,30 @@ typedef struct {
     unsigned brightness;             /* 0..100 %, steps of 10 */
     unsigned home;                   /* HOME_* */
     unsigned last_preset;            /* 0..59, 255 = none */
-    unsigned tuner_ref;              /* tuner reference A4, 430..450 Hz */
+    unsigned tuner_ref;              /* tuner reference A4, 425..450 Hz */
     unsigned setlist_hold;           /* 0 tuner, 1 previous part; Setlist only */
     unsigned factory_state;          /* 0 fresh, 1 initialized/skipped, 2 seeding */
     unsigned tap_note;               /* 32t: 0 quarter, 1 dotted eighth, 2 eighth */
     unsigned tempo_light;            /* 32t: 1 = footswitch LED flashes the tempo */
     unsigned tap_tempo;              /* 32u: 1 = footswitch hold on a tempo effect taps; 0 (default) = as before */
+    unsigned tap_target;             /* 0 (default) = a tap sets the selected effect, 1 = every tempo effect in the chain */
 } FrostGlobals;
 static FrostGlobals globals;
 /* Performance controls are volatile: MIDI never saves global preferences. */
 static unsigned midi_bypass;
+/* MIDI CC 92/93/94 override the saved tap tempo settings until restart or
+ * until that setting is edited in GLOBAL SETTINGS (255 = no override). */
+static unsigned midi_tap_tempo=255u,midi_tap_note=255u,midi_tap_target=255u;
+static unsigned tap_tempo_on(void){return midi_tap_tempo<=1u?midi_tap_tempo:globals.tap_tempo;}
+static unsigned tap_note_now(void){return midi_tap_note<=2u?midi_tap_note:globals.tap_note;}
+static unsigned tap_target_now(void){return midi_tap_target<=1u?midi_tap_target:globals.tap_target;}
 static unsigned global_output_flags(void){return globals.out_mode | (midi_bypass?FROST_GLOBAL_BYPASS:0u);}
 void gp5_backlight_duty(unsigned percent);
 static void globals_defaults(FrostGlobals *g)
-{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;}
+{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;g->tap_target=0;}
 static int globals_valid(const FrostGlobals *g)
 {return g->eq_db[0]>=-12 && g->eq_db[0]<=12 && g->eq_db[1]>=-12 && g->eq_db[1]<=12 && g->eq_db[2]>=-12 && g->eq_db[2]<=12 && g->in_gain_db>=-20 && g->in_gain_db<=20 && g->out_level<=100 && g->out_mode<=1 && g->cab_override<=1 &&
-        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=430u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u;}
+        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=425u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u && g->tap_target<=1u;}
 /* record: 'FG' 1 0 | in_gain(i8) out_level out_mode cab brightness home last_preset 0 | 0... | crc32 @60 */
 static void globals_load(void)
 {
@@ -61,6 +68,7 @@ static void globals_load(void)
     g.tap_note=FROST_FILE_AT(d)[17]?FROST_FILE_AT(d)[17]-1u:0u;       /* 32t; 0 (older record) = quarter */
     g.tempo_light=FROST_FILE_AT(d)[18]?FROST_FILE_AT(d)[18]-1u:1u;    /* 32t; 0 (older record) = on */
     g.tap_tempo=FROST_FILE_AT(d)[19]?FROST_FILE_AT(d)[19]-1u:0u;      /* 32u; 0 (older record) = off */
+    g.tap_target=FROST_FILE_AT(d)[20]?FROST_FILE_AT(d)[20]-1u:0u;     /* 0 (older record) = selected */
     if(globals_valid(&g))globals=g;
 }
 /* 1 = written (or nothing to do). */
@@ -78,7 +86,7 @@ static int globals_save(uint32_t now)
     store_buf[12]=(uint8_t)(globals.setlist_hold+1u);
     store_buf[13]=(uint8_t)globals.factory_state;
     for(i=0;i<3u;++i)store_buf[14u+i]=(uint8_t)(int8_t)globals.eq_db[i];
-    store_buf[17]=(uint8_t)(globals.tap_note+1u);store_buf[18]=(uint8_t)(globals.tempo_light+1u);store_buf[19]=(uint8_t)(globals.tap_tempo+1u);
+    store_buf[17]=(uint8_t)(globals.tap_note+1u);store_buf[18]=(uint8_t)(globals.tempo_light+1u);store_buf[19]=(uint8_t)(globals.tap_tempo+1u);store_buf[20]=(uint8_t)(globals.tap_target+1u);
     frost_wire_put32(store_buf+60,store_crc_ram(store_buf,60));
     store_group_name(name,'g','l','b',0);
     return store_write_group(FROST_GLB_FIRM,name,bytes);

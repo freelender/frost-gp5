@@ -220,6 +220,47 @@ return frost_ovl_call(&s->swell,x,p,FROST_SWELL);
 return frost_swell_sample(&s->swell,x,p);
 #endif
 }
+/* beta.14 stereo side signal (engine/stereo.h). */
+#if defined(__arm__) && defined(GP5_FIRMWARE)
+float *frost_side;                       /* set by fw_process every block */
+#else
+static float frost_side_host[FROST_SIDE_BLOCK];
+float *frost_side=frost_side_host;
+#endif
+unsigned frost_side_pos,frost_side_used,frost_stereo_output,frost_side_route_ok=1u,frost_side_slot=255u;   /* >= FROST_SLOTS: no stereo block */
+/* beta.14: SL-100 lead head, own overlay module (the seven amp heads stay as they are). */
+FROST_XCODE void frost_x_sl100_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_sl100_reset(FrostEffectState *s){frost_sl100_reset(&s->sl100);}
+FROST_XCODE float frost_x_sl100_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_sl100_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->sl100,x,p,FROST_SL100);
+#else
+return frost_sl100_sample(&s->sl100,x,p);
+#endif
+}
+/* beta.14: PING ping-pong delay (stereo), same wrapper pattern as the extras. */
+FROST_XCODE void frost_x_pingpong_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_pingpong_reset(FrostEffectState *s){frost_pingpong_reset(&s->pingpong);}
+FROST_XCODE float frost_x_pingpong_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_pingpong_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->pingpong,x,p,FROST_PINGPONG);
+#else
+return frost_pingpong_sample(&s->pingpong,x,p);
+#endif
+}
+/* beta.14: CALI 5-BAND EQ, same dsp-data-flash wrapper pattern as the 32l extras. */
+FROST_XCODE void frost_x_cali_eq_reset(FrostEffectState *s);
+FROST_XCODE void frost_x_cali_eq_reset(FrostEffectState *s){frost_cali_eq_reset(&s->cali_eq);}
+FROST_XCODE float frost_x_cali_eq_sample(FrostEffectState *s,float x,const float *p);
+FROST_XCODE float frost_x_cali_eq_sample(FrostEffectState *s,float x,const float *p){
+#ifdef FROST_OVERLAYS
+return frost_ovl_call(&s->cali_eq,x,p,FROST_CALI_EQ);
+#else
+return frost_cali_eq_sample(&s->cali_eq,x,p);
+#endif
+}
 FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s);   /* 32c: cold, flash */
 FROST_XCODE void frost_new_foxx_reset(FrostEffectState *s){frost_foxx_reset(&s->foxx);}
 FROST_LARGE_ONLY float frost_new_foxx_sample(FrostEffectState *s,float x,const float *p);
@@ -360,7 +401,10 @@ const FrostEffect frost_effects[FROST_EFFECTS] = {
     FROST_LIB_ENTRY(FROST_HARMTREM,"H-TREM",0,FROST_LIB_HARMTREM,0,frost_x_harmtrem,sizeof(FrostHarmTrem),0),
     FROST_LIB_ENTRY(FROST_MUFF,"BIG PI",0,FROST_LIB_MUFF,0,frost_x_muff,sizeof(FrostMuff),0),
     FROST_LIB_ENTRY(FROST_BOOST,"BOOST",0,FROST_LIB_BOOST,0,frost_x_boost,sizeof(FrostBoost),0),
-    FROST_LIB_ENTRY(FROST_SWELL,"SWELL",0,FROST_LIB_SWELL,0,frost_x_swell,sizeof(FrostSwell),0)
+    FROST_LIB_ENTRY(FROST_SWELL,"SWELL",0,FROST_LIB_SWELL,0,frost_x_swell,sizeof(FrostSwell),0),
+    FROST_LIB_ENTRY(FROST_CALI_EQ,"CALIEQ",0,FROST_LIB_CALI_EQ,0,frost_x_cali_eq,sizeof(FrostCaliEq),0),
+    FROST_LIB_ENTRY(FROST_PINGPONG,"PING",0,FROST_LIB_PINGPONG,0,frost_x_pingpong,sizeof(FrostPingPong),sizeof(FrostDelay)),
+    FROST_LIB_ENTRY(FROST_SL100,"SL-100",0,FROST_LIB_SL100,0,frost_x_sl100,sizeof(FrostSl100),0)
 };
 FROST_CTL_RAM const FrostEffect *frost_effect_find(unsigned type)
 { return type<FROST_EFFECTS?&frost_effects[type]:0; }
@@ -381,6 +425,7 @@ FROST_COLD void frost_instance_init_workspace(FrostInstance *s,unsigned type,voi
     else if(d && type==FROST_REVERB){s->state.reverb=(FrostReverbWorkspace *)workspace;d->reset(&s->state);}
     else if(d && (type==FROST_DD3)){s->state.dd3.ring=(FrostDelay *)workspace;d->reset(&s->state);}
     else if(d && type==FROST_TAPE){s->state.tape.ring=(FrostDelay *)workspace;d->reset(&s->state);}
+    else if(d && type==FROST_PINGPONG){s->state.pingpong.ring=(FrostDelay *)workspace;d->reset(&s->state);}
     else if(d && (type==FROST_DM2)){s->state.dm2.ring=(FrostDelay *)workspace;d->reset(&s->state);}
     else if(d && (type==FROST_RV6 || type==FROST_SPRING)){s->state.reverb_model.ws=(FrostReverbWorkspace *)workspace;d->reset(&s->state);}
     else if(d && type==FROST_POG){s->state.octave.ring=(FrostModulation *)workspace;d->reset(&s->state);}
@@ -397,6 +442,7 @@ const void *frost_instance_workspace(const FrostInstance *s)
     case FROST_DD3:return s->state.dd3.ring;
     case FROST_DM2:return s->state.dm2.ring;
     case FROST_TAPE:return s->state.tape.ring;
+    case FROST_PINGPONG:return s->state.pingpong.ring;
     case FROST_CHORUS:case FROST_FLANGER:return s->state.modulation;
     case FROST_POG:return s->state.octave.ring;
     case FROST_DROP:return s->state.drop.ring;
@@ -815,7 +861,7 @@ unsigned frost_tail_process(FrostInstance *s,float *x,unsigned count);
 FROST_AUDIO_RAM static unsigned frost_tail_on(const FrostInstance *s,const FrostEffect *d)
 {
     switch(s->type){
-    case FROST_DD3:case FROST_DM2:case FROST_TAPE:case FROST_RV6:case FROST_SPRING:
+    case FROST_DD3:case FROST_DM2:case FROST_TAPE:case FROST_RV6:case FROST_SPRING:case FROST_PINGPONG:
         return d->parameter_count && s->target[d->parameter_count-1u]>=0.5f;
     default:return 0;
     }
@@ -917,6 +963,7 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM unsigned frost_instance_process(FrostInstan
         case FROST_FCM:if(frost_fcm_block_kernel)return fcm_settled(s,x,count,wet,frost_fcm_block_kernel);break;
         case FROST_DELUXE:case FROST_TWIN:case FROST_AC30:case FROST_JC120:case FROST_JCM800:case FROST_RECTIFIER:case FROST_5150:
             if(frost_amphead_block_kernel)return fcm_settled(s,x,count,wet,frost_amphead_block_kernel);break;
+        case FROST_SL100:if(frost_sl100_block_kernel)return fcm_settled(s,x,count,wet,frost_sl100_block_kernel);break;   /* beta.14 */
         default:
 #ifdef FROST_OVERLAYS
             if(s->type<FROST_EFFECTS && frost_ovl_kernel[s->type])return ovl_settled(s,x,count,wet,frost_ovl_kernel[s->type]);

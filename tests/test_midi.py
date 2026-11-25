@@ -98,6 +98,24 @@ class MidiTests(live_tests.LiveHostTests):
         self.assertEqual(self.c.ge_midi_tempo(),504)
         self.cc(91,0);self.c.ge_midi(15,0xfa,0,0)
         self.assertEqual(self.c.ge_midi_tempo(),504)
+    def test_tap_tempo_settings_and_tap_note(self):
+        c=self.c
+        for slot,effect in ((4,5),(5,6)):
+            self.assertEqual(self.host([0x7e,0x17,slot,effect])[2],1);self.settle()
+        self.cc(92,127);self.cc(94,127);self.cc(93,1)
+        self.assertEqual((c.ge_tap_tempo_on(),c.ge_tap_target_on(),c.ge_tap_note_value()),(1,1,1))
+        self.assertEqual(c.ge_tap_saved(),0)                           # overrides only: the saved settings are untouched
+        self.cc(85,127);c.ge_advance(500);self.cc(85,127);self.settle()
+        self.assertEqual(self.slot(4)['values'][0],375)                # dotted eighth of a 500 ms beat
+        self.assertEqual(self.slot(5)['values'][0],267)                # one cycle per 375 ms
+        self.cc(93,3);self.assertEqual(c.ge_tap_note_value(),1)        # out of range: ignored
+        self.cc(93,2);self.cc(85,127);c.ge_advance(400);self.cc(85,127);self.settle()
+        self.assertEqual(self.slot(4)['values'][0],200)                # eighth of a 400 ms beat
+        self.cc(92,0);self.cc(94,0);self.cc(93,0)
+        self.assertEqual((c.ge_tap_tempo_on(),c.ge_tap_target_on(),c.ge_tap_note_value()),(0,0,0))
+        self.cc(85,127);c.ge_advance(500);self.cc(85,127);self.settle()
+        self.assertEqual(self.slot(4)['values'][0],500)                # MIDI tap works with TAP TEMPO OFF
+        self.cc(92,127);c.ge_reboot();self.settle();self.assertEqual(c.ge_tap_tempo_on(),0)   # restart drops the override
 
 class WebsiteRecallTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('node'),'Node.js needed')

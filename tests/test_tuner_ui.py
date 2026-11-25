@@ -42,8 +42,8 @@ class TunerUiTests(unittest.TestCase):
         c.ge_reboot();self.settle();self.assertEqual(c.ge_tuner(4),450)                # reference remembered
     def test_reference_relocks_on_reentry_and_clamps_at_both_limits(self):
         c=self.lib;c.ge_foot_hold();c.ge_press();c.ge_turn(-30)
-        self.assertEqual(c.ge_tuner(4),430);c.ge_foot();self.run_for(20)
-        c.ge_foot_hold();c.ge_turn(20);self.assertEqual(c.ge_tuner(4),430)
+        self.assertEqual(c.ge_tuner(4),425);c.ge_foot();self.run_for(20)   # beta.14: 425..450 Hz
+        c.ge_foot_hold();c.ge_turn(20);self.assertEqual(c.ge_tuner(4),425)
         c.ge_press();c.ge_turn(30);self.assertEqual(c.ge_tuner(4),450)
         c.ge_press();c.ge_turn(-30);self.assertEqual(c.ge_tuner(4),450)
     def test_short_footswitch_still_toggles_on_press(self):

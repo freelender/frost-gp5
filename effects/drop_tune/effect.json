@@ -5,5 +5,5 @@
   "source": "drop_tune.c",
   "type_id": 34,
   "hardware_qualified": false,
-  "note": "Stage 5: pitch down 1/2..3 steps with correlation-spliced cubic read head; see docs/User%20Guide.md."
+  "note": "Stage 5: pitch down 1/2..3 steps with the correlation-spliced read head of effects/common/pitch_shift.h (attack-synchronous, correlation-normalized crossfades); see docs/Effects%20list.md."
 }

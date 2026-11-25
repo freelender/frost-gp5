@@ -77,7 +77,7 @@ class RouteWireTests(unittest.TestCase):
         c=self.lib;rev=c.connected_revision()
         prior=struct.pack('<HH5I',0x7f11,24,1,3000,rev,1,1250)
         self.wire(0x7f11,prior);rev+=1
-        invalid=[dict(types=(59,1,2,3,255,255)),dict(types=(254,1,2,3,255,255)),
+        invalid=[dict(types=(62,1,2,3,255,255)),dict(types=(254,1,2,3,255,255)),
             dict(types=(3,3,3,255,255,255)),dict(types=(5,5,2,3,255,255)),dict(types=(6,7,6,3,255,255)),dict(order=(0,0,2,3,4,5)),
             dict(types=(8,8,2,3,255,255)),dict(order=(0,1,2,3,4,255)),dict(pre=7),dict(pre=0xffffffff)]
         for i,fields in enumerate(invalid):

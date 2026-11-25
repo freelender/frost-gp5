@@ -1062,6 +1062,18 @@ dialog h2 {
   font: 700 19px var(--head);
   margin: 0 0 8px;
 }
+.confirm-selects {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+.confirm-selects label {
+  display: grid;
+  gap: 6px;
+}
+.confirm-selects select {
+  width: 100%;
+}
 dialog p {
   color: #a9bdd4;
   line-height: 1.6;

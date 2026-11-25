@@ -107,8 +107,11 @@ not run native NAM on the pedal.
    page. **Clear** removes that optional audio selection.
 4. Click **Convert** and wait for the progress display. Conversion can take
    several minutes. Keep the tab open; **Cancel** stops conversion.
-5. Review the completion message, then click **Write to pedal** and confirm
-   the destination. Wait for the transfer to finish.
+5. Review the completion message. Optionally click **Download .fcm** (shown
+   only after a conversion finishes) to keep the converted model as a file;
+   it can be written to any Frost pedal later without converting again.
+   Then click **Write to pedal** and confirm the destination. Wait for the
+   transfer to finish.
 6. Select the matching MODEL in the pedal's **NAM** block and save the preset.
 
 Conversion runs in browser workers; the selected capture is not uploaded to a
@@ -116,8 +119,10 @@ conversion server. A ready-made `.fcm` does not need NAM conversion: select
 it, choose its destination and write it when the page enables that action.
 
 MODEL 00 provides the built-in/default behavior; user model positions are
-01–63. The **On the pedal** list shows stored models. **Remove** deletes the
-selected file after confirmation. Presets reference numbers: replacing or
+01–63. The **On the pedal** list shows stored models. **Download** saves a
+stored model as an `.fcm` file, for example to move it to another pedal or
+keep it before replacing it. **Remove** deletes the selected file after
+confirmation. Presets reference numbers: replacing or
 removing a model affects every preset using that number. A missing model
 uses the default rather than restoring the deleted capture.
 
@@ -135,7 +140,10 @@ input, converts to mono 44.1 kHz and prepares a 512-tap cabinet response.
 This is for short cabinet responses, not preserving long room/reverb tails.
 CAB 00 remains built in and is not a writable user position.
 
-The stored list offers **Remove**. Replacing a CAB changes every preset
+The stored list offers **Download** and **Remove**. **Download** saves the
+cabinet as it is stored on the pedal: a mono 44.1 kHz, 32-bit float `.wav`
+of 512 samples. Importing that file again gives the same cabinet; it is not
+the original, longer WAV. Replacing a CAB changes every preset
 referencing it; deleting it leaves those references with built-in fallback.
 If a cabinet seems bypassed, check the block switch and the pedal's Global
 **CAB OVERRIDE** setting.
@@ -156,14 +164,36 @@ matches. The preset now playing is marked "playing now".
   changes at once; the pedal follows in about a second.
 - **Delete:** remove that stored preset after confirmation.
 - **Download:** save that preset as a `.frostpreset` file, for sharing or
-  keeping single sounds.
+  keeping single sounds. The file also contains the AMP models (NAM) and
+  cabinet IRs the preset plays, so it is complete on another pedal.
+
+A preset file holds the chain, order and every setting, plus a copy of each
+user AMP model and cabinet it uses (as stored on the pedal: the converted
+model and the prepared 512-tap cabinet, not the original `.nam` or `.wav`).
+The built-in MODEL 00 and CAB 00 are not included.
 
 To **import** a preset file, choose the destination in **Import into**, then
 **Import preset** and the file. Importing to a used number replaces that preset
-after confirmation. A preset file holds the chain, order and every setting.
-Cabinets and AMP models are referenced by their CAB and MODEL numbers, not
-included: the receiving pedal needs the same files at those numbers, otherwise
-the built-in cabinet or default model plays.
+after confirmation. When the file contains AMP models or cabinets, the same
+window asks where to store each one, with a list of MODEL or CAB 01–63 that
+shows what each number holds now:
+
+- **already here:** this number holds the identical file. It is not written
+  again; the preset simply uses it. This is chosen automatically when found.
+- **empty:** the file is written there. Its original number is suggested if
+  empty, otherwise the first empty number.
+- **replace:** the stored file is overwritten. Every preset that uses that
+  number changes sound, so choose this only on purpose.
+
+The preset is renumbered to play the files from the numbers you chose. The
+files are written first and the preset last; if a file cannot be written, the
+preset is not imported. Two files of the same kind cannot share a number.
+
+Preset files from older website versions contain no AMP models or cabinets.
+They import as before: the preset uses whatever this pedal has at its MODEL
+and CAB numbers, or the built-in cabinet and default model when those numbers
+are empty. The import window lists such numbers. A preset with three or more
+IR blocks keeps its cabinet choice only for the first two, as on the pedal.
 
 Song parts reference preset numbers. Reordering, replacing or deleting a
 preset changes what those parts play. Check your setlist after reorganizing.

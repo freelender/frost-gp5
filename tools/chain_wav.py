@@ -12,7 +12,7 @@ LIBRARY_TYPES={'ts':9,'bd2':10,'klon':11,'bluesbreaker':12,'ocd':13,'ds1':14,'ra
     'dd3':17,'dm2':18,'rv6':19,'spring':20,'phase90':21,'ce2':22,'mistress':23,'m117':24,'univibe':25,
     'vb2':26,'tr2':27,'pog':28,'dynacomp':29,'compplus':30,'ge7':31,'ns2':32,
     'amp':33,  # 33: EXPERIMENTAL AMP (Frost Capture Model, converted NAM approximation)
-    'drop':34,'ns1x':35,'multiband':36,'highpass':37,'lowpass':38,'autowah':39,'treble_boost':40,'foxx':41,'tape':42,'vintage_fuzz':43,'acoustic':44,'deluxe':45,'twin':46,'ac30':47,'jc120':48,'jcm800':49,'rectifier':50,'5150':51,'rotary':52,'ringmod':53,'crusher':54,'harmtrem':55,'muff':56,'boost':57,'swell':58}  # 34: stage 5 drop tune
+    'drop':34,'ns1x':35,'multiband':36,'highpass':37,'lowpass':38,'autowah':39,'treble_boost':40,'foxx':41,'tape':42,'vintage_fuzz':43,'acoustic':44,'deluxe':45,'twin':46,'ac30':47,'jc120':48,'jcm800':49,'rectifier':50,'5150':51,'rotary':52,'ringmod':53,'crusher':54,'harmtrem':55,'muff':56,'boost':57,'swell':58,'cali_eq':59,'pingpong':60,'sl100':61}  # 34: stage 5 drop tune
 ALL_TYPES={**EFFECT_TYPES,**LIBRARY_TYPES}
 
 def run(source,destination,gain=1.,threshold=.001,eq=(1.,1.,1.),ir=None,effects=None,bypass_policy='keep',overdrive=(4.,.5,.5),delay=(250.,.35,.3),tail_seconds=0.,chorus=(.8,.5,.3),flanger=(.3,.5,.5),reverb=(.75,.5,.25)):

@@ -189,7 +189,11 @@ static uint32_t frost_ovl_pool[FROST_OVL_POOL/4u] GP5_LARGE;
     M(harmtrem,FROST_HARMTREM,frost_harmtrem_sample) \
     M(muff,FROST_MUFF,frost_muff_sample) \
     M(boost,FROST_BOOST,frost_boost_sample) \
-    M(swell,FROST_SWELL,frost_swell_sample)
+    M(swell,FROST_SWELL,frost_swell_sample) \
+    M(cali_eq,FROST_CALI_EQ,frost_cali_eq_sample) \
+    M(pingpong,FROST_PINGPONG,frost_pingpong_sample) \
+    M(sl100,FROST_SL100,frost_sl100_sample)
+typedef char frost_side_block_matches[(GP5_BLOCK==FROST_SIDE_BLOCK)?1:-1];
 #define FROST_OVL_EXTERN(id,type,fn) extern char __ovl_##id##_start[],__ovl_##id##_end[];
 FROST_OVL_MODULES(FROST_OVL_EXTERN)
 typedef struct {unsigned type;const char *start,*end;const void *entry;} FrostOvlModule;
@@ -226,7 +230,7 @@ FROST_COLD void frost_ovl_load(const void *chain)
     if(~frost_ovl_loaded_inv==want)return;
     frost_ovl_loaded_inv=~want;
     for(i=0;i<FROST_EFFECTS;++i)frost_ovl_kernel[i]=0;
-    frost_fcm_block_kernel=0;frost_amphead_block_kernel=0;
+    frost_fcm_block_kernel=0;frost_amphead_block_kernel=0;frost_sl100_block_kernel=0;
     for(m=0;m<sizeof frost_ovl_modules/sizeof frost_ovl_modules[0];++m){
         const FrostOvlModule *o=&frost_ovl_modules[m];unsigned used=0,n=(unsigned)(o->end-o->start);
         for(i=0;i<FROST_SLOTS;++i)if(frost_ovl_type(c->slots[i].type)==o->type)used=1;
@@ -237,6 +241,7 @@ FROST_COLD void frost_ovl_load(const void *chain)
         if(o->type==FROST_DELUXE)for(i=FROST_TWIN;i<=FROST_5150;++i)frost_ovl_kernel[i]=frost_ovl_kernel[o->type];
         if(o->type==FROST_DELUXE)frost_amphead_block_kernel=(FrostBlockFn)(uintptr_t)(pos+((uintptr_t)frost_amphead_block-(uintptr_t)o->start));
         if(o->type==FROST_FCM)frost_fcm_block_kernel=(FrostFcmBlockFn)(uintptr_t)(pos+((uintptr_t)frost_fcm_block-(uintptr_t)o->start));
+        if(o->type==FROST_SL100)frost_sl100_block_kernel=(FrostBlockFn)(uintptr_t)(pos+((uintptr_t)frost_sl100_block-(uintptr_t)o->start));
         pos+=(n+7u)&~7u;
     }
     frost_ovl_loaded_bytes=(uint32_t)(pos-(uint8_t *)frost_ovl_pool);
@@ -290,7 +295,7 @@ FROST_DSP_RAM static void frost_bypass_blend(const float *dry,float *wet)
 FROST_COLD static void fw_init(void)
 {
     frost_bypass_mix=0.0f;frost_global_eq_init();
-    frost_in_gain=frost_in_gain_target=1.0f;frost_global_gain_ddb=0;frost_global_mode=0;frost_tuner_stop(&frost_tuner);
+    frost_in_gain=frost_in_gain_target=1.0f;frost_global_gain_ddb=0;frost_global_mode=0;frost_stereo_output=0;frost_tuner_stop(&frost_tuner);
     frost_ir_file_init();
     frost_ir_bypass=0;frost_ir_bypass_pending=2u;
 #ifdef FROST_IR_LINK
@@ -345,7 +350,8 @@ FROST_COLD static void fw_init(void)
 }
 FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_process(const int32_t *in,int32_t *left,int32_t *right)
 {
-    float dry[GP5_BLOCK],wet[GP5_BLOCK],g=frost_in_gain;unsigned i;
+    float dry[GP5_BLOCK],wet[GP5_BLOCK],side[GP5_BLOCK],g=frost_in_gain;unsigned i;
+    frost_side=side;   /* beta.14: this block's stereo side signal (engine/stereo.h) */
     if(g!=frost_in_gain_target){float d=frost_in_gain_target-g;g=d<1e-4f && d>-1e-4f?frost_in_gain_target:g+0.25f*d;frost_in_gain=g;}
     for(i=0;i<GP5_BLOCK;++i){
         float input=frost_input_sample(&frost_input_meter,in[i]);
@@ -363,6 +369,7 @@ FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_pr
      * (31y2/31y4 had this inside the else and kept processing shed blocks). */
     frost_irl_block_begin();
 #endif
+    frost_side_used=0;   /* beta.14: set again by a stereo effect in this block's chain run */
 #ifdef FROST_LINE_TEST
     if(!frost_line_route_ok())frost_line_latch(&line_output,FROST_LINE_ROUTE);
     if(frost_line_late(&line_output,GP5_LATE_BLOCKS,frost_chain.transition!=FROST_ROUTE_IDLE) || line_output.flags)
@@ -375,13 +382,21 @@ FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_pr
         (void)frost_chain_process_guarded(&frost_chain,dry,wet,GP5_BLOCK,0);
         if(!frost_chain.faults && ((frost_global_mode&FROST_GLOBAL_BYPASS) || frost_bypass_mix>0.0f))frost_bypass_blend(dry,wet);
         if(!frost_chain.faults && frost_global_eq.active && !frost_global_eq_block(wet,GP5_BLOCK)){++frost_chain.faults;for(i=0;i<GP5_BLOCK;++i)wet[i]=0.0f;}
+        if(frost_side_used){   /* beta.14 stereo: the side follows processing bypass and the output EQ */
+            if(frost_chain.faults || frost_bypass_mix>=1.0f)frost_side_used=0;
+            else{
+                if(frost_bypass_mix>0.0f)for(i=0;i<GP5_BLOCK;++i)frost_side[i]*=1.0f-frost_bypass_mix;
+                if(frost_global_eq.active)frost_global_eq_side(frost_side,GP5_BLOCK);
+            }
+        }
     }
 #ifdef FROST_IR_LINK
     frost_irl_block_end();
 #endif
     for(i=0;i<GP5_BLOCK;++i){
 #ifdef FROST_LINE_TEST
-        left[i]=right[i]=frost_output_pack(wet[i]);
+        if(frost_side_used){left[i]=frost_output_pack(wet[i]+frost_side[i]);right[i]=frost_output_pack(wet[i]-frost_side[i]);}
+        else left[i]=right[i]=frost_output_pack(wet[i]);
 #else
         (void)frost_output_sample(&frost_output_meter,wet[i]);
         left[i]=right[i]=0;
@@ -634,6 +649,7 @@ static int fw_command(uint32_t cmd,const uint8_t *p,uint32_t n)
             else if(v[4]!=frost_ir_bypass && !frost_chain_request_ir_bypass(&frost_chain,v[4]))status=FROST_SLOT_BUSY;
             else {
                 frost_global_gain_ddb=(int32_t)v[3];frost_global_mode=v[5];
+                frost_stereo_output=v[5]&1u;   /* beta.14: OUTPUT MODE STEREO enables side signals */
                 frost_in_gain_target=frost_db_to_gain((float)frost_global_gain_ddb*0.1f);status=FROST_SLOT_APPLIED;
             }
         }

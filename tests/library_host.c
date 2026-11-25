@@ -92,6 +92,20 @@ API unsigned lib_process(unsigned c,const float *x,float *y,unsigned n,unsigned 
     for(i=0;i<n;i+=chunk){unsigned k=n-i<chunk?n-i:chunk;if(!frost_chain_process_guarded(&fx[c].chain,x+i,y+i,k,0))++bad;}
     return bad;
 }
+/* beta.14 stereo: OUTPUT MODE, fold state (slot | ok<<8) and the guarded path
+ * returning left/right (mid +/- side) per 64-sample block like the pedal. */
+API void lib_stereo(unsigned output){frost_stereo_output=output;}
+API unsigned lib_side_state(void){return frost_side_slot|(frost_side_route_ok<<8);}
+API unsigned lib_process_stereo(unsigned c,const float *x,float *l,float *r,unsigned n)
+{
+    unsigned i,k,bad=0;
+    for(i=0;i<n;i+=FROST_SIDE_BLOCK){
+        unsigned m=n-i<FROST_SIDE_BLOCK?n-i:FROST_SIDE_BLOCK;
+        if(!frost_chain_process_guarded(&fx[c].chain,x+i,l+i,m,0))++bad;
+        for(k=0;k<m;++k){float side=frost_side_used?frost_side[k]:0.0f;r[i+k]=l[i+k]-side;l[i+k]+=side;}
+    }
+    return bad;
+}
 API unsigned lib_process_reference(unsigned c,const float *x,float *y,unsigned n,unsigned chunk)
 {
     unsigned i,bad=0;

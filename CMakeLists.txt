@@ -31,6 +31,9 @@ add_library(frost_dsp STATIC
   effects/autowah/autowah.c
   effects/treble_boost/treble_boost.c
   effects/extras/extras.c
+  effects/cali_eq/cali_eq.c
+  effects/pingpong/pingpong.c
+  effects/sl100/sl100.c
   effects/foxx/foxx.c
   effects/tape/tape.c
   effects/vintage_fuzz/vintage_fuzz.c

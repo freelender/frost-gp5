@@ -1,19 +1,44 @@
 #include "octave.h"
+#include <stddef.h>
 #include "../common/frost_dsp.h"
 #include "../../engine/hot_code.h"
 #include "../../engine/overlay_far_on.h"
-#define UP_START (2.0f+(float)FROST_OCTAVE_UP_GRAIN)
-#define DOWN_START 2.0f
-static void voice_reset(FrostOctaveVoice *v,float start,float rate,float grain)
-{
-    /* Tap 1 is half a grain into its life, with the matching distance. */
-    v->ph[0]=0.0f;v->ph[1]=0.5f;v->d[0]=start;v->d[1]=start+rate*0.5f*grain;
-}
+#define FROST_PS_PREFIX pog
+#define FROST_PS_FN FROST_HOT FROST_NOINLINE FROST_OVL(pog) static
+#define FROST_PS_SMALL FROST_COLD
+#define FROST_PS_LINEAR 1
+#ifndef FROST_OCT_COARSE_W
+#define FROST_OCT_COARSE_W 32u   /* 256 samples: as good as 40 here (harness), cheaper */
+#endif
+#define FROST_PS_COARSE_W FROST_OCT_COARSE_W
+#include "../common/pitch_shift_impl.h"
+#undef FROST_PS_PREFIX
+#undef FROST_PS_FN
+#undef FROST_PS_LINEAR
+typedef char frost_octave_history_fits[(sizeof(FrostPsHistory)==sizeof(FrostModulation))?1:-1];
+typedef char frost_octave_state_fits[(sizeof(FrostOctave)<=120u)?1:-1];
+#ifndef FROST_OCT_GOOD
+#define FROST_OCT_GOOD 0.97f
+#endif
+#ifndef FROST_OCT_UP_FADE
+#define FROST_OCT_UP_FADE 256u
+#endif
+#define FROST_OCT_UP_START (FROST_OCT_UP_MIN+(float)FROST_OCT_UP_FADE+536.0f)   /* first grain: 12 ms */
+#ifndef FROST_OCT_UP_EVERY
+#define FROST_OCT_UP_EVERY 2u
+#endif
+#ifndef FROST_OCT_SUB_EVERY
+#define FROST_OCT_SUB_EVERY 4u
+#endif
+#ifndef FROST_OCT_SUB_FADE
+#define FROST_OCT_SUB_FADE 1024u
+#endif
 void frost_octave_reset(FrostOctave *s)
 {
-    voice_reset(&s->up,UP_START,-1.0f,(float)FROST_OCTAVE_UP_GRAIN);
-    voice_reset(&s->down,DOWN_START,0.5f,(float)FROST_OCTAVE_DOWN_GRAIN);
-    s->sub_lp=s->up_hp=0.0f;if(s->ring){s->ring->position=s->ring->valid=0;}
+    /* Zero history, filters and idle splicers; then each head's start delay. */
+    if(s->ring)frost_ps_zero(s->ring,sizeof(FrostPsHistory));
+    frost_ps_zero(&s->in,sizeof *s-offsetof(FrostOctave,in));
+    s->up.d=s->up.d_old=FROST_OCT_UP_START;s->down.d=s->down.d_old=FROST_OCT_SUB_MIN;
 }
 #ifdef FROST_FCM_BENCH
 /* EXPERIMENTAL FCM timing candidate (IIR engine): the POG slot runs the
@@ -44,94 +69,22 @@ FROST_HOT FROST_NOINLINE FROST_OVL(pog) FROST_FCM_BENCH_OPT float frost_octave_s
     return frost_rail(p[2]*0.02f*y,8.0f);
 }
 #else
-FROST_HOT FROST_OVL(pog) static float sample_at(const FrostModulation *m,unsigned d)
-{
-    unsigned i;if(d>m->valid || !d || d>=FROST_MOD_PCM)return 0.0f;
-    i=m->position>=d?m->position-d:m->position+FROST_MOD_PCM-d;return frost_unpcm16(m->line.pcm[i]);
-}
-/* 31o: when both reads d and d+1 are valid (the normal case), one validity
- * test and direct ring indexing replace two sample_at calls. The indices are
- * exactly sample_at's (j wraps to the ring end when i is 0), so the result is
- * bit-identical. */
-FROST_HOT FROST_NOINLINE FROST_OVL(pog) static float octave_tap(const FrostModulation *m,float distance)
-{
-    unsigned d=(unsigned)distance,p=m->position;float f=distance-(float)d,a;
-    if(d && d+1u<=m->valid && d+1u<FROST_MOD_PCM){
-        unsigned i=p>=d?p-d:p+FROST_MOD_PCM-d,j=i?i-1u:FROST_MOD_PCM-1u;
-        a=frost_unpcm16(m->line.pcm[i]);
-        return a+f*(frost_unpcm16(m->line.pcm[j])-a);
-    }
-    a=sample_at(m,d);
-    return a+f*(sample_at(m,d+1u)-a);
-}
-/* Choose the restart distance in [base, base+8*63] whose local waveform best
- * matches the other tap's current read position (16 points, stride 4).
- * 31n: the 16 reference values are read once and held as scalars (unrolled,
- * so they stay in FPU registers), pre-scaled by 2^-13. A candidate whose 16
- * reads are all in range and do not wrap (the normal case) reads raw int16
- * ring values directly; any other candidate (ring still filling, or window
- * straddling the ring start) uses a compact sample_at loop rescaled by 2^13.
- * Both scalings are exact powers of two, so every product, the j-order sum,
- * the strict-> first-best choice and the result match the original
- * sample_at(o)*sample_at(d) search bit for bit (tests/test_octave_search.py). */
-#define POG16(X) X(0)X(1)X(2)X(3)X(4)X(5)X(6)X(7)X(8)X(9)X(10)X(11)X(12)X(13)X(14)X(15)
-#define POG_REF(j) const float a##j=r[j];
-#define POG_FAST(j) score+=a##j*(float)q[-4*(j)];
-FROST_HOT FROST_NOINLINE FROST_OVL(pog) static float slow_score(const FrostModulation *m,unsigned d,const float *r)
-{
-    unsigned j;float score=0.0f;
-    for(j=0;j<16u;++j)score+=r[j]*(8192.0f*sample_at(m,d+4u*j));
-    return score;
-}
-/* Out of line and overlay-tagged: one copy, never in boot-adjacent .text. */
-FROST_HOT FROST_NOINLINE FROST_OVL(pog) static float aligned_start(const FrostModulation *m,float base,float other)
-{
-    unsigned c,j,o=(unsigned)other,b0=(unsigned)base,best=0,p=m->position,v=m->valid;
-    const int16_t *pcm=m->line.pcm;float best_score=-1e30f,r[16];
-    for(j=0;j<16u;++j)r[j]=sample_at(m,o+4u*j)*(1.0f/8192.0f);
-    POG16(POG_REF)
-    for(c=0;c<FROST_OCTAVE_SEARCH;++c){
-        unsigned d=b0+8u*c,i=p>=d?p-d:p+FROST_MOD_PCM-d;float score=0.0f;
-        if(d && d+60u<=v && d+60u<FROST_MOD_PCM && i>=60u){
-            const int16_t *q=pcm+i;
-            POG16(POG_FAST)
-        }else score=slow_score(m,d,r);
-        if(score>best_score){best_score=score;best=c;}
-    }
-    return base+8.0f*(float)best;
-}
-#undef POG16
-#undef POG_REF
-#undef POG_FAST
-/* 31o: an inline copy of frost_sin01 (effects/common/frost_dsp.c), the same
- * expression, so the Hann weight needs no far pointer call and wrapper. */
-static inline __attribute__((always_inline)) float pog_sin01(float phase)
-{
-    float t=phase<0.25f?4.0f*phase:phase<0.75f?2.0f-4.0f*phase:4.0f*phase-4.0f,t2=t*t;
-    return t*(1.57079633f+t2*(-0.64596409f+t2*(0.07969262f+t2*(-0.00468175f+t2*0.00015957f))));
-}
-/* 31o: the caller passes 1/grain; both grains are powers of two, so the
- * folded reciprocal equals the former per-sample 1.0f/grain division. */
-FROST_HOT FROST_OVL(pog) static float octave_voice(const FrostModulation *m,FrostOctaveVoice *v,float rate,float inv_grain,float start)
-{
-    float y=0.0f;unsigned k;
-    for(k=0;k<2u;++k){
-        float w=pog_sin01(0.5f*v->ph[k]);y+=w*w*octave_tap(m,v->d[k]);
-        v->d[k]+=rate;v->ph[k]+=inv_grain;
-        if(v->ph[k]>=1.0f){v->ph[k]-=1.0f;v->d[k]=aligned_start(m,start,v->d[k^1u]);}
-    }
-    return y;
-}
+/* sub: 0.5x, the head falls behind and jumps forward a whole number of
+ * periods; up: 2x, the head approaches the input and jumps back. Built per
+ * sample with field stores: the constants stay in this module's code (DSP
+ * code flash has no room for const tables). */
+static inline __attribute__((always_inline)) void oct_config(FrostPsConfig *c,float ratio,float dmin,float dmax,unsigned jmax,unsigned every,unsigned phase,unsigned fade_min,unsigned fade_max)
+{c->ratio=ratio;c->dmin=dmin;c->dmax=dmax;c->jmin=64u;c->jmax=jmax;c->good=FROST_OCT_GOOD;c->every=every;c->phase=phase;c->refresh=0u;c->fade_min=fade_min;c->fade_max=fade_max;}
 FROST_HOT FROST_NOINLINE FROST_OVL(pog) float frost_octave_sample(FrostOctave *s,float x,const float *p)
 {
-    FrostModulation *m=s->ring;float up,sub;
-    m->line.pcm[m->position]=frost_pcm16(x);
-    if(++m->position==FROST_MOD_PCM)m->position=0;
-    if(m->valid<FROST_MOD_PCM)++m->valid;
-    /* Up: read distance shrinks one sample per sample (ratio 2). Down: grows
-     * half a sample per sample (ratio 0.5). */
-    up=octave_voice(m,&s->up,-1.0f,1.0f/(float)FROST_OCTAVE_UP_GRAIN,UP_START);
-    sub=octave_voice(m,&s->down,0.5f,1.0f/(float)FROST_OCTAVE_DOWN_GRAIN,DOWN_START);
+    FrostPsHistory *h=(FrostPsHistory *)(void *)s->ring;float up=0.0f,sub=0.0f;FrostPsConfig c;
+    unsigned onset=pog_ps_input(&s->in,h,x,1u,FROST_OCT_HOLD);
+    if(onset){if(s->down.d>FROST_OCT_SUB_MIN+32.0f)frost_ps_jump(&s->down,FROST_OCT_SUB_MIN,48u);s->up.best=0;}   /* new note: the up voice rescans from the minimum jump */
+    /* A voice at level 0 is off (no work) and restarts at its minimum delay. */
+    if(p[1]!=0.0f || s->down.fade){oct_config(&c,0.5f,FROST_OCT_SUB_MIN,1600.0f,1400u,FROST_OCT_SUB_EVERY,1u,128u,FROST_OCT_SUB_FADE);sub=pog_ps_splice(&s->down,h,&c,!h->hold);}
+    else frost_ps_splicer_reset(&s->down,FROST_OCT_SUB_MIN);
+    if(p[2]!=0.0f || s->up.fade){oct_config(&c,2.0f,FROST_OCT_UP_MIN,1650.0f,1336u,FROST_OCT_UP_EVERY,0u,64u,FROST_OCT_UP_FADE);up=pog_ps_splice(&s->up,h,&c,1u);}
+    else frost_ps_splicer_reset(&s->up,FROST_OCT_UP_START);
     sub=frost_lp(&s->sub_lp,sub,frost_onepole(2500.0f));
     up=frost_hp(&s->up_hp,up,frost_onepole(150.0f));
     return frost_rail(p[0]*0.01f*x+p[1]*0.01f*sub+p[2]*0.01f*up,8.0f);

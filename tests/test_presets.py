@@ -35,7 +35,7 @@ class PresetTests(unittest.TestCase):
         self.assertEqual(q.data['slots'][0]['parameters']['MULTIPLIER'],1.75)
         self.assertEqual(q.data['slots'][1]['parameters']['MULTIPLIER'],.5)
         self.assertEqual(len(q.data['slots'][3]['asset_sha256']),64)
-        self.assertEqual(len(catalog()),60) # 59 registered effects plus empty
+        self.assertEqual(len(catalog()),63) # 62 registered effects plus empty
     def test_offline_recall_matches_existing_renderer_and_reports_levels(self):
         d=self.data();d['order']=list(range(6));d['slots'][1]['parameters']['MULTIPLIER']=1.75
         d['slots'][4]['bypass']='keep';d['slots'][4]['parameters']={'TIME':250.,'FEEDBACK':.35,'MIX':.3}

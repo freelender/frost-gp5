@@ -10,11 +10,11 @@ API void dt_init(void){dt.ring=&ring;frost_drop_reset(&dt);splices=0;max_d=0;}
 API void dt_run(const float *x,float *y,unsigned n,float drop,float mix)
 {
     float p[2]={drop,mix};unsigned i;
-    for(i=0;i<n;++i){unsigned f=dt.fade;float d0=dt.d;y[i]=frost_drop_sample(&dt,x[i],p);if(!f && dt.fade){if(splices<16){jumps[splices]=d0-dt.d;scores[splices]=dt.best_score;}++splices;}if((unsigned)dt.d>max_d)max_d=(unsigned)dt.d;}
+    for(i=0;i<n;++i){unsigned f=dt.head.fade;float d0=dt.head.d;y[i]=frost_drop_sample(&dt,x[i],p);if(!f && dt.head.fade){if(splices<16){jumps[splices]=d0-dt.head.d;scores[splices]=dt.head.last;}++splices;}if((unsigned)dt.head.d>max_d)max_d=(unsigned)dt.head.d;}
 }
 API unsigned dt_splices(void){return splices;}
 API unsigned dt_max_distance(void){return max_d;}
-API float dt_distance(void){return dt.d;}
+API float dt_distance(void){return dt.head.d;}
 API unsigned dt_state_bytes(void){return sizeof(FrostDropTune);}
 API float dt_jump(unsigned i){return i<16?jumps[i]:0;}
 API float dt_score(unsigned i){return i<16?scores[i]:0;}

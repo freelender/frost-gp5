@@ -1,20 +1,22 @@
 #ifndef FROST_OCTAVE_H
 #define FROST_OCTAVE_H
 #include "../modulation/modulation.h"
+#include "../common/pitch_shift.h"
 /* EXPERIMENTAL Micro POG-inspired polyphonic octave (dry / -1 oct / +1 oct).
- * Time-domain overlap-add pitch shifting on a 16-bit history held in one
- * exclusive FrostModulation ring: per voice, two Hann-weighted read taps
- * moving at exactly 2.0x (up) or 0.5x (down). Each tap restarts at a
- * correlation-aligned position (bounded WSOLA-style search: 64 candidates
- * x 16 points, once per half-grain) so overlapping grains add coherently.
- * It shifts chords (it is not a single-note divider), but grain-rate
- * modulation, transient smearing and ~12..35 ms latency remain audible:
- * not POG-grade quality. See docs/User%20Guide.md for measurements. */
-#define FROST_OCTAVE_UP_GRAIN 1024u
-#define FROST_OCTAVE_DOWN_GRAIN 2048u
-#define FROST_OCTAVE_SEARCH 64u
-typedef struct { float d[2],ph[2]; } FrostOctaveVoice;
-typedef struct { FrostModulation *ring; FrostOctaveVoice up,down; float sub_lp,up_hp; } FrostOctave;
+ * Time-domain splicing pitch shifters (effects/common/pitch_shift.h) on one
+ * history held in the slot's exclusive FrostModulation workspace: the input
+ * is anti-aliased (~10 kHz) for the octave up, which reads at exactly 2x, and
+ * the octave down reads at 0.5x. Each voice is one read head that jumps by a
+ * correlation-chosen whole number of periods (coarse on a /8 low-passed copy,
+ * then per sample with a sub-sample peak) and crossfades with gains
+ * normalized by the measured match, so chords stay steady instead of
+ * warbling. The sub jumps to its minimum delay on a pick attack. SUB OCT is
+ * low-passed at 2.5 kHz, OCT UP high-passed at 150 Hz (as before).
+ * Not POG-grade: a time-domain shifter still smears very dense chords. */
+#define FROST_OCT_SUB_MIN 48.0f
+#define FROST_OCT_UP_MIN 32.0f
+#define FROST_OCT_HOLD 1100u
+typedef struct { FrostModulation *ring; FrostPsInput in; FrostPsSplicer up,down; float sub_lp,up_hp; } FrostOctave;
 void frost_octave_reset(FrostOctave *s);
 float frost_octave_sample(FrostOctave *s,float x,const float *p);
 #endif

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=1.7.8">
+<link rel="stylesheet" href="style.css?v=1.8.0">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -162,6 +162,7 @@
           <div class="actions">
             <button id="amp-convert" class="btn primary" disabled>Convert</button>
             <button id="amp-cancel" class="btn ghost" hidden>Cancel</button>
+            <button id="amp-download" class="btn ghost" hidden>Download .fcm</button>
             <button id="amp-write" class="btn primary" disabled>Write to pedal</button>
           </div>
           <p id="amp-why" class="why"></p>
@@ -214,7 +215,7 @@
           </div>
           <p id="backup-state" class="why"></p>
           <div class="paneltitle gap">Single presets</div>
-          <p class="hint">Download one preset as a file with its row's <b>Download</b> button, or import a preset file into a preset number. The file keeps the effects and settings; cabinets and AMP models are referenced by their CAB/MODEL number, so the receiving pedal needs the same ones.</p>
+          <p class="hint">Download one preset as a file with its row's <b>Download</b> button, or import a preset file into a preset number. The file keeps the effects and settings and carries the AMP models and cabinets the preset uses; on import you choose the MODEL and CAB numbers to store them at.</p>
           <div class="inputrow">
             <label><span class="inputlabel">Import into</span><select id="import-slot"></select></label>
             <label class="btn ghost" id="import-label">Import preset<input id="import-file" type="file" accept=".frostpreset,application/json" hidden></label>
@@ -284,6 +285,7 @@
     <h2 id="confirm-title"></h2>
     <p id="confirm-text"></p>
     <label id="confirm-input-label" hidden><span class="inputlabel" id="confirm-input-name"></span><input id="confirm-input" maxlength="16" autocomplete="off"></label>
+    <div id="confirm-selects" class="confirm-selects" hidden></div>
     <div class="actions end"><button class="btn ghost" value="cancel" id="confirm-cancel">Cancel</button><button class="btn primary" value="ok" id="confirm-ok">OK</button></div>
   </form>
 </dialog>
@@ -294,6 +296,6 @@
   <div class="limithint">REMOVE AN EFFECT</div>
   <button class="btn small ghost" id="limit-close" type="button">OK</button>
 </div>
-<script type="module" src="app.js?v=1.7.8"></script>
+<script type="module" src="app.js?v=1.8.0"></script>
 </body>
 </html>

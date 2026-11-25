@@ -46,6 +46,18 @@ FROST_GLOBAL_EQ_CODE int frost_global_eq_block(float *x,unsigned n)
     }
     s->z[0]=z[0];s->z[1]=z[1];return 1;
 }
+/* beta.14 stereo: the side signal through the same three bands (its own
+ * filter history), at the gains the mid block just used. Linear, so mid and
+ * side filtered separately give the same left and right as filtering each
+ * output. Only while a stereo effect writes a side signal. */
+static float frost_global_eq_side_z[2];
+FROST_GLOBAL_EQ_CODE void frost_global_eq_side(float *x,unsigned n)
+{
+    FrostGlobalEq *s=&frost_global_eq;float gain[3];unsigned i;
+    if(!s->active){frost_global_eq_side_z[0]=frost_global_eq_side_z[1]=0.0f;return;}
+    gain[0]=1.0f+s->delta[0];gain[1]=1.0f+s->delta[1];gain[2]=1.0f+s->delta[2];
+    for(i=0;i<n;++i){x[i]=frost_tone_sample(x[i],gain,frost_global_eq_side_z);if(!(x[i]>=-16.0f && x[i]<=16.0f))x[i]=0.0f;}
+}
 FROST_GLOBAL_EQ_CODE void frost_global_eq_command(const uint8_t *p,unsigned n,uint8_t *reply)
 {
     uint32_t v[6]={0},status=FROST_SLOT_BAD_FRAME;unsigned i;

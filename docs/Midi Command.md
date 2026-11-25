@@ -225,6 +225,11 @@ Choose **CC**, channel **1**:
 | Global bypass OFF (processed sound) | **90** | **0** |
 | Follow incoming MIDI Clock | **91** | **127** |
 | Stop following MIDI Clock | **91** | **0** |
+| Footswitch tap tempo ON | **92** | **127** |
+| Footswitch tap tempo OFF | **92** | **0** |
+| Tap note 1/4 / dotted 1/8 / 1/8 | **93** | **0** / **1** / **2** |
+| Footswitch tap target SELECTED | **94** | **0** |
+| Footswitch tap target GLOBAL | **94** | **127** |
 
 Set toggle buttons such as tuner and bypass to alternate **127 / 0**.
 Set tap tempo and preset-navigation buttons to send **127 on press** and
@@ -259,15 +264,34 @@ Expression routing and volume are volatile and are not stored in presets.
 
 ## Tap tempo and MIDI Clock
 
+MIDI tap tempo is the **global tap tempo**: it always sets every tempo effect
+in the chain, whatever the pedal's TAP TARGET is, and it works with the
+footswitch TAP TEMPO setting ON or OFF.
+
 Tap at least twice, 200–2,000 ms apart (30–300 BPM). Each high CC 85 message
 is one tap; configure one message per press, with no extra high message on
 release. A gap longer than two seconds starts a new tap pair.
 
-Tempo sets every delay TIME/RATE expressed in milliseconds to one quarter
-note. Modulation RATE/SPEED controls expressed in Hz follow one cycle per
-quarter note. Each control is clamped to its supported range; a BBD delay cannot
-exceed its 300 ms maximum. Reverb decay, vibrato rise and envelope release
-times are not tempo targets. No note-division selection is provided.
+The tapped beat sets every delay TIME/RATE in milliseconds to one note of
+GLOBAL SETTINGS → TAP TEMPO → **TAP NOTE** (a quarter note by default, or a
+dotted eighth or an eighth). Modulation RATE/SPEED controls in Hz (for example
+TREM, H-TREM, VIBE, WARM, PHASE) run one cycle per that note. Each control is
+clamped to its supported range; a BBD delay cannot exceed its 300 ms maximum.
+Reverb decay, vibrato rise, envelope release and the ring modulator frequency
+are not tempo targets.
+
+The tap tempo settings can also be changed from a controller:
+
+| Setting | CC | MIDI value |
+|---|---|---|
+| Footswitch TAP TEMPO | **92** | **0–63** OFF, **64–127** ON |
+| TAP NOTE | **93** | **0** = 1/4, **1** = dotted 1/8, **2** = 1/8; other values are ignored |
+| Footswitch TAP TARGET | **94** | **0–63** SELECTED, **64–127** GLOBAL |
+
+Like every MIDI command, these are not saved: they override the pedal's
+GLOBAL SETTINGS → TAP TEMPO values until restart. The menu shows the value
+in use; editing a setting there replaces its MIDI override and saves it with
+the other settings. While following MIDI Clock, a new TAP NOTE applies at once.
 
 For a clock source, send CC 91 = 127, then MIDI Clock. Frost accepts clock
 with or without an initial Start message. It measures 24 intervals per beat
@@ -400,6 +424,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 | BBD | **1 RATE** (20–300 ms); **2 ECHO** (0–100); **3 INTENS** (0–100); **4 TAIL** (OFF / ON) |
 | DELAY | **1 TIME** (1–500 ms); **2 REPEAT** (0–100); **3 MIX** (0–100) |
 | TAPE | **1 TIME** (20–800 ms); **2 REPEAT** (0–100); **3 MIX** (0–100); **4 WOW** (0–100); **5 AGE** (0–100); **6 DRIVE** (0–100); **7 TAIL** (OFF / ON) |
+| PING | **1 TIME** (20–400 ms); **2 F.BACK** (0–100); **3 E.LEVEL** (0–100); **4 WIDTH** (0–100); **5 TAIL** (OFF / ON) |
 
 ### Reverb
 
@@ -435,6 +460,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 | SQUASH | **1 OUTPUT** (0–100); **2 SENS** (0–100) |
 | BLEND | **1 SUSTAIN** (0–100); **2 LEVEL** (0–100); **3 BLEND** (0–100); **4 TONE** (0–100); **5 PICKUP** (SINGLE / HUMBKR) |
 | EQ-7 | **1 100** (-15–15 dB); **2 200** (-15–15 dB); **3 400** (-15–15 dB); **4 800** (-15–15 dB); **5 1.6K** (-15–15 dB); **6 3.2K** (-15–15 dB); **7 6.4K** (-15–15 dB); **8 LEVEL** (-15–15 dB) |
+| CALIEQ | **1 80** (-12–12 dB); **2 240** (-12–12 dB); **3 750** (-12–12 dB); **4 2.2K** (-12–12 dB); **5 6.6K** (-12–12 dB); **6 LEVEL** (-12–12 dB) |
 | NOISE | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 MODE** (REDUCE / MUTE) |
 | NOISEX | **1 THRESH** (0–100); **2 DECAY** (0–100); **3 DAMP** (0–100); **4 MODE** (REDUCE / GATE / MUTE) |
 | MB-CMP | **1 LOW THR** (-60–0 dB); **2 MID THR** (-60–0 dB); **3 HI THR** (-60–0 dB); **4 RATIO** (1–10); **5 ATTACK** (1–100 ms); **6 RELEASE** (20–1000 ms); **7 MIX** (0–100); **8 LEVEL** (0–100) |
@@ -463,6 +489,7 @@ For example, COMP+ **2 LEVEL** means use the **Control 2** column.
 | UK-800 | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
 | CALI | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
 | BROWN | **1 GAIN** (0–100); **2 BASS** (0–100); **3 MID** (0–100); **4 TREBLE** (0–100); **5 PRESENCE** (0–100); **6 MASTER** (0–100); **7 LEVEL** (0–100) |
+| SL-100 | **1 MODE** (CLEAN / CLEAN BRT / CRUNCH / CRUNCH BRT / LEAD); **2 GAIN** (0–100); **3 BASS** (0–100); **4 MID** (0–100); **5 TREBLE** (0–100); **6 PRESENCE** (0–100); **7 MASTER** (0–100); **8 LEVEL** (0–100) |
 | NAM | **1 MODEL** (0–63); **2 GAIN** (-12–12 dB); **3 LEVEL** (0–100); **4 BASS**, **5 MIDDLE**, **6 TREBLE** (-12–12 dB each) |
 
 ### Pitch
@@ -489,6 +516,9 @@ editors normally construct USB packets themselves.
 | `B0 59 2F` | Scene mask 47 |
 | `B0 5A 7F` / `B0 5A 00` | Global bypass on / off |
 | `B0 5B 7F`, then `F8` ticks | Enable and receive MIDI Clock |
+| `B0 5C 7F` / `B0 5C 00` | Footswitch tap tempo on / off |
+| `B0 5D 01` | Tap note dotted 1/8 |
+| `B0 5E 7F` / `B0 5E 00` | Footswitch tap target global / selected |
 
 USB-MIDI examples on cable 0: PC 0 = `0C C0 00 00`, block 1 on =
 `0B B0 14 7F`, clock = `0F F8 00 00`. Frost's website SysEx protocol remains

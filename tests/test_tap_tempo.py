@@ -65,6 +65,15 @@ class TapTempoTests(unittest.TestCase):
         c.ge_tempo_light(0);seen=set()
         for _ in range(60):c.ge_advance(10);seen.add(c.ge_led())
         self.assertEqual(seen,{1})                                                      # TEMPO LIGHT OFF
+    def test_global_target_sets_every_tempo_block(self):
+        c=self.c;self.put(2,TREM);self.put(4,DIGI);before=c.ge_value(2,0)
+        for _ in range(4):self.press(500)
+        self.settle(20);self.assertEqual(c.ge_value(4,2),500);self.assertEqual(c.ge_value(2,0),before)   # SELECTED: only the delay
+        c.ge_tap_target(1);c.ge_advance(2600);c.ge_tick_draw();self.last=None
+        for _ in range(4):self.press(400)
+        self.settle(20);self.assertEqual(c.ge_value(4,2),400);self.assertEqual(c.ge_value(2,0),250)       # GLOBAL: both, 2.50 Hz
+        self.put(4,GREEN);c.ge_foot_edge(1,300);c.ge_advance(800);c.ge_tick_draw()
+        self.assertEqual(c.ge_tap_mode(),0);self.assertEqual(c.ge_view(),TUNER)                         # non-tempo block selected: usual footswitch
     def test_non_tempo_block_hold_still_opens_the_tuner(self):
         c=self.c;self.put(4,GREEN);c.ge_foot_edge(1,300);c.ge_advance(800);c.ge_tick_draw()
         self.assertEqual(c.ge_tap_mode(),0);self.assertEqual(c.ge_view(),TUNER)
@@ -80,7 +89,9 @@ class TapTempoTests(unittest.TestCase):
         self.press(500);self.settle(20);self.assertEqual(c.ge_enabled(4),1-on)         # a press switches it
     def test_settings_persist(self):
         c=self.c;c.ge_long_press();settings_nav.set_value(c,settings_nav.TAP_NOTE,1)
-        settings_nav.set_value(c,settings_nav.TEMPO_LIGHT,1);settings_nav.set_value(c,settings_nav.TAP_TEMPO,1);settings_nav.leave(c);self.settle()
+        settings_nav.set_value(c,settings_nav.TEMPO_LIGHT,1);settings_nav.set_value(c,settings_nav.TAP_TEMPO,1)
+        settings_nav.set_value(c,settings_nav.TAP_TARGET,1);settings_nav.leave(c);self.settle()
         self.assertEqual(c.ge_tap_settings(),10);c.ge_reboot();self.settle();self.assertEqual(c.ge_tap_settings(),10)
+        self.assertEqual(c.ge_tap_target_on(),1)
         self.assertEqual(c.ge_tap_tempo_on(),0)   # setUp turned it on in RAM only; the saved TAP TEMPO toggle flipped it
 if __name__=='__main__':unittest.main()

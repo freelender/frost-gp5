@@ -29,7 +29,7 @@ class FrameworkTests(unittest.TestCase):
         self.lib.fx_process(c,a,b,len(x));return list(b)
     def test_registry_and_atomic_cold_routes(self):
         self.assertEqual([self.lib.fx_parameters(i) for i in range(9)],[1,1,3,3,3,3,3,3,3])
-        self.assertEqual(self.lib.fx_parameters(59),0) # first unregistered ID after the 32l additions
+        self.assertEqual(self.lib.fx_parameters(62),0) # first unregistered ID after SL-100 (beta.14)
         self.assertEqual(self.lib.fx_workspace_bytes(3),4104)
         self.assertEqual(self.route(0,[2,0,2,255,3,1]),1)
         for bad in ([0,99],[0]*7,[3,3,3]):self.assertEqual(self.route(0,bad),0)

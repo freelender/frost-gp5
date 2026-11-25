@@ -21,7 +21,7 @@ def wav(rate=48000,bits=24,channels=2,tag=1):
 
 @unittest.skipUnless(shutil.which('node'),'Node.js needed')
 class IrFilesTests(unittest.TestCase):
-    js=ws.WebStoreTests.js;host=ws.WebStoreTests.host;files=ws.WebStoreTests.files
+    js=ws.WebStoreTests.js;host=ws.WebStoreTests.host;files=ws.WebStoreTests.files;rec=ws.WebStoreTests.rec
     @classmethod
     def setUpClass(cls):
         cls.lib=ct.CDLL(str(build(ROOT/('build/ir_files_editor.dll' if os.name=='nt' else 'build/ir_files_editor.so'),ROOT/'tests/ir_files_host.c',includes=[ROOT/'tests/stubs'],flags=['-DFROST_IR_FFT_PARTS=8u'])))
@@ -42,7 +42,7 @@ class IrFilesTests(unittest.TestCase):
             rec=bytes.fromhex(r['record']);self.assertEqual(zlib.crc32(rec[:-4]),struct.unpack_from('<I',rec,1044)[0]);self.assertLessEqual(r['info']['l1'],8.0)
         self.assertEqual(self.convert(wav(11025,8,3))['info']['taps'],512)
     def test_js_storage_capacity_names_and_backup(self):
-        r=self.put(62);listed,got=self.js(['irs'],['irGet',62]);self.assertEqual(listed,{'62':{'label':'WEB CAB'}});self.assertEqual(got,r['record']);self.assertEqual(self.lib.irf_record(62),1);self.assertIn('ir-20',self.files())
+        r=self.put(62);listed,got=self.js(['irs'],['irGet',62]);self.assertEqual({k:v['label'] for k,v in listed.items()},{'62':'WEB CAB'});self.assertEqual(listed['62']['crc'],int.from_bytes(bytes.fromhex(r['record'])[-4:],'little'));self.assertEqual(got,r['record']);self.assertEqual(self.lib.irf_record(62),1);self.assertIn('ir-20',self.files())
         p=str(ROOT/'build/ir_test.frostbackup');self.js(['backup',p],['irRemove',62]);self.assertEqual(self.lib.irf_record(62),0);self.js(['restore',p]);self.assertEqual(self.lib.irf_record(62),1)
     def test_website_ir_reaches_dsp_and_preset_recall(self):
         c=self.lib;r=self.put();c.irf_cab(3,1);self.pump();self.assertEqual(c.irf_busy(),0);self.assertEqual(c.ge_ir_taps(3),512)
@@ -52,6 +52,47 @@ class IrFilesTests(unittest.TestCase):
         c.ge_reboot();self.pump();self.assertEqual(c.ge_flash_load(0),1);self.pump();self.assertAlmostEqual(c.ge_ir_coefficient(3,35),r['h'][35],places=8)
     def test_remove_selected_ir_falls_back_and_replacement_reloads(self):
         c=self.lib;r=self.put();c.irf_cab(3,1);self.pump();self.js(['irRemove',0]);self.pump();self.assertEqual(c.ge_dsp_global(1),0);self.assertNotEqual(c.ge_ir_coefficient(3,35),r['h'][35]);self.put(name='REPLACED');self.pump();self.assertEqual(c.ge_ir_taps(3),512)
+    def test_preset_file_carries_its_amp_model_and_cabinet(self):
+        """A downloaded preset holds the AMP model and cabinet it plays; importing
+        stores them at the numbers chosen and renumbers the preset to match."""
+        c=self.lib;NAM=33;self.put(0,'SRC CAB');self.js(['ampPut',5,self.rec('SRC AMP',1.4)])
+        self.assertEqual(c.ge_type_change(4,NAM),1);self.pump();c.ge_queue(4,0,5);c.irf_cab(3,1);self.pump()
+        self.assertEqual(c.ge_flash_save(0),1);self.pump()
+        p=str(ROOT/'build/bundle.frostpreset');got=self.js(['presetFile',0,p])[0]
+        self.assertEqual(got,{'models':[[5,'SRC AMP']],'cabs':[[1,'SRC CAB']]})
+        # Another pedal: neither file, and CAB 01 holds something else.
+        self.js(['ampRemove',5],['irRemove',0]);self.put(0,'OTHER CAB')
+        self.assertEqual(self.js(['parse',p])[0],{'name':'PRESET 01','used':{'models':[5],'cabs':[1]},'models':[5],'cabs':[1]})
+        self.js(['presetImport',7,p,{'5':{'to':9,'write':True}},{'1':{'to':4,'write':True}}]);self.pump()
+        assets,amps,irs=self.js(['assets',7],['amps'],['irs'])
+        self.assertEqual(assets,{'models':[9],'cabs':[4]})
+        self.assertEqual(amps['9']['label'],'SRC AMP');self.assertNotIn('5',amps)
+        self.assertEqual({k:v['label'] for k,v in irs.items()},{'0':'OTHER CAB','3':'SRC CAB'})   # CAB 01 kept, CAB 04 added
+        self.assertEqual(self.js(['assets',0])[0],{'models':[5],'cabs':[1]})                     # the source preset is untouched
+        self.assertEqual(c.ge_flash_load(7),1);self.pump()
+        self.assertEqual(c.ge_value(4,0),9);self.assertEqual(c.irf_cab_get(3),4)                 # the pedal plays them from there
+        # Reuse an identical stored file: nothing written, preset renumbered.
+        self.js(['presetImport',8,p,{'5':{'to':9,'write':False}},{'1':{'to':4,'write':False}}])
+        self.assertEqual(self.js(['assets',8])[0],{'models':[9],'cabs':[4]})
+        # An old file without files, or a damaged one, keeps its own numbers.
+        j=json.loads(Path(p).read_text());j['models'][0]['record']=j['models'][0]['record'][:-8]+'AAAAAAA=';del j['cabs']
+        Path(p).write_text(json.dumps(j))
+        self.assertEqual(self.js(['parse',p])[0]['models'],[]);self.js(['presetImport',9,p,{},{}])
+        self.assertEqual(self.js(['assets',9])[0],{'models':[5],'cabs':[1]})
+    def test_stored_files_download_as_fcm_and_wav(self):
+        """AMP models download as the stored .fcm (byte-identical, so it can be
+        written to another pedal); a cabinet downloads as a 44.1 kHz float WAV
+        that converts back to the same 512-tap response."""
+        p=self.rec('DL AMP',1.3);self.js(['ampPut',12,p])
+        self.assertEqual(bytes.fromhex(self.js(['ampGet',12])[0]),Path(p).read_bytes())
+        self.put(5,'DL CAB');got=self.js(['irGet',5])[0];rec=ROOT/'build/dl_cab.fir';rec.write_bytes(bytes.fromhex(got))
+        out=ROOT/'build/dl_cab.wav';r=json.loads(subprocess.check_output(['node',str(ROOT/'tests/js/ir_wav.mjs'),str(rec),str(out)],text=True))
+        w=out.read_bytes();self.assertEqual((w[:4],w[8:12]),(b'RIFF',b'WAVE'))
+        self.assertEqual(struct.unpack_from('<HHIIHH',w,20),(3,1,44100,176400,4,32))       # mono float, 44.1 kHz
+        self.assertEqual(struct.unpack_from('<I',w,40)[0],512*4)
+        self.assertEqual(r['info']['sourceRate'],44100);self.assertEqual(r['info']['trimmed'],0)
+        peak=max(abs(v) for v in r['h'])
+        self.assertLess(max(abs(a-b) for a,b in zip(r['h'][:480],r['again'][:480])),peak*.002)   # same response (the tail fade is applied again)
     def test_two_ir_references(self):
         c=self.lib;self.put(0);self.put(62);c.irf_two();self.pump();c.irf_cab(3,1);c.irf_cab(4,63);self.pump();self.assertEqual(c.ge_flash_save(4),1);self.pump();self.assertEqual([c.irf_ref(4,i) for i in range(2)],[0,62]);self.assertEqual(c.ge_ir_taps(4),128);self.assertEqual(c.ge_dsp_global(1),0);self.assertEqual(c.ge_flash_load(4),1);self.pump();self.assertEqual([c.irf_cab_get(i) for i in (3,4)],[1,63])
     def test_cab_press_edit_and_selected_only_bypass(self):

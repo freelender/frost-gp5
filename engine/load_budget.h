@@ -42,7 +42,19 @@ static const uint32_t frost_load_cost[FROST_EFFECTS] FROST_XDATA={
      52700, 42200, 45800, 53800, 55900, 53100,   /* 42..47 */
      54500, 81700, 81700, 81700,   /* 48..51 */
      /* 52..58 ROTARY RING CRUSH H-TREM MUFF BOOST SWELL */
-     32900, 13100,  9700, 18700, 36100,  8800, 16200
+     32900, 13100,  9700, 18700, 36100,  8800, 16200,
+     /* 59 CALI EQ: slot-load meter max 29,608 on the pedal (2026-11-25,
+      * beta.14 check build, alone in slot 1, defaults, ON; signal-independent). */
+     29700,
+     /* 60 PING: pedal 2026-11-25 (stereo build), silent, alone, ON: slot 35,503
+      * in STEREO (29,877 in MONO) plus ~2,100 for the stereo output stage; with
+      * the ~7% delays add while playing (DIGI 30.1k silent / 32.0k playing). */
+     40100,
+     /* 61 SL-100: pedal 2026-11-25 with the settled block kernel, alone, ON,
+      * silent (amp cost does not depend on the signal): LEAD 80,959 (the
+      * default and the costliest), CRUNCH 67,399 (BRT 68,485), CLEAN 53,305
+      * (BRT 54,398). Costed at LEAD. (Per-sample kernel was LEAD 102,021.) */
+     81000
 };
 typedef char FrostLoadCostTable[(sizeof frost_load_cost/sizeof frost_load_cost[0]==FROST_EFFECTS)?1:-1];
 /* SPACE (RV-6) by MODE 0..4, measured while playing (2026-11-24). */

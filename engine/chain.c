@@ -12,6 +12,7 @@ FROST_CTL_RAM static int finite_float(float x)
     return (v.u & 0x7f800000u)!=0x7f800000u;
 }
 static int signal_valid(float x){return frost_signal_valid(x);}
+void frost_side_route(const FrostChain *s,const FrostAmpStage *amp);   /* beta.14, below */
 FROST_COLD void frost_chain_init(FrostChain *s)
 {
     unsigned i;s->faults=0;s->started=0;s->delay_workspace=0;s->modulation_pool=0;s->reverb_workspace=0;
@@ -73,7 +74,29 @@ int frost_chain_configure(FrostChain *s,const unsigned *types,unsigned count)
         s->order[i]=i;
     }
     s->pre_count=count;
+    frost_side_route(s,0);
     return 1;
+}
+/* beta.14 stereo fold rule (engine/stereo.h): the first stereo block keeps
+ * its side signal only when every non-empty block after it is a delay,
+ * reverb or modulation and no amp stage follows it; otherwise it plays mono.
+ * Decided when a route is configured or committed (the silent commit), so
+ * audio blocks pay nothing. External linkage, cold flash. */
+void frost_side_route(const FrostChain *s,const FrostAmpStage *amp);
+FROST_COLD void frost_side_route(const FrostChain *s,const FrostAmpStage *amp)
+{
+    unsigned p,q,slot=FROST_SLOTS,ok=1u;
+    for(p=0;p<FROST_SLOTS;++p)if(frost_type_is_stereo(s->slots[s->order[p]].type)){slot=s->order[p];break;}
+    if(slot<FROST_SLOTS){
+        if(p<s->pre_count && amp && amp->sample)ok=0u;
+        for(q=p+1u;q<FROST_SLOTS && ok;++q){
+            unsigned t=s->slots[s->order[q]].type,c;
+            if(t==FROST_EMPTY)continue;
+            c=frost_type_category(t);
+            if(c!=FROST_CATEGORY_DELAY && c!=FROST_CATEGORY_REVERB && c!=FROST_CATEGORY_MODULATION)ok=0u;
+        }
+    }
+    frost_side_slot=slot;frost_side_route_ok=ok;
 }
 FROST_CTL_RAM unsigned frost_chain_transition(const FrostChain *s){return s->transition;}
 FROST_COLD int frost_chain_request_route(FrostChain *s,const unsigned *types,const unsigned *order,unsigned pre_count)
@@ -169,6 +192,7 @@ FROST_RECALL_COMMIT_RAM FROST_COLD static void frost_chain_commit_route(FrostCha
         s->pending_policy_slot=FROST_SLOTS;
     }
     if(frost_ir_bypass_pending<2u){frost_ir_bypass=frost_ir_bypass_pending;frost_ir_bypass_pending=2u;}
+    frost_side_route(s,amp);   /* beta.14 stereo fold rule */
 #ifdef FROST_IR_LINK
     if(frost_ir_remote_pending<2u){frost_ir_remote=frost_ir_remote_pending;frost_ir_remote_pending=2u;}
 #endif
@@ -253,6 +277,7 @@ static int frost_chain_process_core(FrostChain *s,const float *input,float *outp
                                     const FrostAmpStage *amp,unsigned abort_on_fault)
 {
     unsigned n,i;
+    frost_side_begin();
     if(count)s->started=1;
     for(n=0;n<count;++n){
         float x=input[n];unsigned bad=!signal_valid(x);
@@ -334,21 +359,38 @@ FROST_HOT FROST_CORE FROST_NOINLINE FROST_COLD void frost_chain_fade_block(Frost
     unsigned n;
     for(n=0;n<count;++n){
         if(s->transition==FROST_ROUTE_OUT){
-            x[n]*= (float)(FROST_ROUTE_FADE-1u-s->fade_position)/(float)FROST_ROUTE_FADE;
+            float g=(float)(FROST_ROUTE_FADE-1u-s->fade_position)/(float)FROST_ROUTE_FADE;
+            x[n]*=g;if(frost_side_used && n<FROST_SIDE_BLOCK)frost_side[n]*=g;   /* beta.14: the side fades too */
             if(++s->fade_position==FROST_ROUTE_FADE){
                 if(frost_chain_commit_alone && n+1u==count){s->fade_position=0;s->transition=FROST_ROUTE_COMMIT;}
                 else{frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;}
             }
         }else{
-            x[n]*= (float)(s->fade_position+1u)/(float)FROST_ROUTE_FADE;
+            float g=(float)(s->fade_position+1u)/(float)FROST_ROUTE_FADE;
+            x[n]*=g;if(frost_side_used && n<FROST_SIDE_BLOCK)frost_side[n]*=g;
             if(++s->fade_position==FROST_ROUTE_FADE){s->fade_position=0;s->transition=FROST_ROUTE_IDLE;}
         }
     }
+}
+/* beta.14: the stereo block's side signal follows its on/off wet ramp (the
+ * chain applies the wet mix to the mid only). Not with TAIL ON: then the
+ * effect's input fades and its echoes keep playing at full level, side too.
+ * Called only while the block's wet level is not 1 (fades, rests). External
+ * linkage, dsp-data flash (boot-adjacent layout rule). */
+void frost_side_follow(const FrostInstance *s,float w0,unsigned count);
+FROST_XCODE void frost_side_follow(const FrostInstance *s,float w0,unsigned count)
+{
+    const FrostEffect *d=frost_effect_find(s->type);unsigned n;float w1=s->wet,step;
+    if(!d || !d->parameter_count || s->target[d->parameter_count-1u]>=0.5f)return;   /* TAIL ON */
+    if(count>FROST_SIDE_BLOCK)count=FROST_SIDE_BLOCK;
+    step=count?(w1-w0)/(float)count:0.0f;
+    for(n=0;n<count;++n){w0+=step;frost_side[n]*=w0;}
 }
 unsigned frost_chain_commit_alone;
 FROST_HOT FROST_CORE FROST_AUDIO_RAM int frost_chain_process_guarded(FrostChain *s,const float *input,float *output,unsigned count,const FrostAmpStage *amp)
 {
     unsigned i,n,result,fading;uint32_t begin,end;
+    frost_side_begin();                     /* beta.14: stereo effects write this block's side */
     if(s->transition==FROST_ROUTE_COMMIT){   /* the silent commit-only block */
         for(n=0;n<count;++n)output[n]=0.0f;
         frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;
@@ -374,17 +416,23 @@ FROST_HOT FROST_CORE FROST_AUDIO_RAM int frost_chain_process_guarded(FrostChain 
     s->started=1;
     if(output!=input)for(n=0;n<count;++n)output[n]=input[n];
     for(i=0;i<s->pre_count;++i){
+        float w0=s->slots[s->order[i]].wet;
         begin=FROST_PROFILE_CLOCK();
         result=frost_instance_process(&s->slots[s->order[i]],output,count);
         end=FROST_PROFILE_CLOCK();FROST_PROFILE_SLOT(s->order[i],s->slots[s->order[i]].type,begin,end);
         if(result!=count)return frost_chain_guarded_fault(s,output,count,amp);
+        if(frost_side_used && s->order[i]==frost_side_slot && (w0!=1.0f || s->slots[s->order[i]].wet!=1.0f))
+            frost_side_follow(&s->slots[s->order[i]],w0,count);
     }
     if(!frost_chain_amp_block(amp,output,count))return frost_chain_guarded_fault(s,output,count,amp);
     for(i=s->pre_count;i<FROST_SLOTS;++i){
+        float w0=s->slots[s->order[i]].wet;
         begin=FROST_PROFILE_CLOCK();
         result=frost_instance_process(&s->slots[s->order[i]],output,count);
         end=FROST_PROFILE_CLOCK();FROST_PROFILE_SLOT(s->order[i],s->slots[s->order[i]].type,begin,end);
         if(result!=count)return frost_chain_guarded_fault(s,output,count,amp);
+        if(frost_side_used && s->order[i]==frost_side_slot && (w0!=1.0f || s->slots[s->order[i]].wet!=1.0f))
+            frost_side_follow(&s->slots[s->order[i]],w0,count);
     }
     if(fading)frost_chain_fade_block(s,output,count,amp);
     return 1;

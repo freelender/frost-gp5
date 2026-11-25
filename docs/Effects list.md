@@ -58,6 +58,7 @@ adds. The very top octave (above about 8 kHz) is a touch softer.
 | DIGI | Digital Delay | E.LEVEL, F.BACK, TIME, HOLD, FOOT, TAIL | Boss DD-3 |
 | BBD | Bucket Brigade Delay | RATE, ECHO, INTENS, TAIL | Boss DM-2 |
 | TAPE | Tape Echo | TIME, REPEAT, MIX, WOW, AGE, DRIVE, TAIL | — |
+| PING | Ping Pong Delay: stereo, echoes alternate left and right (WIDTH sets the spread); plays as a mono delay with OUTPUT MODE MONO or when an amp, drive, cab, pitch or dynamics block follows it | TIME, F.BACK, E.LEVEL, WIDTH, TAIL | — |
 
 **TAIL** (DIGI, BBD, TAPE, SPACE, SPRING; OFF by default): with TAIL ON the
 echoes or reverb ring out when you switch the effect off; with TAIL OFF it
@@ -108,6 +109,7 @@ DSP LIMIT.
 | SQUASH | Squash Comp | OUTPUT, SENS | MXR M102 Dyna Comp |
 | BLEND | Blend Comp | SUSTAIN, LEVEL, BLEND, TONE, PICKUP | Keeley Compressor Plus |
 | EQ-7 | 7-Band Graphic EQ | 100, 200, 400, 800, 1.6K, 3.2K, 6.4K, LEVEL | Boss GE-7 |
+| CALIEQ | Cali 5-Band EQ: broad bands for the classic "V" (80 and 6.6K up, 750 down); best after an amp | 80, 240, 750, 2.2K, 6.6K, LEVEL | Mesa/Boogie Mark IIC+ graphic EQ |
 | NOISE | Noise Suppressor | THRESH, DECAY, MODE | Boss NS-2 |
 | NOISEX | Adaptive Suppressor | THRESH, DECAY, DAMP, MODE | Boss NS-1X |
 | MB-CMP | Three Band Compressor | LOW THR, MID THR, HI THR, RATIO, ATTACK, RELEASE, MIX, LEVEL | — |
@@ -137,6 +139,7 @@ DSP LIMIT.
 | UK-800 | Brit 800 Crunch | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | Marshall JCM800 |
 | CALI | Cali High Gain | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | Mesa/Boogie Dual Rectifier |
 | BROWN | Brown Sound High Gain | GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | EVH 5150 |
+| SL-100 | Super Lead 100: three channels (MODE: CLEAN, CLEAN BRT, CRUNCH, CRUNCH BRT, LEAD; BRT = bright cap) | MODE, GAIN, BASS, MID, TREBLE, PRESENCE, MASTER, LEVEL | Soldano SLO-100 |
 
 The amp heads are amps only: add an IR block after them for the cabinet. NAM
 plays a converted capture (FCM) chosen by MODEL; captures are added on the
@@ -172,10 +175,15 @@ website. With single-coil pickups, see [Single coils and humbuckers](User%20Guid
 - **ACOUST:** choose STANDARD, JUMBO, PIEZO or ENHANCE, then adjust BODY,
   TOP and MIX. For a starting acoustic-like sound, bypass electric amp/cab
   blocks and add only a little compression and reverb.
-- **DROP:** choose the tuning shift and mix. Pitch processing can add latency
-  and artifacts; check it with your own chords and playing before performance.
-- **OCTAVE:** the octave model is experimental. Treat sound quality and tracking
-  as beta behavior rather than an exact reproduction of a commercial pedal.
+- **DROP:** choose the tuning shift and mix. Each pick attack plays about
+  1.5 ms after you hit the string; held notes then lag by up to about one
+  period of the lowest note (up to about 25 ms for a low chord). Very dense or
+  out-of-tune chords can still waver slightly; check it with your own playing
+  before performance.
+- **OCTAVE:** the octave model is experimental. Single notes and simple chords
+  track cleanly; wide six-string chords, especially an octave up, still sound
+  smeared. Treat it as beta behavior rather than an exact reproduction of a
+  commercial pedal.
 - **Gates/suppressors:** start with a low threshold and raise it until idle
   noise is controlled, then verify soft notes and sustained notes are retained.
 - **IR and amp blocks:** an amp head and a cabinet are separate. Match output

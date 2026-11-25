@@ -65,7 +65,7 @@ class LibraryTests(unittest.TestCase):
         return self.run_(x)[warm:]
     # ---------------- registry/controls ----------------
     def test_registry_appends_ids_and_keeps_original_nine(self):
-        c=self.c;self.assertEqual(c.lib_effect_count(),59)
+        c=self.c;self.assertEqual(c.lib_effect_count(),62)
         self.assertEqual([c.lib_parameter_count(t) for t in range(9)],[1,1,3,3,3,3,3,3,3])
         counts={TS:4,BD2:3,KLON:3,BB:3,OCD:4,DS1:3,RAT:3,DISTPLUS:2,DD3:6,DM2:4,RV6:5,SPRING:4,   # beta.10: +TAIL on delays/reverbs
                 PH90:2,CE2:2,
@@ -78,7 +78,7 @@ class LibraryTests(unittest.TestCase):
                 lo,hi,init,flags=(c.lib_bound(t,p,i) for i in range(4))
                 self.assertTrue(lo<=init<=hi,(t,p))
                 if flags:self.assertEqual(init,int(init))
-        self.assertEqual(c.lib_parameter_count(59),0)
+        self.assertEqual(c.lib_parameter_count(62),0)
     def test_workspace_classes_and_categories(self):
         c=self.c
         self.assertEqual({t for t in range(52) if c.lib_workspace(t)==2},{5,DD3,DM2,42})

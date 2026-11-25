@@ -37,7 +37,7 @@ browser tabs using the device.
 | PARA hold on a home screen | Open Global settings |
 | Footswitch tap on a home screen | Bypass the selected block, advance a preset, or advance a setlist part, depending on the home screen |
 | Footswitch tap in a menu | Go back one level (same as **BACK**) |
-| Footswitch hold | Open the tuner; Setlist view can instead use Previous Part. With SYSTEM → TAP TEMPO ON, on a tempo effect (Chain or Stomp view): a tap sets the tempo and a hold switches the effect on/off |
+| Footswitch hold | Open the tuner; Setlist view can instead use Previous Part. With TAP TEMPO → TAP TEMPO ON, on a tempo effect (Chain or Stomp view): a tap sets the tempo and a hold switches the effect on/off |
 
 In parameter menus, turn to select a row, press to edit it, turn to change its
 value, then press again to leave the value edit. Use **BACK** or tap the
@@ -55,7 +55,8 @@ Some effects have their own momentary footswitch behavior on home screens.
 ### Tap tempo with the footswitch
 
 Tap tempo is **off** by default: the footswitch then works as described above.
-Turn it on in GLOBAL SETTINGS → SYSTEM → **TAP TEMPO**.
+Turn it on in GLOBAL SETTINGS → TAP TEMPO → **TAP TEMPO**. That menu also holds
+TAP NOTE, TAP TARGET and TEMPO LIGHT (see [section 8](#8-global-settings-and-tuner)).
 
 Tempo effects are the delays (DIGI, BBD, DELAY, TAPE) and the modulation
 effects with a rate in Hz (for example TREM, H-TREM, VIBE, WARM, PHASE). With
@@ -72,14 +73,27 @@ one of them selected on the Chain or Stomp screen:
 
 The tempo is the average of your last taps (30–300 BPM); a very different tap
 starts a new average, and a pause over 2 seconds starts over. GLOBAL SETTINGS
-→ AUDIO → **TAP NOTE** chooses what a delay repeats on: a quarter note, a
+→ TAP TEMPO → **TAP NOTE** chooses what a delay repeats on: a quarter note, a
 dotted eighth or an eighth. Modulation runs one cycle per that note. Values
 outside an effect's range are clamped (BBD reaches at most 300 ms). The tapped
 value is a normal edit: save the preset to keep it.
 
+**TAP TARGET** chooses which effects a tap sets:
+
+- **SELECTED** (default): only the selected effect.
+- **GLOBAL**: every tempo effect in the chain at once, for example a delay
+  and a tremolo together. The popup then reads **GLOBAL TAP TEMPO**.
+
+<p align="center"><img src="../assets/docs/pedal-tap-tempo-global.png" alt="GLOBAL TAP TEMPO popup: 120 BPM sets every tempo effect" width="330"><br><sub>GLOBAL TAP TEMPO popup: 120 BPM sets every tempo effect</sub></p>
+
+In both modes you tap with a tempo effect selected, and a hold switches only
+the selected effect on or off. With a non-tempo block selected, the footswitch
+works as usual. A MIDI controller can also tap the global tempo; see
+[Tap tempo and MIDI Clock](Midi%20Command.md#tap-tempo-and-midi-clock).
+
 While a tempo effect is on, the footswitch light flashes **yellow** on the
 beat: on its usual mint colour, or on blue while the TAP TEMPO popup is open. An
-effect that is off stays dim red. GLOBAL SETTINGS → DISPLAY → **TEMPO LIGHT**
+effect that is off stays dim red. GLOBAL SETTINGS → TAP TEMPO → **TEMPO LIGHT**
 turns the flashing off. On any other effect the footswitch works as usual (a
 press switches it, a hold opens the tuner); select a non-tempo block first to
 open the tuner.
@@ -150,7 +164,7 @@ playing. Both refusals appear as a popup for about 2.5 seconds.
 
 ### Delay and reverb tails
 
-DIGI, BBD, TAPE, SPACE and SPRING have a **TAIL** setting (OFF by default):
+DIGI, BBD, TAPE, PING, SPACE and SPRING have a **TAIL** setting (OFF by default):
 
 - **TAIL OFF:** switching the effect off fades it out within a few
   milliseconds. While it is off it uses no DSP, and when you switch it on
@@ -161,6 +175,23 @@ DIGI, BBD, TAPE, SPACE and SPRING have a **TAIL** setting (OFF by default):
 
 TAIL is saved with the preset. The generic DELAY and REVERB behave as TAIL OFF.
 On a preset change, tails are cut with the usual short crossfade.
+
+### Stereo and the ping-pong delay
+
+The GP-5 has a stereo output. With **GLOBAL SETTINGS → AUDIO → OUTPUT MODE**
+set to **STEREO**, the **PING** delay bounces its echoes between the left and
+right outputs; **WIDTH** sets how far (0 = the same echoes on both sides).
+Everything else in the chain stays mono, so stereo costs no extra DSP until a
+stereo effect plays.
+
+- With OUTPUT MODE **MONO**, PING is an ordinary delay with every echo at full
+  level, so it sounds right through a single amp or speaker.
+- Put PING near the end of the chain, after the amp and cab. Delays, reverbs
+  and modulation may follow it and keep the stereo spread. If an amp, drive,
+  cab, pitch or dynamics block comes after PING, it plays mono (the stereo
+  echoes would skip that block otherwise); move PING after it to get stereo.
+- PING's TIME is the time between echoes, up to 400 ms: each side repeats at
+  twice that.
 
 ### Read the DSP meter
 
@@ -190,12 +221,29 @@ amp styles (trademarks of their owners; see the notice in the [Effects list](Eff
 - UK-800: Marshall JCM 800
 - CALI: Mesa/Boogie Dual Rectifier
 - BROWN: EVH 5150
+- SL-100: Soldano SLO-100
+
+### SL-100 channels
+
+SL-100 has three channels on its **MODE** control:
+
+- **CLEAN:** one gain stage, open and glassy; stays clean at moderate GAIN.
+- **CRUNCH:** two stages, mid-forward rock crunch.
+- **LEAD:** three cascaded stages with a tight low end, for singing leads.
+- **CLEAN BRT / CRUNCH BRT:** the same channels with the bright cap on, a
+  treble lift that is strongest at low GAIN and fades as GAIN rises (as on
+  the real amp; LEAD has none).
+
+At the default settings LEAD and CRUNCH play about as loud as UK-800 and
+CLEAN about 2 dB quieter, so switching channels in a preset needs little
+LEVEL change. The power amp's low-end resonance is set per channel: more
+thump on LEAD, less on CLEAN. Add an IR block after it, as with every head.
 
 ### Single coils and humbuckers
 
 The factory presets and amp voicings are balanced for a medium-output guitar.
 Single-coil pickups put out less signal, so high-gain amps (UK-800, CALI,
-BROWN) and drives sound cleaner and thinner, and clean patches quieter.
+BROWN, SL-100 LEAD) and drives sound cleaner and thinner, and clean patches quieter.
 Humbuckers put out more, so cleans break up sooner.
 
 The high-gain heads cut deep bass before their gain stages and restore it
@@ -368,30 +416,31 @@ as saving can briefly interrupt audio.
 
 ## 8. Global settings and tuner
 
-Hold PARA on a home screen to open **GLOBAL SETTINGS**. It lists three
-menus: **AUDIO**, **DISPLAY** and **SYSTEM**. Turn to select a row and press to
+Hold PARA on a home screen to open **GLOBAL SETTINGS**. It lists four
+menus: **AUDIO**, **DISPLAY**, **TAP TEMPO** and **SYSTEM**. Turn to select a row and press to
 open a menu or edit a setting; turn to change the value and press again.
 **BACK** (or the footswitch) goes up one level; BACK in GLOBAL SETTINGS saves
 and exits.
 
 <table><tr>
-<td align="center"><img src="../assets/docs/pedal-settings.png" alt="GLOBAL SETTINGS: three menus" width="330"><br><sub>GLOBAL SETTINGS: three menus</sub></td>
-<td align="center"><img src="../assets/docs/pedal-settings-system.png" alt="SYSTEM: TAP TEMPO and the firmware version" width="330"><br><sub>SYSTEM: TAP TEMPO and the firmware version</sub></td>
+<td align="center"><img src="../assets/docs/pedal-settings.png" alt="GLOBAL SETTINGS: AUDIO, DISPLAY, TAP TEMPO and SYSTEM" width="330"><br><sub>GLOBAL SETTINGS: AUDIO, DISPLAY, TAP TEMPO and SYSTEM</sub></td>
+<td align="center"><img src="../assets/docs/pedal-settings-tap-tempo.png" alt="TAP TEMPO: on/off, note, target and tempo light" width="330"><br><sub>TAP TEMPO: on/off, note, target and tempo light</sub></td>
 </tr></table>
 
 | Menu | Setting | Purpose |
 |---|---|---|
 | AUDIO | INPUT GAIN | Adjust input level from -20 to +20 dB; match your pickups (single coils about +3 to +6 dB, see section 4) |
 | AUDIO | OUTPUT LEVEL | Scale overall output, 0–100% |
-| AUDIO | OUTPUT MODE | Mono/stereo preference; current effect processing is mono |
+| AUDIO | OUTPUT MODE | MONO sends the same signal to both outputs. STEREO lets stereo effects (PING) spread across the left and right outputs; everything else stays mono |
 | AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
 | AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
-| AUDIO | TAP NOTE | Footswitch tap tempo (with TAP TEMPO ON): 1/4, DOTTED 1/8 or 1/8 |
 | DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
-| DISPLAY | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
-| SYSTEM | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set its tempo and a hold switches it on/off; the light flashes on the beat |
+| TAP TEMPO | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set the tempo and a hold switches it on/off; the light flashes on the beat |
+| TAP TEMPO | TAP NOTE | The note a tap sets: 1/4 (default), DOTTED 1/8 or 1/8. Also applies to MIDI tap and MIDI Clock |
+| TAP TEMPO | TAP TARGET | SELECTED (default): a footswitch tap sets the selected effect. GLOBAL: it sets every tempo effect in the chain |
+| TAP TEMPO | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | FIRMWARE | The installed Frost version |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
@@ -404,7 +453,7 @@ Leave GLOBAL SETTINGS with BACK to save it with the other settings.
 To use the tuner, hold the footswitch on a home screen where the tuner gesture
 is available. In Setlist view, choose TUNER for SETLIST HOLD first. Tap the
 footswitch to exit. In the tuner, press PARA to unlock reference adjustment,
-turn to choose 430–450 Hz, and press to lock again; the usual reference is 440 Hz.
+turn to choose 425–450 Hz, and press to lock again; the usual reference is 440 Hz.
 
 ### MIDI performance control
 

@@ -24,7 +24,7 @@ class NewEffectsTests(unittest.TestCase):
     def gain(self,t,f,p):
         x=sine(f,a=.01);y=self.render(t,x,p);return rms(y[11025:])/rms(x[11025:])
     def test_registry_and_no_new_per_slot_or_large_workspace_memory(self):
-        c=self.c;self.assertEqual(c.lib_effect_count(),59);self.assertEqual(c.lib_state_bytes(),120)
+        c=self.c;self.assertEqual(c.lib_effect_count(),62);self.assertEqual(c.lib_state_bytes(),120)
         self.assertEqual([c.lib_workspace(i) for i in range(35,45)],[0]*7+[2,0,0])
         self.assertEqual(c.lib_category(29),5) # existing M102-inspired DYNA retained
         d=json.loads((ROOT/'web/effects.json').read_text());seen=[]
@@ -32,7 +32,7 @@ class NewEffectsTests(unittest.TestCase):
             for t in g:
                 seen.append(t)
                 if t!=255:self.assertEqual(d['effects'][str(t)]['category'],cat)
-        self.assertEqual(sorted(seen),list(range(59))+[255])
+        self.assertEqual(sorted(seen),list(range(62))+[255])
     def test_hpf_lpf_cutoff_response_and_slope(self):
         for t in (HP,LP):
             p={0:1000,1:.707,2:0}

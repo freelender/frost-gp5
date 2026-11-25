@@ -1,14 +1,14 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
-import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.7.8';
-import { Store, PRESETS, checkPreset, presetName } from './store.js?v=1.7.8';
-import { convertIr, readWav } from './ir.js?v=1.7.8';
-import { LiveView, loadCatalog } from './live.js?v=1.7.8';
-import { initFirmware, isBusy } from './firmware.js?v=1.7.8';
-import { SetlistView } from './setlist_view.js?v=1.7.8';
-import { simulatedPedal } from './sim.js?v=1.7.8';
+import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.8.0';
+import { Store, PRESETS, parsePresetFile, recordCrc } from './store.js?v=1.8.0';
+import { convertIr, readWav, irWav } from './ir.js?v=1.8.0';
+import { LiveView, loadCatalog } from './live.js?v=1.8.0';
+import { initFirmware, isBusy } from './firmware.js?v=1.8.0';
+import { SetlistView } from './setlist_view.js?v=1.8.0';
+import { simulatedPedal } from './sim.js?v=1.8.0';
 
-export const VERSION = '1.7.8';
+export const VERSION = '1.8.0';
 const $ = id => document.getElementById(id);
 const pad2 = i => String(i).padStart(2, '0');
 const state = {
@@ -34,13 +34,21 @@ function toast(text, kind = '') {
 }
 function notice(text) { $('notice-text').textContent = text || ''; $('notice').hidden = !text; }
 $('notice-close').onclick = () => notice('');
-/** Promise<bool> (or the typed text when `input` is given; null on cancel). */
-function ask(title, text, ok = 'OK', { danger = false, input = null } = {}) {
+/** Promise<bool> (or the typed text when `input` is given, or the chosen numbers
+ * when `selects` [{label, options: [[value, text]], value}] is given; null on cancel). */
+function ask(title, text, ok = 'OK', { danger = false, input = null, selects = null } = {}) {
   const d = $('confirm');
   $('confirm-title').textContent = title; $('confirm-text').textContent = text;
   $('confirm-ok').textContent = ok; $('confirm-ok').className = 'btn ' + (danger ? 'danger' : 'primary');
   $('confirm-input-label').hidden = !input;
   if (input) { $('confirm-input-name').textContent = input.label; $('confirm-input').value = input.value; }
+  const box = $('confirm-selects'); box.textContent = ''; box.hidden = !selects;
+  const picks = (selects || []).map(s => {
+    const label = document.createElement('label'), name = document.createElement('span'), sel = document.createElement('select');
+    name.className = 'inputlabel'; name.textContent = s.label;
+    for (const [v, t] of s.options) sel.add(new Option(t, v));
+    sel.value = String(s.value); label.append(name, sel); box.append(label); return sel;
+  });
   d.returnValue = '';
   // Resolved from the buttons themselves (the dialog's close event alone proved unreliable),
   // with Escape (cancel) and a close from elsewhere as fallbacks; settles exactly once.
@@ -49,7 +57,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null } = {}) {
     const finish = yes => {
       if (settled) return; settled = true;
       d.onclose = d.oncancel = $('confirm-ok').onclick = $('confirm-cancel').onclick = null;
-      const value = input ? (yes ? $('confirm-input').value : null) : yes;
+      const value = input ? (yes ? $('confirm-input').value : null) : selects ? (yes ? picks.map(p => Number(p.value)) : null) : yes;
       if (d.open) d.close(yes ? 'ok' : 'cancel');
       resolve(value);
     };
@@ -59,7 +67,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null } = {}) {
     $('confirm-input').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } };   // Enter renames
     d.onclose = () => finish(d.returnValue === 'ok');
     if (!d.open) d.showModal();
-    (input ? $('confirm-input') : $('confirm-ok')).focus();
+    (input ? $('confirm-input') : picks[0] || $('confirm-ok')).focus();
   });
 }
 
@@ -232,9 +240,20 @@ function list(ul, rows, empty) {
 }
 
 // ---------- AMP models ----------
+/** A file-name-safe lower-case slug, e.g. "Plexi Crunch!" -> "plexi-crunch". */
+const slug = (name, none) => (name || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || none;
+/** Read one stored AMP model or cabinet from the pedal and save it as a file. */
+function downloadStored(what, read, bytes, file) {
+  return exclusive(`Downloading ${what}`, async () => {
+    const r = await read(); if (!r) throw new Error(`${what} could not be read`);
+    save(bytes(r), file(recordLabel(r))); toast(`${what} downloaded.`, 'ok');
+  }, async () => {});
+}
 function renderAmps() {
   const idx = Object.keys(state.models).map(Number).sort((a, b) => a - b);
-  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', sub: `MODEL ${pad2(i)}`, buttons: [['Remove', 'danger', async () => {
+  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', sub: `MODEL ${pad2(i)}`, buttons: [
+    ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
+    ['Remove', 'danger', async () => {
     if (await ask(`Remove MODEL ${pad2(i)}?`, `"${state.models[i].label}" is deleted from the pedal. An AMP block set to it plays the default model.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing MODEL ${pad2(i)}`, () => state.store.ampRemove(i))) toast(`MODEL ${pad2(i)} removed.`, 'ok');
   }, `Remove MODEL ${pad2(i)}`]] })), state.store ? 'No AMP models yet. Add one on the left.' : offlineText());
@@ -258,7 +277,7 @@ function dropZone(zone, input, take) {
 }
 dropZone($('amp-drop'), $('amp-file'), async f => {
   if (state.worker) { toast('A conversion is running. Cancel it first.', 'bad'); return; }
-  state.record = null; state.nam = null; $('amp-quality').hidden = true; $('amp-progress').hidden = true;
+  state.record = null; state.nam = null; state.converted = false; $('amp-quality').hidden = true; $('amp-progress').hidden = true;
   $('amp-dropname').textContent = f.name;
   const info = $('amp-info'); info.hidden = false;
   try {
@@ -280,7 +299,7 @@ $('amp-name').oninput = () => { $('amp-name').value = $('amp-name').value.replac
 $('amp-convert').onclick = () => {
   if (!state.nam || state.worker) return;
   const name = ($('amp-name').value || 'AMP').slice(0, 15), workers = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  const w = new Worker(new URL('./convert_worker.js?v=1.7.8', import.meta.url), { type: 'module' }); state.worker = w;
+  const w = new Worker(new URL('./convert_worker.js?v=1.8.0', import.meta.url), { type: 'module' }); state.worker = w;
   const t0 = performance.now(), prog = (s, v) => { $('amp-progress').hidden = false; $('amp-bar').style.width = `${Math.round(100 * v)}%`; $('amp-stage').textContent = `${s} · ${Math.round((performance.now() - t0) / 1000)} s`; };
   const stop = () => { state.worker = null; w.terminate(); updateButtons(); };
   prog('Starting', 0);
@@ -291,7 +310,7 @@ $('amp-convert').onclick = () => {
       $('amp-info').textContent += c.applied ? ` Input level matched to the GP-5 (capture calibrated at +${c.captureDbu} dBu: ${c.db >= 0 ? '+' : ''}${c.db.toFixed(1)} dB).` : ' The capture has no input calibration, so it is used at its own level.';
     } else if (m.type === 'progress') prog(m.stage === 'teacher' ? 'Rendering the capture' : 'Fitting the model', m.stage === 'teacher' ? 0.35 * m.value : m.stage === 'baseline' ? 0.37 : 0.4 + 0.52 * m.value);
     else if (m.type === 'done') {
-      state.record = new Uint8Array(m.record); prog('Done', 1); stop();
+      state.record = new Uint8Array(m.record); state.converted = true; prog('Done', 1); stop();
       $('amp-quality').hidden = false; $('amp-quality').textContent = `Difference from the capture: ${m.quality.mel_db.toFixed(2)} dB (lower is closer; 1.5–3 dB sounds very similar).`;
       toast('Conversion finished. Write it to the pedal when ready.', 'ok');
     } else if (m.type === 'error') { notice('Conversion failed: ' + m.text); $('amp-progress').hidden = true; stop(); }
@@ -320,18 +339,24 @@ $('train-file').onchange = async e => {
 };
 $('train-clear').onclick = () => { state.train = null; renderTrain(); };
 $('amp-cancel').onclick = () => { if (state.worker) { state.worker.terminate(); state.worker = null; $('amp-progress').hidden = true; toast('Conversion cancelled.'); updateButtons(); } };
+$('amp-download').onclick = () => {
+  if (!state.record) return; const label = recordLabel(state.record);
+  save(state.record, `${slug(label, 'amp')}.fcm`); toast(`"${label}" saved as an .fcm file.`, 'ok');
+};
 $('amp-write').onclick = async () => {
   const i = Number($('amp-slot').value), old = state.models[i], label = recordLabel(state.record);
   if (!(await ask(`Write MODEL ${pad2(i)}?`, `"${label}" is written to the pedal as MODEL ${pad2(i)}${old ? `, replacing "${old.label}"` : ''}.`, 'Write'))) return;
   const ok = await exclusive(`Writing MODEL ${pad2(i)}`, () => state.store.ampPut(i, state.record));
-  if (ok) { state.record = null; state.nam = null; $('amp-info').textContent = `Written as MODEL ${pad2(i)}.`; $('amp-quality').hidden = true; $('amp-progress').hidden = true; $('amp-dropname').textContent = 'Drop a .nam or .fcm file'; toast(`"${label}" is now MODEL ${pad2(i)}.`, 'ok'); }
+  if (ok) { state.record = null; state.nam = null; state.converted = false; $('amp-info').textContent = `Written as MODEL ${pad2(i)}.`; $('amp-quality').hidden = true; $('amp-progress').hidden = true; $('amp-dropname').textContent = 'Drop a .nam or .fcm file'; toast(`"${label}" is now MODEL ${pad2(i)}.`, 'ok'); }
   updateButtons();
 };
 
 // ---------- cabinets ----------
 function renderCabs() {
   const idx = Object.keys(state.cabs).map(Number).sort((a, b) => a - b);
-  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, sub: `CAB ${pad2(i + 1)}`, buttons: [['Remove', 'danger', async () => {
+  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, sub: `CAB ${pad2(i + 1)}`, buttons: [
+    ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
+    ['Remove', 'danger', async () => {
     if (await ask(`Remove CAB ${pad2(i + 1)}?`, `"${state.cabs[i].label}" is deleted from the pedal. IR blocks set to it play the built-in cabinet until it is filled again.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing CAB ${pad2(i + 1)}`, () => state.store.irRemove(i))) toast(`CAB ${pad2(i + 1)} removed.`, 'ok');
   }, `Remove CAB ${pad2(i + 1)}`]] })), state.store ? 'No custom cabinets yet. Add one on the left.' : offlineText());
@@ -445,10 +470,10 @@ function renderPresets() {
     ['↑', 'ghost', () => movePreset(i, -1), `Move preset ${pad2(i + 1)} up`, i === 0],
     ['↓', 'ghost', () => movePreset(i, 1), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],
     ['Download', 'ghost', () => exclusive('Downloading a preset', async () => {
-      const rec = await s.presetGet(i); if (!rec) throw new Error('the preset could not be read');
-      const name = presetName(rec), file = JSON.stringify({ format: 'frost-preset', version: 1, number: i + 1, name, record: b64(rec) }, null, 1);
-      save(new TextEncoder().encode(file), `frost-preset-${pad2(i + 1)}-${(name || 'preset').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'preset'}.frostpreset`);
-      toast(`Preset ${pad2(i + 1)} downloaded.`, 'ok');
+      const p = await s.presetFile(i), name = p.name;
+      const extra = [p.models.length && `${p.models.length} AMP model${p.models.length > 1 ? 's' : ''}`, p.cabs.length && `${p.cabs.length} cabinet${p.cabs.length > 1 ? 's' : ''}`].filter(Boolean);
+      save(new TextEncoder().encode(JSON.stringify(p, null, 1)), `frost-preset-${pad2(i + 1)}-${slug(name, 'preset')}.frostpreset`);
+      toast(`Preset ${pad2(i + 1)} downloaded${extra.length ? ' with ' + extra.join(' and ') : ''}.`, 'ok');
     }, async () => {}), `Download preset ${pad2(i + 1)}`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
@@ -462,7 +487,6 @@ function renderPresets() {
   $('presets-summary').textContent = state.store ? `${all.length} of ${PRESETS} used` + (q ? ` · ${idx.length} shown` : '') : 'Not connected';
   $('preset-search').disabled = !state.store;
 }
-const b64 = b => { let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
 function fillPresetSlots() {
   for (const id of ['save-slot', 'import-slot']) {
     const sel = $(id), keep = sel.value; sel.textContent = '';
@@ -480,17 +504,52 @@ $('save-preset').onclick = async () => {
   if (!(await ask(`Save as preset ${pad2(i + 1)}?`, `The current sound is saved on the pedal as "${name}"${old ? `, replacing "${old.name}"` : ''}.`, 'Save'))) return;
   if (await exclusive('Saving a preset', async () => { await live.live.savePreset(i, name); state.dirty = false; renderDirty(); delete $('save-name').dataset.edited; }, refreshPresets)) toast(`Saved as preset ${pad2(i + 1)}.`, 'ok');
 };
+/* AMP models and cabinets included in a preset file: where each goes by default
+ * (the number already holding the identical file, else its own number when
+ * empty, else the first empty number, else its own number, replacing) and the
+ * choices offered. `stored` is state.models (MODEL n at n) or state.cabs (CAB n
+ * at n-1). */
+const NUMBERS = [...Array(63).keys()].map(k => k + 1);
+const sameFile = (a, s) => !!s && s.crc === a.crc && s.label === a.name;
+function importTarget(a) {
+  const at = n => a.stored[a.at(n)];
+  return NUMBERS.find(n => sameFile(a, at(n))) ?? (!at(a.number) ? a.number : NUMBERS.find(n => !at(n)) ?? a.number);
+}
+function importOptions(a) {
+  return NUMBERS.map(n => {
+    const s = a.stored[a.at(n)], what = !s ? 'empty' : sameFile(a, s) ? `${s.label} (already here)` : `${s.label || '(no name)'} (replace)`;
+    return [n, `${a.kind} ${pad2(n)} · ${what}`];
+  });
+}
 $('import-file').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f || !state.store) return;
-  let rec, name;
-  try {
-    const j = JSON.parse(await f.text());
-    if (j?.format !== 'frost-preset' || j.version !== 1 || typeof j.record !== 'string') throw new Error('not a Frost preset file');
-    rec = Uint8Array.from(atob(j.record), c => c.charCodeAt(0)); checkPreset(rec); name = presetName(rec);
-  } catch (err) { toast(`${f.name}: ${err instanceof SyntaxError ? 'not a Frost preset file' : err.message}`, 'bad'); return; }
-  const i = Number($('import-slot').value), old = state.presets[i];
-  if (!(await ask(`Import "${name}" as preset ${pad2(i + 1)}?`, old ? `This replaces "${old.name}" on the pedal.` : 'The preset is written to the pedal.', 'Import', { danger: !!old }))) return;
-  if (await exclusive('Importing a preset', () => state.store.presetPut(i, rec), refreshPresets)) toast(`"${name}" is now preset ${pad2(i + 1)}.`, 'ok');
+  let file;
+  try { file = parsePresetFile(await f.text()); } catch (err) { toast(`${f.name}: ${err.message}`, 'bad'); return; }
+  const i = Number($('import-slot').value), old = state.presets[i], name = file.name;
+  const items = [...file.models.map(a => ({ ...a, kind: 'MODEL', stored: state.models, at: n => n, crc: recordCrc(a.record) })),
+                 ...file.cabs.map(a => ({ ...a, kind: 'CAB', stored: state.cabs, at: n => n - 1, crc: recordCrc(a.record) }))];
+  const missing = [...file.used.models.filter(n => !file.models.some(a => a.number === n)).map(n => `MODEL ${pad2(n)}`),
+                   ...file.used.cabs.filter(n => !file.cabs.some(a => a.number === n)).map(n => `CAB ${pad2(n)}`)];
+  let text = old ? `This replaces "${old.name}" on the pedal.` : 'The preset is written to the pedal.';
+  if (items.length) text += `\nChoose where to store the ${items.length > 1 ? 'files' : 'file'} that came with it. Replacing a used number changes every preset that uses it.`;
+  if (missing.length) text += `\nNot included in the file: ${missing.join(', ')}. The preset plays whatever this pedal has at ${missing.length > 1 ? 'those numbers' : 'that number'}.`;
+  const selects = items.map(a => ({ label: `${a.kind === 'MODEL' ? 'AMP model' : 'Cabinet'} "${a.name}" (was ${a.kind} ${pad2(a.number)})`, options: importOptions(a), value: importTarget(a) }));
+  let picked;
+  for (;;) {
+    const replacing = items.some((a, k) => { const s = a.stored[a.at(selects[k].value)]; return s && !sameFile(a, s); });
+    picked = await ask(`Import "${name}" as preset ${pad2(i + 1)}?`, text, 'Import', { danger: !!old || replacing, selects: items.length ? selects : null });
+    if (!picked) return;
+    if (picked === true) { picked = []; break; }
+    picked.forEach((v, k) => { selects[k].value = v; });
+    const clash = items.find((a, k) => items.some((b, m) => m !== k && b.kind === a.kind && picked[m] === picked[k]));
+    if (!clash) break;
+    toast(`Two files cannot share ${clash.kind} ${pad2(picked[items.indexOf(clash)])}. Choose different numbers.`, 'bad');
+  }
+  const models = {}, cabs = {};
+  items.forEach((a, k) => { (a.kind === 'MODEL' ? models : cabs)[a.number] = { to: picked[k], write: !sameFile(a, a.stored[a.at(picked[k])]) }; });
+  const placed = items.map((a, k) => `${a.kind} ${pad2(picked[k])}`);
+  if (await exclusive('Importing a preset', () => state.store.presetImport(i, file, models, cabs), items.length ? refreshAll : refreshPresets))
+    toast(`"${name}" is now preset ${pad2(i + 1)}${placed.length ? ' (' + placed.join(', ') + ')' : ''}.`, 'ok');
 };
 function save(bytes, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $('backup').onclick = () => exclusive('Backing up', async () => {
@@ -516,6 +575,7 @@ function updateButtons() {
   $('connect').textContent = state.mode === 'frost' ? 'Reconnect' : 'Connect GP-5';
   $('demo').disabled = !!op;
   $('amp-convert').disabled = !state.nam || conv || !!state.record; $('amp-cancel').hidden = !conv;
+  $('amp-download').hidden = !(state.converted && state.record) || conv;
   $('train-file').disabled = conv; $('train-pick').classList.toggle('disabled', conv); $('train-clear').disabled = conv;
   $('amp-write').disabled = !on || !state.record || conv || !!op;
   why('amp-why', !state.record ? '' : !on ? offline : op ? `Waiting for "${op}" to finish.` : '');

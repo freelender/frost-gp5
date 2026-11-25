@@ -113,7 +113,11 @@ API unsigned ge_led(void){return fw_active();}
 API void ge_tap_note(unsigned n){globals.tap_note=n;}
 API void ge_tempo_light(unsigned n){globals.tempo_light=n;}
 API void ge_tap_tempo(unsigned n){globals.tap_tempo=n;}
-API unsigned ge_tap_tempo_on(void){return globals.tap_tempo;}
+API unsigned ge_tap_tempo_on(void){return tap_tempo_on();}
+API void ge_tap_target(unsigned n){globals.tap_target=n;}
+API unsigned ge_tap_target_on(void){return tap_target_now();}
+API unsigned ge_tap_note_value(void){return tap_note_now();}
+API unsigned ge_tap_saved(void){return globals.tap_tempo*100u+globals.tap_note*10u+globals.tap_target;}
 API unsigned ge_tap_settings(void){return globals.tap_note*10u+globals.tempo_light;}
 API void ge_select(unsigned slot){selected=slot;++generation;}
 API const char *ge_store_name(unsigned i){static char out[17];store_preset_name(i,out);return out;}

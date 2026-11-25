@@ -22,6 +22,10 @@
 #include "../effects/autowah/autowah.h"
 #include "../effects/treble_boost/treble_boost.h"
 #include "../effects/extras/extras.h"
+#include "../effects/cali_eq/cali_eq.h"
+#include "../effects/pingpong/pingpong.h"
+#include "../effects/sl100/sl100.h"
+#include "stereo.h"
 #include "../effects/foxx/foxx.h"
 #include "../effects/tape/tape.h"
 #include "../effects/vintage_fuzz/vintage_fuzz.h"
@@ -78,6 +82,9 @@ typedef union {
     FrostMuff muff;
     FrostBoost boost;
     FrostSwell swell;
+    FrostCaliEq cali_eq;   /* beta.14 */
+    FrostPingPong pingpong;   /* beta.14 */
+    FrostSl100 sl100;   /* beta.14 */
 
 } FrostEffectState;
 typedef struct {
