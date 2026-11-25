@@ -155,7 +155,7 @@ that does not fit is not loaded. Replace one of the larger effects.
 The pedal also estimates the processing load of a chain before it plays, from
 costs measured for each effect while playing guitar. A chain estimated above
 about 90% of the DSP is refused with **DSP LIMIT**, so it does not overload,
-crackle or mute. The heaviest effects are OCTAVE (about 40% on its own), NAM
+crackle or mute. The heaviest effects are OCTAVE (about 52% on its own), NAM
 capture (about 32%), the UK-800, CALI and BROWN heads (about 29%) and the
 reverbs (REVERB 25%, SPRING 24%). SPACE depends on its MODE: ROOM and HALL
 about 23%, PLATE 29%, MOD 35% and SHIMMER 38%. Changing SPACE to a costlier

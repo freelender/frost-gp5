@@ -36,8 +36,13 @@ static const uint32_t frost_load_cost[FROST_EFFECTS] FROST_XDATA={
      22600, 22500, 70200, 33300, 40600, 37900,   /*  6..11 */
      27300, 56700, 40400, 43600, 41700, 32000,   /* 12..17 */
      55000, 63500, 65600, 18300, 24000, 28800,   /* 18..23 */
-     29900, 41900, 33500, 12200,110700, 12200,   /* 24..29 */
-     22200, 38600, 35800, 88700, 33500, 32400,   /* 30..35 */
+     /* 28 OCTAVE, 34 DROP: beta.15 splicing shifters (effects/common/pitch_shift.h).
+      * NOT yet measured on the pedal: the old pedal maxima (110,700 / 33,500)
+      * scaled by the new/old Cortex-M4 emulator block maxima
+      * (tools/pitch_arm_bench.py: 54,924/41,495 and 25,497/14,350, plus
+      * ~1,300 slot overhead each), rounded up. Re-measure while playing. */
+     29900, 41900, 33500, 12200,145500, 12200,   /* 24..29 */
+     22200, 38600, 35800, 88700, 57400, 32400,   /* 30..35 */
      28300, 12800, 12100, 21700, 15200, 29600,   /* 36..41 */
      52700, 42200, 45800, 53800, 55900, 53100,   /* 42..47 */
      54500, 81700, 81700, 81700,   /* 48..51 */

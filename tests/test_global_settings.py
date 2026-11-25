@@ -120,7 +120,7 @@ class GlobalSettingsTests(unittest.TestCase):
     def test_release_version_is_complete_and_fits_settings_row(self):
         c=self.lib;c.ge_firmware_text.restype=ct.c_char_p
         label=c.ge_firmware_text().decode()
-        self.assertEqual(label,'0.1.0-BETA.13')
+        self.assertEqual(label,'0.1.0-BETA.15')
         self.assertGreaterEqual(153-6*len(label),15+6*len('FIRMWARE')+6)
         self.open_settings();self.go_row(FIRMWARE);self.assertEqual(c.ge_paint(),0)
     def test_output_eq_clamps_persists_and_reconciles_to_dsp(self):
