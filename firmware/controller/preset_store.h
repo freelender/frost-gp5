@@ -136,6 +136,8 @@ static void store_words_to_record(const uint32_t *w,const char *name,const uint1
 static uint16_t store_ir_refs[2]={0xffffu,0xffffu};
 /* 32p: a name for the next save (website 7E 20); empty keeps the slot's name. */
 static char store_save_label[17];
+/* Record byte 27: CTL participation by stable slot ID; older records = 0. */
+static unsigned store_ctl_mask;
 static int store_save_preset(unsigned i,const uint32_t *w,uint32_t now)
 {
     char name[8],label[17];uint16_t refs[2]={0xffffu,0xffffu};uint32_t d;unsigned k;
@@ -149,6 +151,9 @@ static int store_save_preset(unsigned i,const uint32_t *w,uint32_t now)
     d=store_group(FROST_PST_FIRM,name,FROST_PST_SLOTS*FROST_PST_BYTES);
     for(k=0;k<FROST_PST_SLOTS*FROST_PST_BYTES;++k)store_buf[k]=d?FROST_FILE_AT(d)[k]:0;
     store_words_to_record(w,label,refs,store_buf+(i%FROST_PST_SLOTS)*FROST_PST_BYTES);
+    {uint8_t *rec=store_buf+(i%FROST_PST_SLOTS)*FROST_PST_BYTES;
+     rec[27]=(uint8_t)(store_ctl_mask&63u);
+     frost_wire_put32(rec+FROST_PST_BYTES-4u,store_crc_ram(rec,FROST_PST_BYTES-4u));}
     return store_write_group(FROST_PST_FIRM,name,FROST_PST_SLOTS*FROST_PST_BYTES);
 }
 /* ---- AMP models in group files (legacy single files still read) ---- */

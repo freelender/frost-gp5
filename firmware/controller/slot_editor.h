@@ -56,7 +56,7 @@ static unsigned foot_down,foot_long,foot_toggled,tuner_ref_dirty,tuner_ref_unloc
 static uint32_t foot_down_ms;
 static unsigned tuner_home;                      /* the home view to return to */
 /* Stage 2b: global settings menu, home screens, long press (docs/User%20Guide.md). */
-enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_FIRMWARE, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_ROWS };
+enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_VERSION, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_FOOTSWITCH, SET_FIRMWARE, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
 /* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
@@ -67,8 +67,8 @@ enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ, SE_TAP };
 static const uint8_t settings_menus[SM_MENUS][7]={
     {SE_AUDIO,SE_DISPLAY,SE_TAP,SE_SYSTEM,SET_BACK,255,255},
     {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
-    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_BACK,255,255,255},
-    {SET_FIRMWARE,SET_RESET,SET_FACTORY,SET_BACK,255,255,255},
+    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_FOOTSWITCH,SET_BACK,255,255},
+    {SET_FIRMWARE,SET_VERSION,SET_RESET,SET_FACTORY,SET_BACK,255,255},
     {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255},
     {SET_TAP_TEMPO,SET_TAP_NOTE,SET_TAP_TARGET,SET_TEMPO_LIGHT,SET_BACK,255,255}};
 /* Submenu entry SE_* <-> menu SM_*: SE_AUDIO..SE_SYSTEM map in order. */
@@ -79,6 +79,12 @@ static unsigned factory_stage,settings_row,settings_dirty,settings_confirm,para_
 static uint32_t para_down_ms,last_input_ms;
 static uint16_t recall_old_cabs[6];
 static unsigned recall_pending,recall_previous;
+static unsigned ctl_mask,recall_ctl_mask,ctl_pending;
+static uint8_t ctl_types[6];
+/* Assignments follow stable slot IDs through reordering, but replacements default off. */
+static void ctl_sync(void)
+{unsigned i;if(!editor.ready || preset_client.state || recall_pending)return;
+ for(i=0;i<6u;++i){if(ctl_types[i]!=editor.types[i] || editor.types[i]==FROST_EMPTY)ctl_mask&=~(1u<<i);ctl_types[i]=editor.types[i];}}
 static unsigned editor_transport_status;
 static unsigned midi_volume=127;
 static void midi_init(void);
@@ -123,9 +129,9 @@ static unsigned foot_mode(void)
 static unsigned editor_position(unsigned slot)
 {unsigned i;for(i=0;i<6;++i)if(editor.order[i]==slot)return i;return 0;}
 /* PARA menu rows of the selected block, top to bottom: CAB (IR only), its
- * parameters, TYPE, POSITION, REMOVE EFFECT (any non-empty block), BACK, PRESETS.
+ * parameters, TYPE, POSITION, REMOVE EFFECT, CTL, ACTIVE (non-empty blocks), BACK, PRESETS.
  * PRESETS stays last (one turn back from the first row). */
-enum { ROW_PARAM, ROW_CAB, ROW_TYPE, ROW_POSITION, ROW_REMOVE, ROW_BACK, ROW_PRESETS };
+enum { ROW_PARAM, ROW_CAB, ROW_TYPE, ROW_POSITION, ROW_REMOVE, ROW_BACK, ROW_PRESETS, ROW_CTL, ROW_ACTIVE };
 /* beta.12 PRESETS list, top to bottom: SAVE CURRENT PRESET, presets 01..60, BACK.
  * preset_choice keeps the preset index (FROST_PRESETS = BACK, PRESET_ROW_SAVE =
  * the save row); the list opens on the current preset. */
@@ -135,7 +141,7 @@ static unsigned preset_row_pos(unsigned c){return c==PRESET_ROW_SAVE?0u:c>=FROST
 static unsigned preset_row_at(unsigned pos){return pos==0u?PRESET_ROW_SAVE:pos>FROST_PRESETS?FROST_PRESETS:pos-1u;}
 static unsigned row_has_cab(void){return editor.types[selected]==FROST_IR;}
 static unsigned row_has_remove(void){return editor.types[selected]!=FROST_EMPTY;}
-static unsigned row_total(const FrostControlEffect *e){return e->count+4u+row_has_cab()+row_has_remove();}
+static unsigned row_total(const FrostControlEffect *e){return e->count+4u+row_has_cab()+3u*row_has_remove();}
 static unsigned row_kind(const FrostControlEffect *e,unsigned row,unsigned *p)
 {
     if(row_has_cab()){if(!row)return ROW_CAB;--row;}
@@ -144,7 +150,7 @@ static unsigned row_kind(const FrostControlEffect *e,unsigned row,unsigned *p)
     if(row==0)return ROW_TYPE;
     if(row==1)return ROW_POSITION;
     row-=2;
-    if(row_has_remove()){if(!row)return ROW_REMOVE;--row;}
+    if(row_has_remove()){if(!row)return ROW_REMOVE;--row;if(!row)return ROW_CTL;--row;if(!row)return ROW_ACTIVE;--row;}
     return row?ROW_PRESETS:ROW_BACK;
 }
 static const char *editor_message(void)
@@ -300,10 +306,12 @@ static void settings_value(unsigned row,char out[24])
     case SET_BRIGHT:q=number(q,globals.brightness);*q++='%';*q=0;break;
     case SET_HOME:{const char *t=globals.home==HOME_SETLIST?"SETLIST":globals.home==HOME_PRESET?"PRESET":globals.home==HOME_STOMP?"STOMP":"CHAIN";while(*t)*q++=*t++;*q=0;break;}
     case SET_SETLIST_HOLD:{const char *t=globals.setlist_hold?"PREV PART":"TUNER";while(*t)*q++=*t++;*q=0;break;}
-    case SET_FIRMWARE:{const char *t=FROST_FIRMWARE_TEXT;while(*t)*q++=*t++;*q=0;break;}
+    case SET_FIRMWARE:{const char *t="FROST";while(*t)*q++=*t++;*q=0;break;}
+    case SET_VERSION:{const char *t=FROST_FIRMWARE_TEXT;while(*t)*q++=*t++;*q=0;break;}
     case SET_TAP_NOTE:{const char *t=tap_note_now()==1u?"DOTTED 1/8":tap_note_now()==2u?"1/8":"1/4";while(*t)*q++=*t++;*q=0;break;}
     case SET_TEMPO_LIGHT:{const char *t=globals.tempo_light?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
     case SET_TAP_TEMPO:{const char *t=tap_tempo_on()?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_FOOTSWITCH:{const char *t=globals.footswitch_ctl?"CTL":"SELECTED";while(*t)*q++=*t++;*q=0;break;}
     case SET_TAP_TARGET:{const char *t=tap_target_now()?"GLOBAL":"SELECTED";while(*t)*q++=*t++;*q=0;break;}
     default:*q=0;
     }
@@ -315,7 +323,7 @@ static void settings_select(unsigned menu,unsigned pos)
 {settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
-    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","FIRMWARE","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK"};
+    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","VERSION","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK","FOOTSWITCH","FIRMWARE"};
     static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ","TAP TEMPO"};
     static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ","TAP TEMPO"};
     unsigned i;char value[24];
@@ -417,7 +425,7 @@ static void render_stage2b(const char *message)
             text_center(top,d->short_name,editor.types[selected]==FROST_EMPTY?WIRE:on?BG:MUTED,scale);
             {char nm[27];unsigned k;for(k=0;d->name[k] && k<26;++k)nm[k]=d->name[k];nm[k]=0;text_center(top+7*scale+6,nm,on && editor.types[selected]!=FROST_EMPTY?BG:MUTED,1);}
         }
-        text(5,72,message?message:"PARA: FX  FOOT: BYPASS",INK);
+        text(5,72,message?message:(globals.footswitch_ctl?"PARA: FX  FOOT: CTL":"PARA: FX  FOOT: BYPASS"),INK);
     }
 }
 static void render_popup(void)
@@ -532,6 +540,10 @@ static void render(void)
             }else if(k==ROW_POSITION){
                 static const Parameter position={"POSITION","",1,6,1,1,1,0};
                 label="POSITION";formatted(value,&position,(int)(view==VALUE && parameter==i?choice:editor_position(selected))+1);
+            }else if(k==ROW_ACTIVE){
+                label="ACTIVE";shown=editor.desired_enabled[selected]?"ON":"OFF";
+            }else if(k==ROW_CTL){
+                label="CTL";shown=(view==VALUE && i==parameter?choice:(ctl_mask>>selected)&1u)?"ENABLE":"DISABLE";
             }else if(k==ROW_REMOVE){
                 label="REMOVE EFFECT";shown=view==VALUE && parameter==i?"CONFIRM?":"";
             }else if(k==ROW_CAB){
@@ -546,7 +558,7 @@ static void render(void)
             text(15,y,label,INK);text(153-(int)length(shown)*6,y,shown,i==parameter && view==VALUE?FOCUS:INK);
         }
         text(5,72,message?message:
-            view==VALUE?(kind==ROW_PARAM?frost_control_hint(editor.types[selected],pk):kind==ROW_REMOVE?"PRESS: REMOVE / TURN: NO":"PRESS TO CONFIRM"):
+            view==VALUE?(kind==ROW_PARAM?frost_control_hint(editor.types[selected],pk):kind==ROW_ACTIVE?"PARA: ON/OFF / PRESS: BACK":kind==ROW_REMOVE?"PRESS: REMOVE / TURN: NO":"PRESS TO CONFIRM"):
             kind==ROW_TYPE?frost_category_names[frost_type_category(editor.types[selected])]:"PARA: SELECT / EDIT",INK);
     }
 }
@@ -561,6 +573,7 @@ void fw_init(void)
 #endif
     globals_load();setlist_init();global_client_init(&global_client,gp5_ms());globals_apply_backlight();
     settings_menu=settings_pos=0;settings_row=settings_dirty=settings_confirm=para_down=para_long=last_preset_dirty=boot_load_done=0;current_preset=globals.last_preset;
+    ctl_mask=recall_ctl_mask=ctl_pending=0;{unsigned i;for(i=0;i<6u;++i)ctl_types[i]=FROST_EMPTY;}
     para_down_ms=last_input_ms=gp5_ms();recall_pending=editor_transport_status=0;
     tuner_client_init(&tuner_client,gp5_ms());foot_down=foot_long=foot_toggled=tuner_ref_dirty=tuner_ref_unlocked=0;foot_down_ms=gp5_ms();tuner_home=CHAIN;
     editor_init(&editor,gp5_ms());selected=1;view=home_view();parameter=choice=changed=0;pick_category=pick_model=foot_held=0;
@@ -604,6 +617,8 @@ return 0;
 unsigned fw_active(void)
 {
     unsigned on=editor.desired_enabled[selected],slot=tap_mode?tap_slot:selected,beat;uint32_t now;
+    if(globals.footswitch_ctl && (view==CHAIN || view==STOMP)){unsigned i;on=0;
+        for(i=0;i<6u;++i)if((ctl_mask&(1u<<i)) && editor.types[i]!=FROST_EMPTY && editor.desired_enabled[i])on=1;return on;}
     if(!tap_tempo_on())return on;                          /* 32u: TAP TEMPO OFF = the usual light */
     if(!globals.tempo_light || !(tap_mode || (on && (view==CHAIN || view==STOMP))))return tap_mode?FROST_LED_BLUE:on;
     beat=tap_mode && !tap_count?0u:tap_flash_beat(slot);
@@ -627,12 +642,13 @@ unsigned fw_editor_interval(void)
 void fw_editor_transport_status(unsigned status){editor_transport_status=status;}
 static void fw_recall_finish(void)
 {
-    unsigned i;if(!recall_pending || preset_client.state)return;
+    unsigned i;if(!recall_pending){ctl_sync();return;}if(preset_client.state)return;
     if(preset_client.error){
         for(i=0;i<6u;++i){ir_cabs[i]=recall_old_cabs[i];ir_file_client.held_cab[i]=64;}
         current_preset=recall_previous;ir_file_client.next_check=0;
-    }else changed=0;
+    }else {changed=0;ctl_mask=recall_ctl_mask;for(i=0;i<6u;++i)ctl_types[i]=editor.types[i];}
     recall_pending=0;
+    ctl_sync();
 }
 /* Volatile RAM bank save (pre-stage-2 path; kept for the IR SOURCE picker's
  * RAM sources and bank export; the PRESETS menu now saves to flash). */
@@ -647,6 +663,7 @@ static int capture_client_store(unsigned preset,const uint32_t *words)
 {
     unsigned i,b=0;store_ir_refs[0]=store_ir_refs[1]=0xffffu;
     for(i=0;i<6 && b<2;++i)if(words[3+i]==FROST_IR)store_ir_refs[b++]=ir_cabs[i]?(uint16_t)(ir_cabs[i]-1u):0xffffu;
+    ctl_sync();store_ctl_mask=ctl_mask;
     if(!store_save_preset(preset,words,gp5_ms()))return 0;
     current_preset=preset;
     if(globals.last_preset!=preset){globals.last_preset=preset;last_preset_dirty=globals_save(gp5_ms())?0u:1u;}
@@ -676,7 +693,7 @@ static int fw_flash_load(unsigned preset)
     for(k=0;k<6u;++k)if(load_words[3+k]==FROST_IR && b<2u){unsigned ref=rec[248+2*b]|rec[249+2*b]<<8;++b;if(ref<63u)builtin=0;}
     if(!(builtin?preset_client_start_quick(&preset_client,&editor,load_words,editor.revision):
                   preset_client_start_snapshot(&preset_client,&editor,load_words,editor.revision)))return 0;
-    recall_pending=1;recall_previous=current_preset;for(k=0;k<6u;++k)recall_old_cabs[k]=ir_cabs[k];
+    recall_ctl_mask=rec[27]&63u;recall_pending=1;recall_previous=current_preset;for(k=0;k<6u;++k)recall_old_cabs[k]=ir_cabs[k];
     {unsigned b=0;for(k=0;k<6;++k){
         unsigned ref=0xffffu;
         if(load_words[3+k]==FROST_IR && b<2){ref=rec[248+2*b]|rec[249+2*b]<<8;++b;}
@@ -913,6 +930,9 @@ static void foot_press(uint32_t now)
     if(tap_mode && tap_slot!=selected){tap_mode=0;++generation;}   /* selection changed */
     if(view==SETLIST_HOME){foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;return;}
     mode=foot_mode();foot_held=0;
+    if(globals.footswitch_ctl && (view==CHAIN || view==STOMP)){
+        ctl_sync();foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;ctl_pending=1;return;
+    }
     if(tap_tempo_on() && !mode && (view==CHAIN || view==STOMP) && tap_param(editor.types[selected])>=0){
         foot_down=1;foot_long=0;foot_down_ms=now;foot_toggled=0;tap_pending=1;tap_press_ms=now;return;   /* 32v: tap on release, on/off on hold */
     }
@@ -932,6 +952,13 @@ static void foot_release(void)
     unsigned slot;
     if(foot_down){
         foot_down=0;
+        if(ctl_pending){unsigned i,mask=0,targets=0;ctl_pending=0;
+            if(!foot_long && (view==CHAIN || view==STOMP) && editor_editable(&editor)){ctl_sync();
+                for(i=0;i<6u;++i)if(editor.types[i]!=FROST_EMPTY){
+                    if(editor.desired_enabled[i])mask|=1u<<i;targets|=ctl_mask&(1u<<i);}
+                if(targets && editor_queue_mask(&editor,mask^targets))changed=1;
+                ++generation;}
+            foot_long=0;return;}
         if(tap_pending){tap_pending=0;if(!foot_long)tap_press(tap_press_ms);foot_long=0;return;}   /* 32v: a short press is a tap */
         if(!foot_long && view==SETLIST_HOME)setlist_step(1,0);
         if(!foot_long && view==PRESET_HOME){unsigned next=preset_step(current_preset,1);if(next!=255u && fw_flash_load(next))++generation;}
@@ -989,7 +1016,7 @@ static void settings_press(void)
         unsigned entry=settings_entry();
         if(entry>=SE_AUDIO)settings_select(settings_submenu(entry),0);
         else if(settings_row==SET_BACK)settings_up();
-        else if(settings_row==SET_FIRMWARE){}
+        else if(settings_row==SET_VERSION || settings_row==SET_FIRMWARE){}
         else if(settings_row==SET_RESET || settings_row==SET_FACTORY){view=SETTINGS_CONFIRM;settings_confirm=0;factory_stage=0;}
         else view=SETTINGS_VALUE;
     }else if(view==SETTINGS_VALUE)view=SETTINGS;
@@ -1022,6 +1049,7 @@ static void settings_turn(int d)
     case SET_TAP_NOTE:globals.tap_note=(unsigned)(((int)tap_note_now()+d%3+3)%3);midi_tap_note=255u;break;
     case SET_TEMPO_LIGHT:globals.tempo_light=(unsigned)(((int)globals.tempo_light+d%2+2)%2);break;
     case SET_TAP_TEMPO:globals.tap_tempo=(unsigned)(((int)tap_tempo_on()+d%2+2)%2);midi_tap_tempo=255u;if(!globals.tap_tempo)tap_mode=0;break;
+    case SET_FOOTSWITCH:globals.footswitch_ctl=(unsigned)(((int)globals.footswitch_ctl+d%2+2)%2);tap_mode=0;break;
     case SET_TAP_TARGET:globals.tap_target=(unsigned)(((int)tap_target_now()+d%2+2)%2);midi_tap_target=255u;break;
     default:return;
     }
@@ -1078,17 +1106,21 @@ void fw_para_push(void)
         unsigned kind=row_kind(e,parameter,0);
         if(kind==ROW_BACK)view=home_view();
         else if(kind==ROW_TYPE && editor_editable(&editor)){view=TYPE_CATEGORY;pick_category=frost_type_category(editor.types[selected]);}
+        else if(kind==ROW_ACTIVE){if(editor_editable(&editor))view=VALUE;}
+        else if(kind==ROW_CTL){ctl_sync();choice=(ctl_mask>>selected)&1u;view=VALUE;}
         else if(kind==ROW_CAB){choice=ir_cabs[selected];view=VALUE;}
         else if(kind==ROW_PRESETS){view=PRESETS;preset_choice=current_preset<FROST_PRESETS?current_preset:0u;}
         else if(kind==ROW_REMOVE){if(editor_editable(&editor))view=VALUE;}  /* asks first: CONFIRM? */
         else if(editor_editable(&editor)){
             choice=kind==ROW_TYPE?editor.types[selected]:editor_position(selected);view=VALUE;
         }
+    }else if(row_kind(e,parameter,0)==ROW_CTL){
+        ctl_mask=(ctl_mask&~(1u<<selected))|(choice<<selected);changed=1;view=PARAMETERS;
     }else if(row_kind(e,parameter,0)==ROW_CAB){
         ir_cabs[selected]=(uint16_t)choice;ir_file_client.held_cab[selected]=64;ir_file_client.next_check=0;changed=1;view=PARAMETERS;
     }else{
         unsigned kind=row_kind(e,parameter,0);
-        if(editor_editable(&editor) && kind!=ROW_PARAM){
+        if(editor_editable(&editor) && kind!=ROW_PARAM && kind!=ROW_ACTIVE){
             uint8_t types[6],order[6];unsigned i,pos=editor_position(selected);
             for(i=0;i<6;++i){types[i]=editor.types[i];order[i]=editor.order[i];}
             if(kind==ROW_TYPE)types[selected]=(uint8_t)choice;
@@ -1127,6 +1159,10 @@ void fw_para_turn(int detents)
     else if(view==TYPE_CATEGORY){int count=FROST_CATEGORIES+1;pick_category=(unsigned)(((int)pick_category+detents%count+count)%count);}
     else if(view==TYPE_MODEL){int count=(int)picker_count(pick_category)+1;pick_model=(unsigned)(((int)pick_model+detents%count+count)%count);}
     else if(view==PARAMETERS){int count=(int)row_total(e);parameter=(unsigned)(((int)parameter+detents%count+count)%count);}
+    else if(row_kind(e,parameter,0)==ROW_ACTIVE){
+        if(editor_queue_enable(&editor,selected,editor.desired_enabled[selected]^(unsigned)(detents%2!=0)))changed=1;
+    }
+    else if(row_kind(e,parameter,0)==ROW_CTL){choice=(unsigned)(((int)choice+detents%2+2)%2);}
     else if(row_kind(e,parameter,0)==ROW_REMOVE)view=PARAMETERS;          /* turning cancels the removal */
     else if(row_kind(e,parameter,0)==ROW_CAB){choice=(unsigned)(((int)choice+detents%64+64)%64);}
     else if(editor_editable(&editor)){

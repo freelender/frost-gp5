@@ -264,7 +264,7 @@ API unsigned ge_level(void){return fw_level();}
 API int ge_global(unsigned field){int v[]={globals.in_gain_db,(int)globals.out_level,(int)globals.out_mode,(int)globals.cab_override,(int)globals.brightness,(int)globals.home,(int)globals.last_preset};return field<7?v[field]:0;}
 API int ge_dsp_global(unsigned field){int v[]={(int)(frost_in_gain_target*1000.0f+0.5f),(int)frost_ir_bypass,(int)frost_global_mode,frost_global_gain_ddb};return field<4?v[field]:0;}
 API unsigned ge_settings_row(void){return settings_row;}
-API const char *ge_firmware_text(void){static char s[24];settings_value(SET_FIRMWARE,s);return s;}
+API const char *ge_firmware_text(void){static char s[24];settings_value(SET_VERSION,s);return s;}
 API unsigned ge_current_preset(void){return current_preset;}
 API void ge_tick_draw(void){(void)fw_draw(0,0);}
 /* Stage 2c tuner */
@@ -288,3 +288,8 @@ API unsigned ge_settings_back_row(void){return SET_BACK;}
 API unsigned ge_settings_menu(void){return settings_menu;}
 API unsigned ge_settings_pos(void){return settings_pos;}
 API unsigned ge_settings_count(void){return settings_count(settings_menu);}
+
+API unsigned ge_ctl_mask(void){ctl_sync();return ctl_mask;}
+API unsigned ge_ctl_mode(void){return globals.footswitch_ctl;}
+
+API const char *ge_firmware_name(void){static char s[24];settings_value(SET_FIRMWARE,s);return s;}

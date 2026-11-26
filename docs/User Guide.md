@@ -35,7 +35,7 @@ browser tabs using the device.
 | PARA turn | Select a block, menu row, preset or song, depending on the screen |
 | PARA short press | Open the selection or enter/leave a value edit |
 | PARA hold on a home screen | Open Global settings |
-| Footswitch tap on a home screen | Bypass the selected block, advance a preset, or advance a setlist part, depending on the home screen |
+| Footswitch tap on a home screen | Bypass the selected block (or toggle assigned effects in CTL mode), advance a preset, or advance a setlist part, depending on the home screen |
 | Footswitch tap in a menu | Go back one level (same as **BACK**) |
 | Footswitch hold | Open the tuner; Setlist view can instead use Previous Part. With TAP TEMPO → TAP TEMPO ON, on a tempo effect (Chain or Stomp view): a tap sets the tempo and a hold switches the effect on/off |
 
@@ -44,13 +44,38 @@ value, then press again to leave the value edit. Use **BACK** or tap the
 footswitch to return one level. A parameter value is kept as you turned it;
 an unconfirmed TYPE, POSITION, CAB or REMOVE choice is cancelled. In Global
 settings the footswitch leaves a value edit, and from the settings list it
-saves and returns home like **BACK**. Bypass the block from its home screen.
+saves and returns home like **BACK**. Use the effect’s **ACTIVE** row to switch it on/off from this menu, or use
+the footswitch on its home screen. ACTIVE edits apply as you turn PARA; press
+again to leave the edit. Save the preset to keep the on/off state.
 Some effects have their own momentary footswitch behavior on home screens.
 
 <table><tr>
 <td align="center"><img src="../assets/docs/pedal-parameters.png" alt="PARA press: the block's parameters" width="330"><br><sub>PARA press: the block's parameters</sub></td>
 <td align="center"><img src="../assets/docs/pedal-value.png" alt="Press again: edit the value (blue)" width="330"><br><sub>Press again: edit the value (blue)</sub></td>
 </tr></table>
+
+### Control several effects with CTL
+
+In GLOBAL SETTINGS → DISPLAY → **FOOTSWITCH**, choose **SELECTED** (default)
+or **CTL**. SELECTED keeps the usual selected-block footswitch behavior.
+CTL lets a Chain/Stomp footswitch tap toggle several effects in the current patch.
+
+Open each effect with PARA, select **CTL**, press to edit, choose **ENABLE**
+or **DISABLE**, and press to confirm. Every effect starts with CTL **DISABLE**,
+including effects in older presets. Save the preset to keep its assignments.
+Assignments stay with a block when reordered; a replacement effect starts disabled.
+
+In CTL mode, a short tap toggles each assigned effect from its current state:
+on becomes off, and off becomes on. For example, an enabled drive and bypassed
+delay exchange states together; another tap restores them. Unassigned effects
+keep their state. An empty CTL group does nothing. Loading a preset restores
+its saved on/off states and assignments. The footswitch light is on when any
+assigned effect is on.
+
+CTL takes priority over footswitch tap tempo and the selected effect's
+momentary footswitch modes on Chain/Stomp. A hold opens the tuner without
+toggling the group. Preset and Setlist screens keep their navigation gestures,
+and the footswitch still goes back in menus. MIDI tempo controls remain available.
 
 ### Tap tempo with the footswitch
 
@@ -460,12 +485,14 @@ and exits.
 | AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
 | DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
+| DISPLAY | FOOTSWITCH | SELECTED (default): selected-block behavior. CTL: tap toggles the current preset’s CTL-enabled effects on Chain/Stomp |
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
 | TAP TEMPO | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set the tempo and a hold switches it on/off; the light flashes on the beat |
 | TAP TEMPO | TAP NOTE | The note a tap sets: 1/4 (default), DOTTED 1/8 or 1/8. Also applies to MIDI tap and MIDI Clock |
 | TAP TEMPO | TAP TARGET | SELECTED (default): a footswitch tap sets the selected effect. GLOBAL: it sets every tempo effect in the chain |
 | TAP TEMPO | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
-| SYSTEM | FIRMWARE | The installed Frost version |
+| SYSTEM | FIRMWARE | FROST (read-only; first System row) |
+| SYSTEM | VERSION | The installed Frost version (read-only) |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 

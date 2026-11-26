@@ -144,8 +144,8 @@ class SlotEditorTests(unittest.TestCase):
         self.assertEqual(c.ge_paint(),0)
     def test_remove_effect_row_asks_then_empties_only_the_selected_slot(self):
         c=self.lib;self.settle();c.ge_press()                 # PARA menu of slot 1
-        n=c.ge_human_count(c.ge_type(1));self.assertEqual(c.ge_row_total(),n+5)
-        self.assertEqual([c.ge_row_kind(n+k) for k in range(5)],[self.ROW_TYPE,self.ROW_POSITION,self.ROW_REMOVE,self.ROW_BACK,self.ROW_PRESETS])
+        n=c.ge_human_count(c.ge_type(1));self.assertEqual(c.ge_row_total(),n+7)
+        self.assertEqual([c.ge_row_kind(n+k) for k in range(7)],[self.ROW_TYPE,self.ROW_POSITION,self.ROW_REMOVE,7,8,self.ROW_BACK,self.ROW_PRESETS])
         c.ge_turn(n+2);c.ge_press();self.assertEqual(c.ge_view(),2);self.assertEqual(c.ge_paint(),0)   # CONFIRM?
         c.ge_turn(1);self.assertEqual(c.ge_view(),1);c.ge_pump(10);self.assertEqual(c.ge_type(1),1)        # turning cancels
         before=[c.ge_type(i) for i in range(6)]
@@ -155,7 +155,7 @@ class SlotEditorTests(unittest.TestCase):
         self.assertNotIn(self.ROW_REMOVE,[c.ge_row_kind(i) for i in range(c.ge_row_total())])  # an empty slot has nothing to remove
     def test_ir_cab_is_the_first_row(self):
         c=self.lib;self.settle();self.select(3);c.ge_press()
-        n=c.ge_human_count(c.ge_type(3));self.assertEqual(c.ge_row_total(),n+6)
+        n=c.ge_human_count(c.ge_type(3));self.assertEqual(c.ge_row_total(),n+8)
         self.assertEqual(c.ge_row_kind(0),self.ROW_CAB);self.assertEqual(c.ge_row_kind(1),self.ROW_PARAM)
         self.assertEqual(c.ge_row_kind(c.ge_row_total()-1),self.ROW_PRESETS);self.assertEqual(c.ge_paint(),0)
         c.ge_press();self.assertEqual(c.ge_view(),2);c.ge_turn(1);self.assertEqual(c.ge_paint(),0);c.ge_press();self.assertEqual(c.ge_view(),1)
@@ -314,11 +314,30 @@ class SlotEditorTests(unittest.TestCase):
         c.ge_press();c.ge_press();c.ge_turn(2147483647);self.settle()
         self.assertEqual(c.ge_value_raw(1,0),100000)
         c.ge_turn(-2147483648);self.settle();self.assertEqual(c.ge_value_raw(1,0),10)
-        c.ge_press();c.ge_turn(4);c.ge_press();c.ge_turn(-1) # BACK (after REMOVE EFFECT) to chain, select gain
+        c.ge_press();c.ge_turn(c.ge_row_total()-2);c.ge_press();c.ge_turn(-1) # BACK (after CTL) to chain, select gain
         self.assertEqual(c.ge_view(),0)
         c.ge_turn(2);c.ge_press() # EQ menu; scroll all rows and paint safely
         for _ in range(12):c.ge_turn(1);self.assertEqual(c.ge_paint(),0)
         self.assertTrue(c.ge_muted())
+
+    def open_active(self):
+        c=self.lib;c.ge_press();c.ge_turn(c.ge_row_total()-3)
+        self.assertEqual(c.ge_row_kind(c.ge_parameter()),8);c.ge_press();self.assertEqual(c.ge_view(),2)
+    def test_active_changes_selected_block_live_and_menu_foot_goes_back(self):
+        c=self.lib;self.settle();before=[c.ge_actual_enabled(i) for i in range(6)]
+        self.open_active();c.ge_turn(1);self.settle();self.assertEqual(c.ge_paint(),0)
+        self.assertEqual([c.ge_actual_enabled(i) for i in range(6)],[v^(i==1) for i,v in enumerate(before)])
+        c.ge_foot();self.settle();self.assertEqual(c.ge_view(),1);self.assertEqual(c.ge_actual_enabled(1),0)
+        c.ge_press();c.ge_turn(-1);c.ge_press();self.settle();self.assertEqual(c.ge_view(),1)
+        self.assertEqual([c.ge_actual_enabled(i) for i in range(6)],before)
+        c.ge_turn(1);self.assertEqual(c.ge_row_kind(c.ge_parameter()),self.ROW_BACK)
+        c.ge_press();self.select(4);c.ge_press()
+        self.assertNotIn(8,[c.ge_row_kind(i) for i in range(c.ge_row_total())])
+    def test_active_state_survives_preset_save_and_recall(self):
+        c=self.lib;self.settle();c.ge_paint();self.settle();self.open_active();c.ge_turn(1);c.ge_press();c.ge_foot();self.settle()
+        self.assertEqual(c.ge_flash_save(0),1);self.settle()
+        c.ge_foot();self.settle();self.assertEqual(c.ge_actual_enabled(1),1)
+        self.assertEqual(c.ge_flash_load(0),1);self.settle();self.assertEqual(c.ge_actual_enabled(1),0)
 
 class SlowIdlePollTests(unittest.TestCase):
     """beta.12 on the pedal: the line-test build polls an idle DSP every 60 s.

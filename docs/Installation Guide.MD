@@ -47,7 +47,7 @@ USB port. Charge-only cables cannot transfer firmware.
 
 Each release comes with its `.bin`, release notes and a `SHA256SUMS.txt` file
 with the firmware's checksum. After installing, check that GLOBAL SETTINGS →
-SYSTEM → FIRMWARE shows the version of the release you installed.
+SYSTEM → VERSION shows the version of the release you installed.
 
 A custom source build has its own checksum. Use its build manifest and do
 not assume it matches the supplied image. A ZIP, `.nam`, WAV or backup is
@@ -74,7 +74,7 @@ immediately repeating a completed flash.
 ## 6. Check the result
 
 1. Hold **PARA** on a home screen to open GLOBAL SETTINGS.
-2. Open **SYSTEM** and find **FIRMWARE**. It shows the installed version.
+2. Open **SYSTEM** and find **VERSION**. It shows the installed version.
 3. Choose **BACK** to leave the menu, then **BACK** again to leave Settings.
 
 <p align="center"><img src="../assets/docs/pedal-settings-system.png" alt="GLOBAL SETTINGS → SYSTEM shows the installed firmware version" width="330"><br><sub>GLOBAL SETTINGS → SYSTEM shows the installed firmware version</sub></p>

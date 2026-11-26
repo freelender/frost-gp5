@@ -24,7 +24,7 @@ manage models and cabinets, and organize songs for performance.
 </tr></table>
 
 Frost is in beta and supports the Valeton GP-5. The installed version is shown
-in GLOBAL SETTINGS → SYSTEM → FIRMWARE; release notes come with each release.
+in GLOBAL SETTINGS → SYSTEM → VERSION; release notes come with each release.
 
 ## Features
 

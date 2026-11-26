@@ -47,7 +47,8 @@ redistributable. Retain attribution when adapting third-party source.
 - Keep protocol IDs, wire formats and preset storage compatible; add, never
   reassign. Transitions stay bounded and faults are handled, not hidden.
 - Keep the controls: PARA turn selects, PARA press edits; on the Chain and
-  Stomp screens the footswitch bypasses only the selected block.
+  Stomp screens SELECTED mode bypasses only the selected block; the optional
+  CTL mode toggles only blocks assigned in the current preset.
 - Keep the approved Frost logo and blue colours.
 - Converted capture models are approximations; Frost does not run native NAM.
   AMP plus five effects is a target, not a guarantee for every chain.

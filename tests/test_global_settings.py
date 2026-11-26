@@ -9,7 +9,7 @@ sys.path[:0]=[str(ROOT/'tools'),str(ROOT/'tests')]
 from host import build
 import settings_nav
 CHAIN,PARAMS,SETTINGS,SVALUE,SCONFIRM,PHOME,STOMP=0,1,9,10,11,12,13
-IN_GAIN,OUT_LEVEL,OUT_MODE,CAB,BRIGHT,HOME,SETLIST_HOLD,FIRMWARE,RESET,FACTORY,EQ_BASS,EQ_MIDDLE,EQ_TREBLE,TAP_NOTE,TEMPO_LIGHT,TAP_TEMPO,TAP_TARGET,BACK=range(18)
+IN_GAIN,OUT_LEVEL,OUT_MODE,CAB,BRIGHT,HOME,SETLIST_HOLD,VERSION,RESET,FACTORY,EQ_BASS,EQ_MIDDLE,EQ_TREBLE,TAP_NOTE,TEMPO_LIGHT,TAP_TEMPO,TAP_TARGET,BACK=range(18)
 class GlobalSettingsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -44,9 +44,9 @@ class GlobalSettingsTests(unittest.TestCase):
                 settings_nav.turn_to(c,pos);rows[top].append(c.ge_settings_row())
         N=settings_nav
         self.assertEqual(rows[0][:4]+rows[0][5:],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB,N.BACK])
-        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.BACK])
+        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.FOOTSWITCH,N.BACK])
         self.assertEqual(rows[2],[N.TAP_TEMPO,N.TAP_NOTE,N.TAP_TARGET,N.TEMPO_LIGHT,N.BACK])
-        self.assertEqual(rows[3],[N.FIRMWARE,N.RESET,N.FACTORY,N.BACK])
+        self.assertEqual(rows[3],[N.FIRMWARE,N.VERSION,N.RESET,N.FACTORY,N.BACK])
         c.ge_press();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,3))   # BACK -> top, on SYSTEM
         settings_nav.turn_to(c,2);c.ge_press();self.assertEqual(c.ge_settings_menu(),5)
         settings_nav.turn_to(c,4);c.ge_press();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,2))   # on TAP TEMPO
@@ -60,7 +60,7 @@ class GlobalSettingsTests(unittest.TestCase):
         self.open_settings();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,0))   # reopens at the top
     def test_long_press_opens_settings_short_press_still_edits(self):
         c=self.lib;c.ge_press();self.assertEqual(c.ge_view(),PARAMS)
-        c.ge_turn(c.ge_human_count(c.ge_type(c.ge_selected()))+3);c.ge_press();self.assertEqual(c.ge_view(),CHAIN)    # BACK row returns home
+        c.ge_turn(c.ge_row_total()-2);c.ge_press();self.assertEqual(c.ge_view(),CHAIN)    # BACK row returns home
         self.open_settings();self.leave();self.assertEqual(c.ge_view(),CHAIN)
     def test_settings_edit_clamp_persist_and_reach_the_dsp(self):
         c=self.lib;self.open_settings()
@@ -110,19 +110,26 @@ class GlobalSettingsTests(unittest.TestCase):
         self.assertEqual(c.ge_paint(),0);self.assertEqual(c.ge_store_preset(0),1)
         c.ge_press();self.assertEqual(c.ge_view(),SETTINGS);self.assertEqual(c.ge_store_preset(0),1)          # second ask: CANCEL default
         c.ge_press();c.ge_turn(1);c.ge_press();c.ge_turn(1);c.ge_press();self.assertEqual(c.ge_store_preset(0),0)
-        self.go_row(FIRMWARE);c.ge_press();self.assertEqual(c.ge_view(),SETTINGS)
+        self.go_row(VERSION);c.ge_press();self.assertEqual(c.ge_view(),SETTINGS)
     def test_last_preset_is_loaded_at_boot(self):
         c=self.lib;c.ge_queue_raw(1,0,1600);self.settle();want=c.ge_actual_value(1,0);c.ge_flash_save(7);self.settle()
         c.ge_queue_raw(1,0,1000);self.settle();c.ge_advance(11000);self.settle()   # debounced save of the current preset
         self.assertEqual(c.ge_global(6),7)
         c.ge_reboot();self.settle();self.blocks(8);self.settle()
         self.assertEqual(c.ge_current_preset(),7);self.assertEqual(c.ge_actual_value(1,0),want)
+    def test_system_starts_with_read_only_firmware_frost_then_version(self):
+        c=self.lib;c.ge_firmware_name.restype=ct.c_char_p
+        self.open_settings();settings_nav.top(c);settings_nav.turn_to(c,settings_nav.TOP_SYSTEM);c.ge_press()
+        self.assertEqual((c.ge_settings_pos(),c.ge_settings_row()),(0,settings_nav.FIRMWARE))
+        self.assertEqual(c.ge_firmware_name(),b'FROST');c.ge_press();self.assertEqual(c.ge_view(),SETTINGS)
+        c.ge_turn(1);self.assertEqual(c.ge_settings_row(),VERSION);c.ge_press();self.assertEqual(c.ge_view(),SETTINGS)
+        self.assertEqual(c.ge_paint(),0)
     def test_release_version_is_complete_and_fits_settings_row(self):
         c=self.lib;c.ge_firmware_text.restype=ct.c_char_p
         label=c.ge_firmware_text().decode()
         self.assertEqual(label,'0.1.0-BETA.16')
-        self.assertGreaterEqual(153-6*len(label),15+6*len('FIRMWARE')+6)
-        self.open_settings();self.go_row(FIRMWARE);self.assertEqual(c.ge_paint(),0)
+        self.assertGreaterEqual(153-6*len(label),15+6*len('VERSION')+6)
+        self.open_settings();self.go_row(VERSION);self.assertEqual(c.ge_paint(),0)
     def test_output_eq_clamps_persists_and_reconciles_to_dsp(self):
         c=self.lib;self.open_settings()
         self.set_value(EQ_BASS,-50);self.set_value(EQ_MIDDLE,50);self.set_value(EQ_TREBLE,6)
