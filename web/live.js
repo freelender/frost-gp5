@@ -305,8 +305,9 @@ export class LiveView {
     }
     this.inspector.append(head, box);
 
-    const browse=el('button','btn ghost browse-effects',eff?'Browse / replace effect →':'Browse effects →');
-    browse.type='button'; browse.onclick=()=>{this.fxSearch.scrollIntoView({block:'nearest'});this.fxSearch.focus();}; box.append(browse);
+    const actions=el('div','effect-actions'), browse=el('button','btn ghost browse-effects',eff?'Replace effect':'Add Effect');
+    browse.type='button'; browse.onclick=()=>{this.fxSearch.scrollIntoView({block:'nearest'});this.fxSearch.focus();};
+    actions.append(browse);box.append(actions);
     if (!eff) { box.appendChild(el('p', 'noparams', 'Choose an effect to fill this block. A new block starts switched off.')); return; }
     if (!eff.params.length) box.appendChild(el('p', 'noparams', 'This effect has no settings.'));
     if(d.type===3){
@@ -314,23 +315,48 @@ export class LiveView {
       if(cab)box.appendChild(this.cabField(s,cab));
       else box.appendChild(el('p','noparams','Cabinet selection requires the IR-control firmware update.'));
     }
+    if(d.type===33)box.appendChild(this.modelField(s,d.values[0] ?? eff.params[0].initial));
     const knobs = el('div', 'knobrow');
-    eff.params.forEach((p, i) => knobs.appendChild(this.field(s, i, p, d.values[i] ?? p.initial)));
+    eff.params.forEach((p, i) => { if(d.type!==33 || i!==0)knobs.appendChild(this.field(s, i, p, d.values[i] ?? p.initial)); });
     if (eff.params.length) box.appendChild(knobs);
     box.appendChild(el('p', 'knobhint', 'Drag a knob up or down or scroll on it (Shift: fine), double-click for the default, or use the arrow keys.'));
+  }
+  modelField(s,value) {
+    const row=el('label','picker'), sel=el('select');
+    row.append(el('span','inputlabel','MODEL'),sel);
+    sel.id=`p-${s}-0`;sel.dataset.p=0;
+    sel.setAttribute('aria-label','MODEL');
+    for(let i=0;i<=63;i++)sel.add(new Option('',i));
+    if(this.ui.addFile)sel.add(new Option('Add a model…','add'));
+    const show=()=>{
+      const models=this.ui.models?.() || {}, options=sel.options || sel.children;
+      for(let i=0;i<=63;i++)options[i].text=`${String(i).padStart(2,'0')} · ${models[i]?.label || (i===0?'Built-in default':'Empty — default fallback')}`;
+    };
+    show();sel.value=value;
+    sel.addEventListener('sync',()=>{value=Number(sel.value);show();});
+    sel.addEventListener('change',()=>{
+      if(sel.value==='add'){sel.value=value;this.ui.addFile('amps',s);return;}
+      value=Number(sel.value);this.queue(s,0,value);
+    });
+    return row;
   }
   cabField(s,cab) {
     const row=el('label','picker'), sel=el('select'), status=el('p','noparams');
     row.append(el('span','inputlabel','CAB'),sel,status);sel.dataset.cab='1';
+    sel.setAttribute('aria-label','CAB');
     sel.add(new Option('00 · Built in',0));const cabs=this.ui.cabs?.() || {};
     for(let i=1;i<=63;i++)sel.add(new Option(`${String(i).padStart(2,'0')} · ${cabs[i-1]?.label || (cab.number===i && cab.exists?cab.name:'Empty — built-in fallback')}`,i));
+    if(this.ui.addFile)sel.add(new Option('Add a cabinet…','add'));
     const show=c=>{
       const latest=this.ui.cabs?.() || {}, options=sel.options || sel.children;
       for(let i=1;i<=63;i++)options[i].text=`${String(i).padStart(2,'0')} · ${latest[i-1]?.label || (c.number===i && c.exists?c.name:'Empty — built-in fallback')}`;
-      sel.value=c.number;status.textContent=c.override?'Cabinet bypassed: CAB OVERRIDE is on in pedal settings.':c.busy?'Loading cabinet…':c.error?'Cabinet unavailable — using built in.':!c.exists?'Empty cabinet slot — using built in.':'Cabinet choice is saved with the preset.';
+      cab=c;sel.value=c.number;status.textContent=c.override?'Cabinet bypassed: CAB OVERRIDE is on in pedal settings.':c.busy?'Loading cabinet…':c.error?'Cabinet unavailable — using built in.':!c.exists?'Empty cabinet slot — using built in.':'Cabinet choice is saved with the preset.';
     };
     show(cab);this.cabSync=show;
-    sel.onchange=()=>this.act(()=>this.live.setCab(s,Number(sel.value)),'cabinet',true);
+    sel.onchange=()=>{
+      if(sel.value==='add'){sel.value=cab.number;this.ui.addFile('cabs',s);return;}
+      return this.act(()=>this.live.setCab(s,Number(sel.value)),'cabinet',true);
+    };
     return row;
   }
   /**
@@ -400,7 +426,11 @@ export class LiveView {
     if(d.type===3){const cab=await this.live.cab(s);if(cab && s===this.selected && !this.busy && document.activeElement!==this.inspector.querySelector('[data-cab]'))this.cabSync?.(cab);}
     d.values.forEach((v, p) => {
       const inp = this.inspector.querySelector(`[data-p="${p}"]`);
-      if (inp && document.activeElement !== inp && Number(inp.value) !== v) { inp.value = v; inp.dispatchEvent(new Event('sync')); }
+      if (inp && document.activeElement !== inp) {
+        const changed=Number(inp.value)!==v;
+        if(changed)inp.value=v;
+        if(changed || (d.type===33 && p===0))inp.dispatchEvent(new Event('sync'));
+      }
     });
   }
 

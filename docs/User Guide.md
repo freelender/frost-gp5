@@ -136,10 +136,16 @@ On the pedal, select a block and press PARA. Use **TYPE** to choose its effect,
 **POSITION** to move it in the signal order, and **REMOVE** to clear it after
 confirmation. Effect parameter rows control its sound.
 
-On the website, open **Live editor**, select a block, and use its inspector to
-change the effect, bypass state and available parameters. Changes affect the
-sound immediately, but they are **not saved to a preset** until you save on
-the pedal. Selecting another preset or switching off discards unsaved edits.
+On the website, open **Editor**, select a block, and use its inspector to
+change the effect, bypass state and available parameters. **Replace effect**
+opens the Effects library; an empty block shows **Add Effect**. Changes affect
+the sound immediately, but they are **not saved to a preset** until you use
+**Save to pedal** in the Editor or save on the pedal itself. Selecting another
+preset or switching off discards unsaved edits. The selector above the chain
+shows the current preset; its arrows load the previous/next saved preset,
+and clicking its name opens preset search.
+
+<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Editor with preset selector, six-block chain, named NAM dropdown and right-aligned Replace effect button" width="760"><br><sub>Website Editor (local documentation demo with synthetic names)</sub></p>
 
 There are six slots, but processing capacity depends on the effects chosen.
 AMP plus five effects is the design target, not a guarantee for every heavy
@@ -281,15 +287,22 @@ BASS, MIDDLE and TREBLE adjust the model output by -12 to +12 dB, with
 
 ### Add a capture model
 
-1. Open **AMP models** on the website.
+1. Open **NAMs & IRs → Amp models → Add model** on the website.
 2. Choose a supported `.nam` capture or a ready-made `.fcm` file.
 3. For a NAM conversion, optionally choose the recommended training `input.wav`
    described on the page. Click **Convert** and allow a few minutes.
 4. Choose a name and MODEL number, then click **Write to pedal** and confirm.
-5. Select that model in the NAM block and save the preset on the pedal.
+5. Choose **Use in this block** when offered, or select the model by name in
+   the Editor's NAM **MODEL** dropdown. Save the preset on the website or pedal.
 
 MODEL 00 is built in; MODEL 01–63 are user model positions. Conversion quality
 depends on the capture. Replacing a model number changes all presets using it.
+
+To rename a stored capture, find it in **NAMs & IRs → Amp models**, click
+**Rename**, edit the prefilled name (up to 15 characters), and choose **Save**
+or **Cancel**. Renaming keeps its MODEL number and audio data, so existing
+presets keep using it. **Add a model…** in the Editor's MODEL dropdown opens
+the import form directly.
 
 ## 5. Cabinet IRs
 
@@ -312,11 +325,18 @@ bypass fade.
 
 ### Add and select a cabinet
 
-1. Open **Cabinet IRs** and choose a cabinet `.wav` file.
+1. Open **NAMs & IRs → Cabinet IRs → Add cabinet** and choose a cabinet
+   `.wav` file.
 2. Choose a name and CAB number, then **Write to pedal** and confirm.
-3. Open the IR block in the live editor or on the pedal and change **CAB** to
-   that number. Uploading a file alone does not select it in the active chain.
-4. Save the preset on the pedal to retain the CAB selection and IR settings.
+3. Choose **Use in this block** when offered, or open the IR block in the
+   Editor and select its name in **CAB**. On the pedal, select its CAB number.
+   Uploading a file alone does not select it in the active chain.
+4. Save the preset on the website or pedal to retain the CAB selection and IR settings.
+
+The cabinet list also offers **Rename**: edit its prefilled name and choose
+**Save** or **Cancel**. This preserves its CAB number, audio data and preset
+references. **Add a cabinet…** in the Editor's CAB dropdown opens the import
+form directly. Names are limited to 15 characters.
 
 The website converts supported WAV files to a mono, 44.1 kHz, 512-tap response.
 Long reverberation tails are not retained as a full room impulse response.
@@ -349,7 +369,9 @@ load through this menu, choose the preset number, press PARA, select **LOAD**
 and press again. PRESET home offers quicker footswitch/PARA navigation.
 
 The website's **Presets** page can rename, reorder and delete stored presets.
-Live-editor changes still need the on-pedal SAVE operation.
+To store Editor changes from the website, choose **Save as preset**, enter a
+name and click **Save to pedal**. Confirm the destination; an occupied number
+is replaced. The on-pedal SAVE workflow remains available.
 
 The pedal remembers the preset you are on and starts with it after a power
 cycle. It stores your choice once you have stayed on a preset for about two
@@ -383,7 +405,7 @@ A song contains named parts such as Intro, Verse and Chorus. Each part refers
 to an existing preset number. A setlist arranges songs in performance order.
 
 1. Save the presets you want to use first.
-2. Open **Songs & setlist** on the website. If preserving an existing pedal
+2. Open **Setlists** on the website. If preserving an existing pedal
    setlist, use **Read from pedal** before editing your draft.
 3. Create a song, name its parts, and assign a preset number to each part.
 4. **Add the song to the setlist order.** A song in the library alone will not

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=1.8.0">
+<link rel="stylesheet" href="style.css?v=1.9.0">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -23,11 +23,12 @@
   </div>
   <div class="navlabel" id="navlabel">WORKSPACE</div>
   <nav class="nav" id="nav" aria-labelledby="navlabel">
-    <a href="#live" data-view="live"><span class="navicon" aria-hidden="true">◉</span>Live editor</a>
-    <a href="#amps" data-view="amps"><span class="navicon" aria-hidden="true">▥</span>AMP models</a>
-    <a href="#cabs" data-view="cabs"><span class="navicon" aria-hidden="true">▤</span>Cabinet IRs</a>
+    <a href="#live" data-view="live"><span class="navicon" aria-hidden="true">◉</span>Editor</a>
+    <a href="#models" data-view="models"><span class="navicon" aria-hidden="true">▥</span>NAMs &amp; IRs</a>
     <a href="#presets" data-view="presets"><span class="navicon" aria-hidden="true">♬</span>Presets</a>
-    <a href="#setlists" data-view="setlists"><span class="navicon" aria-hidden="true">≡</span>Songs &amp; setlist</a>
+    <a href="#setlists" data-view="setlists"><span class="navicon" aria-hidden="true">≡</span>Setlists</a>
+  </nav>
+  <nav class="nav utilitynav" aria-label="Tools and information">
     <a href="#firmware" data-view="firmware"><span class="navicon" aria-hidden="true">⬡</span>Firmware</a>
     <a href="#about" data-view="about"><span class="navicon" aria-hidden="true">ⓘ</span>About &amp; credits</a>
   </nav>
@@ -52,8 +53,9 @@
 
     <!-- Live editor -->
     <section id="view-live" class="view" aria-labelledby="h-live">
-      <div class="heading">
-        <div><div class="eyebrow">Live editor</div><h1 id="h-live">Shape your tone.</h1><p>Pick an effect for each slot, switch it on and turn its knobs. The pedal follows instantly.</p></div>
+      <div class="heading editor-heading">
+        <h1 id="h-live" class="sr">Editor</h1>
+        <div class="eyebrow">Live editor</div>
         <div class="headingbuttons">
           <div class="presetnav" id="preset-nav" role="group" aria-label="Preset on the pedal" hidden>
             <button class="btn small ghost" id="preset-prev" type="button" aria-label="Load the previous preset" title="Previous preset">◀</button>
@@ -138,24 +140,33 @@
       <div id="setlist-editor"></div>
     </section>
 
-    <!-- AMP models -->
-    <section id="view-amps" class="view" aria-labelledby="h-amps" hidden>
-      <div class="heading"><div><div class="eyebrow">NAM captures</div><h1 id="h-amps">AMP models.</h1><p>Convert a NAM A2 capture in this page and write it to a MODEL number. The capture never leaves your computer.</p></div></div>
-      <div class="grid2">
-        <div class="panel pad">
-          <div class="paneltitle">Add a model</div>
-          <label class="drop" id="amp-drop"><input id="amp-file" type="file" accept=".nam,.fcm"><span class="symbol" aria-hidden="true">⇧</span><b id="amp-dropname">Drop a .nam or .fcm file</b><small>NAM A2 capture, or a ready-made Frost model · or click to choose</small></label>
+    <!-- Shared amp/cabinet library -->
+    <section id="view-models" class="view" aria-labelledby="h-models" hidden>
+      <div class="heading"><div><div class="eyebrow">Your sound library</div><h1 id="h-models">NAMs &amp; IRs.</h1><p>Manage your amp captures and cabinets. Import a file, then choose it in the Editor.</p></div><div><button class="btn ghost" id="model-import" type="button">Import file…</button><input id="model-file" type="file" accept=".nam,.fcm,.wav" hidden></div></div>
+      <div class="model-tabs" role="group" aria-label="Library type">
+        <button class="btn" id="models-tab-amps" aria-pressed="true" aria-controls="models-amps">Amp models</button>
+        <button class="btn" id="models-tab-cabs" aria-pressed="false" aria-controls="models-cabs">Cabinet IRs</button>
+      </div>
+      <p class="hint">Drop a .nam, .fcm or cabinet .wav file anywhere on this page to add it. Files stay on your computer.</p>
+      <section id="models-amps" class="model-pane" aria-labelledby="models-tab-amps">
+        <div class="library-toolbar">
+          <label class="search"><span class="sr">Search amp models</span><input id="amp-search" type="search" placeholder="Search by name or number" autocomplete="off"></label>
+          <button class="btn primary" id="amp-add" aria-expanded="false" aria-controls="amp-import">Add model</button>
+        </div>
+        <section class="panel pad import-panel" id="amp-import" aria-labelledby="amp-import-title" hidden>
+          <div class="panelhead flat"><h2 id="amp-import-title">Add a model</h2><button class="btn ghost small" id="amp-close" aria-label="Close model import">Close</button></div>
+          <label class="drop" id="amp-drop"><input id="amp-file" type="file" accept=".nam,.fcm,.wav"><span class="symbol" aria-hidden="true">⇧</span><b id="amp-dropname">Drop a .nam or .fcm file</b><small>NAM A2 capture, or a ready-made Frost model · or click to choose</small></label>
           <p id="amp-info" class="hint" hidden></p>
           <div class="inputrow">
             <label><span class="inputlabel">Name</span><input id="amp-name" maxlength="15" placeholder="e.g. MY CRUNCH" autocomplete="off"></label>
             <label><span class="inputlabel">MODEL number</span><select id="amp-slot"></select></label>
           </div>
-          <div class="trainbox">
+          <div class="trainbox" id="amp-training" hidden>
             <div class="traintop">
               <div><span class="inputlabel">Training audio <span class="tag">recommended</span></span><span id="train-state" class="trainstate">Not chosen · built-in test audio is used</span></div>
               <div class="trainbtns"><label class="btn ghost small" id="train-pick">Choose input.wav<input id="train-file" type="file" accept=".wav,audio/wav" hidden></label><button class="btn ghost small" id="train-clear" hidden>Clear</button></div>
             </div>
-            <p class="hint">Use the official NAM <b>input.wav</b>: real guitar and bass recordings, the same file NAM captures are trained on. In our tests it gave clearly closer models on crunch and high-gain amps. Download it free from the <a href="https://neural-amp-modeler.readthedocs.io/en/latest/tutorials/full.html" target="_blank" rel="noopener">Neural Amp Modeler website</a> (the "input.wav" link), then choose it here. Frost can't include it. The file stays on your computer; conversion takes about 30% longer with it.</p>
+            <details class="training-help"><summary>About training audio</summary><p class="hint">Use the official NAM <b>input.wav</b>: real guitar and bass recordings, the same file NAM captures are trained on. In our tests it gave clearly closer models on crunch and high-gain amps. Download it free from the <a href="https://neural-amp-modeler.readthedocs.io/en/latest/tutorials/full.html" target="_blank" rel="noopener">Neural Amp Modeler website</a> (the "input.wav" link), then choose it here. Frost can't include it. The file stays on your computer; conversion takes about 30% longer with it.</p></details>
           </div>
           <div class="progress" id="amp-progress" hidden><div class="meter"><i id="amp-bar"></i></div><span id="amp-stage" class="micro"></span></div>
           <p id="amp-quality" class="hint" hidden></p>
@@ -166,22 +177,22 @@
             <button id="amp-write" class="btn primary" disabled>Write to pedal</button>
           </div>
           <p id="amp-why" class="why"></p>
-          <p class="hint">Conversion takes a few minutes. A converted model is an approximation of the capture.</p>
-        </div>
+          <p class="hint" id="amp-conversion-note" hidden>Conversion takes a few minutes. A converted model is an approximation of the capture.</p>
+        </section>
+        <div class="banner upload-result" id="amp-result" role="status" hidden><div><strong id="amp-result-name"></strong><span>Stored on the pedal. Choose it in the Editor to use it, then save your preset.</span></div><div class="actions"><button class="btn primary small" id="amp-use" hidden>Use in this block</button><button class="btn ghost small" data-editor>Open Editor</button></div></div>
         <div class="panel pad">
-          <div class="panelhead flat"><div><div class="paneltitle">On the pedal</div><div class="micro" id="amps-summary">Connect to read the pedal.</div></div></div>
+          <div class="panelhead flat"><div><h2>On the pedal</h2><div class="micro" id="amps-summary">Connect to read the pedal.</div></div></div>
           <ul id="amp-list" class="library"></ul>
         </div>
-      </div>
-    </section>
-
-    <!-- Cabinets -->
-    <section id="view-cabs" class="view" aria-labelledby="h-cabs" hidden>
-      <div class="heading"><div><div class="eyebrow">Impulse responses</div><h1 id="h-cabs">Cabinet IRs.</h1><p>Load a .wav impulse response into a CAB number. On the pedal: IR block → CAB. CAB 00 is the built-in cabinet.</p></div></div>
-      <div class="grid2">
-        <div class="panel pad">
-          <div class="paneltitle">Add a cabinet</div>
-          <label class="drop" id="cab-drop"><input id="cab-file" type="file" accept=".wav,audio/wav"><span class="symbol" aria-hidden="true">≋</span><b id="cab-dropname">Drop a .wav impulse response</b><small>Any sample rate, mono or stereo · or click to choose</small></label>
+      </section>
+      <section id="models-cabs" class="model-pane" aria-labelledby="models-tab-cabs" hidden>
+        <div class="library-toolbar">
+          <label class="search"><span class="sr">Search cabinet IRs</span><input id="cab-search" type="search" placeholder="Search by name or number" autocomplete="off"></label>
+          <button class="btn primary" id="cab-add" aria-expanded="false" aria-controls="cab-import">Add cabinet</button>
+        </div>
+        <section class="panel pad import-panel" id="cab-import" aria-labelledby="cab-import-title" hidden>
+          <div class="panelhead flat"><h2 id="cab-import-title">Add a cabinet</h2><button class="btn ghost small" id="cab-close" aria-label="Close cabinet import">Close</button></div>
+          <label class="drop" id="cab-drop"><input id="cab-file" type="file" accept=".nam,.fcm,.wav"><span class="symbol" aria-hidden="true">≋</span><b id="cab-dropname">Drop a .wav impulse response</b><small>Any sample rate, mono or stereo · or click to choose</small></label>
           <p id="cab-info" class="hint" hidden></p>
           <div class="inputrow">
             <label><span class="inputlabel">Name</span><input id="cab-name" maxlength="15" placeholder="e.g. V30 4X12" autocomplete="off"></label>
@@ -189,12 +200,13 @@
           </div>
           <div class="actions"><button id="cab-write" class="btn primary" disabled>Write to pedal</button></div>
           <p id="cab-why" class="why"></p>
-        </div>
+        </section>
+        <div class="banner upload-result" id="cab-result" role="status" hidden><div><strong id="cab-result-name"></strong><span>Stored on the pedal. Choose it in the Editor to use it, then save your preset.</span></div><div class="actions"><button class="btn primary small" id="cab-use" hidden>Use in this block</button><button class="btn ghost small" data-editor>Open Editor</button></div></div>
         <div class="panel pad">
-          <div class="panelhead flat"><div><div class="paneltitle">On the pedal</div><div class="micro" id="cabs-summary">Connect to read the pedal.</div></div></div>
+          <div class="panelhead flat"><div><h2>On the pedal</h2><div class="micro" id="cabs-summary">Connect to read the pedal.</div></div></div>
           <ul id="cab-list" class="library"></ul>
         </div>
-      </div>
+      </section>
     </section>
 
     <!-- Presets -->
@@ -296,6 +308,6 @@
   <div class="limithint">REMOVE AN EFFECT</div>
   <button class="btn small ghost" id="limit-close" type="button">OK</button>
 </div>
-<script type="module" src="app.js?v=1.8.0"></script>
+<script type="module" src="app.js?v=1.9.0"></script>
 </body>
 </html>

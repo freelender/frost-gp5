@@ -1,14 +1,15 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
-import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.8.0';
-import { Store, PRESETS, parsePresetFile, recordCrc } from './store.js?v=1.8.0';
-import { convertIr, readWav, irWav } from './ir.js?v=1.8.0';
-import { LiveView, loadCatalog } from './live.js?v=1.8.0';
-import { initFirmware, isBusy } from './firmware.js?v=1.8.0';
-import { SetlistView } from './setlist_view.js?v=1.8.0';
-import { simulatedPedal } from './sim.js?v=1.8.0';
+import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.9.0';
+import { Store, PRESETS, parsePresetFile, recordCrc, assetName } from './store.js?v=1.9.0';
+import { convertIr, readWav, irWav } from './ir.js?v=1.9.0';
+import { LiveView, loadCatalog } from './live.js?v=1.9.0';
+import { initFirmware, isBusy } from './firmware.js?v=1.9.0';
+import { SetlistView } from './setlist_view.js?v=1.9.0';
+import { simulatedPedal } from './sim.js?v=1.9.0';
+import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.0';
 
-export const VERSION = '1.8.0';
+export const VERSION = '1.9.0';
 const $ = id => document.getElementById(id);
 const pad2 = i => String(i).padStart(2, '0');
 const state = {
@@ -41,7 +42,8 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
   $('confirm-title').textContent = title; $('confirm-text').textContent = text;
   $('confirm-ok').textContent = ok; $('confirm-ok').className = 'btn ' + (danger ? 'danger' : 'primary');
   $('confirm-input-label').hidden = !input;
-  if (input) { $('confirm-input-name').textContent = input.label; $('confirm-input').value = input.value; }
+  $('confirm-input').setCustomValidity('');
+  if (input) { $('confirm-input-name').textContent = input.label; $('confirm-input').value = input.value; $('confirm-input').maxLength = input.maxLength ?? 16; }
   const box = $('confirm-selects'); box.textContent = ''; box.hidden = !selects;
   const picks = (selects || []).map(s => {
     const label = document.createElement('label'), name = document.createElement('span'), sel = document.createElement('select');
@@ -55,7 +57,13 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
   return new Promise(resolve => {
     let settled = false;
     const finish = yes => {
-      if (settled) return; settled = true;
+      if (settled) return;
+      if (yes && input?.validate) {
+        const error = input.validate($('confirm-input').value);
+        $('confirm-input').setCustomValidity(error || '');
+        if (error) { $('confirm-input').reportValidity(); return; }
+      }
+      settled = true;
       d.onclose = d.oncancel = $('confirm-ok').onclick = $('confirm-cancel').onclick = null;
       const value = input ? (yes ? $('confirm-input').value : null) : selects ? (yes ? picks.map(p => Number(p.value)) : null) : yes;
       if (d.open) d.close(yes ? 'ok' : 'cancel');
@@ -65,6 +73,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
     $('confirm-cancel').onclick = e => { e.preventDefault(); finish(false); };
     d.oncancel = () => finish(false);
     $('confirm-input').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } };   // Enter renames
+    $('confirm-input').oninput = () => $('confirm-input').setCustomValidity('');
     d.onclose = () => finish(d.returnValue === 'ok');
     if (!d.open) d.showModal();
     (input ? $('confirm-input') : picks[0] || $('confirm-ok')).focus();
@@ -72,11 +81,18 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'LIVE EDITOR', amps: 'AMP MODELS', cabs: 'CABINET IRS', presets: 'PRESETS', setlists: 'SONGS & SETLIST', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+let libraryKind = 'amps';
 function show(view, focus = false) {
+  const route = libraryRoute(view); view = route.view;
+  if (route.kind) libraryKind = route.kind;
   if (!TITLES[view]) view = 'live';
   for (const s of document.querySelectorAll('.view')) s.hidden = s.id !== 'view-' + view;
-  for (const a of $('nav').children) { const on = a.dataset.view === view; a.classList.toggle('active', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+  for (const a of document.querySelectorAll('[data-view]')) { const on = a.dataset.view === view; a.classList.toggle('active', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+  for (const kind of ['amps', 'cabs']) {
+    $('models-' + kind).hidden = libraryKind !== kind;
+    $('models-tab-' + kind).setAttribute('aria-pressed', libraryKind === kind);
+  }
   $('breadcrumb').textContent = 'STUDIO / ' + TITLES[view];
   if (focus) $('content').focus({ preventScroll: true });
 }
@@ -86,7 +102,9 @@ show(location.hash.slice(1));
 
 // ---------- connection ----------
 const live = new LiveView($('chain-strip'), $('inspector'), {
+  models: () => state.models,
   cabs: () => state.cabs,
+  addFile: (kind, slot) => openImport(kind, slot),
   state: t => { $('live-state').textContent = t; },
   edited: () => { if (!state.dirty) { state.dirty = true; renderDirty(); } },
   refused: t => toast(t, 'bad'),
@@ -139,6 +157,9 @@ async function connect() {
 }
 function disconnect() {
   live.detach(); if (state.pedal) state.pedal.close();
+  for (const kind of ['amps', 'cabs']) {
+    delete importTargets[kind]; delete uploadedTargets[kind]; $(libraryPrefix(kind) + '-result').hidden = true;
+  }
   Object.assign(state, { pedal: null, files: null, store: null, mode: 'off', models: {}, cabs: {}, presets: {}, dirty: false });
   setlists.attach(null, {}); setLivePanel(); renderLists(); updateButtons();
 }
@@ -240,6 +261,55 @@ function list(ul, rows, empty) {
 }
 
 // ---------- AMP models ----------
+const libraryPrefix = kind => kind === 'amps' ? 'amp' : 'cab';
+const importTargets = {}, uploadedTargets = {};
+for (const kind of ['amps', 'cabs']) {
+  const prefix = libraryPrefix(kind);
+  $('models-tab-' + kind).onclick = () => go('models/' + kind);
+  $(prefix + '-add').onclick = () => openImport(kind);
+  $(prefix + '-close').onclick = () => {
+    $(prefix + '-import').hidden = true; $(prefix + '-add').setAttribute('aria-expanded', 'false'); $(prefix + '-add').focus();
+  };
+  $(prefix + '-search').oninput = () => kind === 'amps' ? renderAmps() : renderCabs();
+}
+for (const button of document.querySelectorAll('[data-editor]')) button.onclick = () => go('live');
+function captureImportTarget(kind, slot = live.selected) {
+  return live.attached && live.chainState?.types[slot] === (kind === 'amps' ? 33 : 3) ? { session: live.live, slot } : null;
+}
+function openImport(kind, slot) {
+  importTargets[kind] = captureImportTarget(kind, slot);
+  go('models/' + kind);
+  const prefix = libraryPrefix(kind);
+  $(prefix + '-import').hidden = false; $(prefix + '-add').setAttribute('aria-expanded', 'true');
+  $(prefix + '-file').focus();
+}
+function uploaded(kind, number, label) {
+  const prefix = libraryPrefix(kind), target = importTargets[kind] || captureImportTarget(kind);
+  uploadedTargets[kind] = { target, number };
+  $(prefix + '-result').hidden = false;
+  $(prefix + '-result-name').textContent = `${label} · ${kind === 'amps' ? 'MODEL' : 'CAB'} ${pad2(number)} is ready`;
+  $(prefix + '-use').hidden = !target;
+  $(prefix + '-use').onclick = () => useUploaded(kind);
+  $(prefix + '-import').hidden = true; $(prefix + '-add').setAttribute('aria-expanded', 'false');
+  $(prefix + '-result').scrollIntoView({ block: 'nearest' });
+}
+async function useUploaded(kind) {
+  const { target, number } = uploadedTargets[kind] || {};
+  if (state.op || isBusy()) { toast('Wait for the current operation to finish.', 'bad'); return; }
+  try { await useLibraryFile(live, target, kind, number); go('live'); }
+  catch (e) { toast(e.message || 'Could not select that file. Try again in the Editor.', 'bad'); }
+}
+async function takeLibraryFile(file) {
+  $('view-models').classList.remove('over');
+  if (state.op || isBusy()) { toast('Wait for the current operation to finish.', 'bad'); return; }
+  try {
+    const kind = fileKind(file.name);
+    if ($('view-models').hidden || libraryKind !== kind || $(libraryPrefix(kind) + '-import').hidden) openImport(kind);
+    await (kind === 'amps' ? takeAmpFile(file) : takeCabFile(file));
+  } catch (e) { toast(e.message || 'Could not read that file.', 'bad'); }
+}
+dropZone($('view-models'), $('model-file'), takeLibraryFile);
+$('model-import').onclick = () => $('model-file').click();
 /** A file-name-safe lower-case slug, e.g. "Plexi Crunch!" -> "plexi-crunch". */
 const slug = (name, none) => (name || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || none;
 /** Read one stored AMP model or cabinet from the pedal and save it as a file. */
@@ -249,15 +319,29 @@ function downloadStored(what, read, bytes, file) {
     save(bytes(r), file(recordLabel(r))); toast(`${what} downloaded.`, 'ok');
   }, async () => {});
 }
+async function renameStored(kind, index) {
+  const store = state.store, entry = (kind === 'amp' ? state.models : state.cabs)[index];
+  if (!store || !entry || state.op || isBusy()) return;
+  const what = `${kind === 'amp' ? 'MODEL' : 'CAB'} ${pad2(index + (kind === 'ir' ? 1 : 0))}`;
+  const name = await ask(`Rename ${what}`, 'Change the name stored on the pedal. The slot number and sound stay the same.', 'Save', {
+    input: { label: 'Name (up to 15 characters)', value: entry.label || '', maxLength: 15,
+      validate: value => { try { assetName(value); return ''; } catch (e) { return e.message; } } },
+  });
+  if (name == null || assetName(name) === entry.label) return;
+  if (state.store !== store) { toast('The pedal connection changed. Reopen Rename to try again.', 'bad'); return; }
+  if (await exclusive(`Renaming ${what}`, () => kind === 'amp' ? store.ampRename(index, name, entry.crc) : store.irRename(index, name, entry.crc)))
+    toast(`${what} renamed to "${assetName(name)}".`, 'ok');
+}
 function renderAmps() {
-  const idx = Object.keys(state.models).map(Number).sort((a, b) => a - b);
+  const all = Object.keys(state.models), idx = matchingSlots(state.models, $('amp-search').value);
   list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', sub: `MODEL ${pad2(i)}`, buttons: [
+    ['Rename', 'ghost', () => renameStored('amp', i), `Rename MODEL ${pad2(i)}`],
     ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove MODEL ${pad2(i)}?`, `"${state.models[i].label}" is deleted from the pedal. An AMP block set to it plays the default model.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing MODEL ${pad2(i)}`, () => state.store.ampRemove(i))) toast(`MODEL ${pad2(i)} removed.`, 'ok');
-  }, `Remove MODEL ${pad2(i)}`]] })), state.store ? 'No AMP models yet. Add one on the left.' : offlineText());
-  $('amps-summary').textContent = state.store ? `${idx.length} of 63 used · MODEL 00 is the built-in amp` : 'Not connected';
+  }, `Remove MODEL ${pad2(i)}`]] })), state.store ? (all.length ? 'No matching models.' : 'No amp models yet. Choose Add model to import one.') : offlineText());
+  $('amps-summary').textContent = state.store ? `${all.length} of 63 used · MODEL 00 is the built-in amp` : 'Not connected';
 }
 function fillSlots() {
   const fill = (sel, n, first, used, fmt) => {
@@ -272,10 +356,10 @@ function fillSlots() {
 function dropZone(zone, input, take) {
   for (const ev of ['dragenter', 'dragover']) zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('over'); });
   for (const ev of ['dragleave', 'drop']) zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('over'); });
-  zone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) take(f); });
+  zone.addEventListener('drop', e => { e.stopPropagation(); const f = e.dataTransfer.files[0]; if (f) take(f); });
   input.onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) take(f); };
 }
-dropZone($('amp-drop'), $('amp-file'), async f => {
+async function takeAmpFile(f) {
   if (state.worker) { toast('A conversion is running. Cancel it first.', 'bad'); return; }
   state.record = null; state.nam = null; state.converted = false; $('amp-quality').hidden = true; $('amp-progress').hidden = true;
   $('amp-dropname').textContent = f.name;
@@ -294,12 +378,13 @@ dropZone($('amp-drop'), $('amp-file'), async f => {
     toast('That file cannot be used.', 'bad');
   }
   updateButtons();
-});
+}
+dropZone($('amp-drop'), $('amp-file'), takeLibraryFile);
 $('amp-name').oninput = () => { $('amp-name').value = $('amp-name').value.replace(/[^\x20-\x7e]/g, ''); };
 $('amp-convert').onclick = () => {
   if (!state.nam || state.worker) return;
   const name = ($('amp-name').value || 'AMP').slice(0, 15), workers = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  const w = new Worker(new URL('./convert_worker.js?v=1.8.0', import.meta.url), { type: 'module' }); state.worker = w;
+  const w = new Worker(new URL('./convert_worker.js?v=1.9.0', import.meta.url), { type: 'module' }); state.worker = w;
   const t0 = performance.now(), prog = (s, v) => { $('amp-progress').hidden = false; $('amp-bar').style.width = `${Math.round(100 * v)}%`; $('amp-stage').textContent = `${s} · ${Math.round((performance.now() - t0) / 1000)} s`; };
   const stop = () => { state.worker = null; w.terminate(); updateButtons(); };
   prog('Starting', 0);
@@ -347,20 +432,21 @@ $('amp-write').onclick = async () => {
   const i = Number($('amp-slot').value), old = state.models[i], label = recordLabel(state.record);
   if (!(await ask(`Write MODEL ${pad2(i)}?`, `"${label}" is written to the pedal as MODEL ${pad2(i)}${old ? `, replacing "${old.label}"` : ''}.`, 'Write'))) return;
   const ok = await exclusive(`Writing MODEL ${pad2(i)}`, () => state.store.ampPut(i, state.record));
-  if (ok) { state.record = null; state.nam = null; state.converted = false; $('amp-info').textContent = `Written as MODEL ${pad2(i)}.`; $('amp-quality').hidden = true; $('amp-progress').hidden = true; $('amp-dropname').textContent = 'Drop a .nam or .fcm file'; toast(`"${label}" is now MODEL ${pad2(i)}.`, 'ok'); }
+  if (ok) { state.record = null; state.nam = null; state.converted = false; $('amp-info').textContent = `Written as MODEL ${pad2(i)}.`; $('amp-quality').hidden = true; $('amp-progress').hidden = true; $('amp-dropname').textContent = 'Drop a .nam or .fcm file'; toast(`"${label}" is now MODEL ${pad2(i)}.`, 'ok'); uploaded('amps', i, label); }
   updateButtons();
 };
 
 // ---------- cabinets ----------
 function renderCabs() {
-  const idx = Object.keys(state.cabs).map(Number).sort((a, b) => a - b);
+  const all = Object.keys(state.cabs), idx = matchingSlots(state.cabs, $('cab-search').value, 1);
   list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, sub: `CAB ${pad2(i + 1)}`, buttons: [
+    ['Rename', 'ghost', () => renameStored('ir', i), `Rename CAB ${pad2(i + 1)}`],
     ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove CAB ${pad2(i + 1)}?`, `"${state.cabs[i].label}" is deleted from the pedal. IR blocks set to it play the built-in cabinet until it is filled again.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing CAB ${pad2(i + 1)}`, () => state.store.irRemove(i))) toast(`CAB ${pad2(i + 1)} removed.`, 'ok');
-  }, `Remove CAB ${pad2(i + 1)}`]] })), state.store ? 'No custom cabinets yet. Add one on the left.' : offlineText());
-  $('cabs-summary').textContent = state.store ? `${idx.length} of 63 used · CAB 00 is the built-in cabinet` : 'Not connected';
+  }, `Remove CAB ${pad2(i + 1)}`]] })), state.store ? (all.length ? 'No matching cabinets.' : 'No cabinets yet. Choose Add cabinet to import one.') : offlineText());
+  $('cabs-summary').textContent = state.store ? `${all.length} of 63 used · CAB 00 is the built-in cabinet` : 'Not connected';
 }
 let cabSource = null;
 function processCab() {
@@ -368,18 +454,19 @@ function processCab() {
   catch (e) { state.cab = null; $('cab-info').textContent = e.message; }
   $('cab-info').hidden = false; updateButtons();
 }
-dropZone($('cab-drop'), $('cab-file'), async f => {
+async function takeCabFile(f) {
   $('cab-dropname').textContent = f.name;
   cabSource = new Uint8Array(await f.arrayBuffer()); $('cab-name').value = f.name.replace(/\.wav$/i, '').slice(0, 15).toUpperCase(); processCab();
   if (!state.cab) toast('That file is not a usable impulse response.', 'bad');
-});
+}
+dropZone($('cab-drop'), $('cab-file'), takeLibraryFile);
 $('cab-name').onchange = () => { if (cabSource) processCab(); };
 $('cab-write').onclick = async () => {
   if(!await live.live?.hasCabControl()){notice('Update the pedal to the IR-control firmware (31z5 or later) before writing level-calibrated cabinets.');return;}
   const i = Number($('cab-slot').value), old = state.cabs[i], label = recordLabel(state.cab.record);
   if (!(await ask(`Write CAB ${pad2(i + 1)}?`, `"${label}" is written to the pedal as CAB ${pad2(i + 1)}${old ? `, replacing "${old.label}"` : ''}.`, 'Write'))) return;
   const ok = await exclusive(`Writing CAB ${pad2(i + 1)}`, () => state.store.irPut(i, state.cab.record));
-  if (ok) { state.cab = null; cabSource = null; $('cab-info').textContent = `Written as CAB ${pad2(i + 1)}.`; $('cab-dropname').textContent = 'Drop a .wav impulse response'; toast(`"${label}" is now CAB ${pad2(i + 1)}.`, 'ok'); }
+  if (ok) { state.cab = null; cabSource = null; $('cab-info').textContent = `Written as CAB ${pad2(i + 1)}.`; $('cab-dropname').textContent = 'Drop a .wav impulse response'; toast(`"${label}" is now CAB ${pad2(i + 1)}.`, 'ok'); uploaded('cabs', i + 1, label); }
   updateButtons();
 };
 
@@ -576,6 +663,15 @@ function updateButtons() {
   $('demo').disabled = !!op;
   $('amp-convert').disabled = !state.nam || conv || !!state.record; $('amp-cancel').hidden = !conv;
   $('amp-download').hidden = !(state.converted && state.record) || conv;
+  $('amp-convert').hidden = !state.nam;
+  $('amp-training').hidden = !state.nam;
+  $('amp-conversion-note').hidden = !state.nam;
+  $('model-file').disabled = !!op || conv;
+  $('model-import').disabled = !!op || conv;
+  for (const prefix of ['amp', 'cab']) {
+    $(prefix + '-import').inert = !!op;
+    $(prefix + '-use').disabled = !!op;
+  }
   $('train-file').disabled = conv; $('train-pick').classList.toggle('disabled', conv); $('train-clear').disabled = conv;
   $('amp-write').disabled = !on || !state.record || conv || !!op;
   why('amp-why', !state.record ? '' : !on ? offline : op ? `Waiting for "${op}" to finish.` : '');

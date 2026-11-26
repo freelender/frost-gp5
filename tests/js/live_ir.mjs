@@ -17,6 +17,7 @@ class Element {
   constructor(tag){this.tag=tag;this.children=[];this.dataset={};}
   append(...items){this.children.push(...items);}
   add(o){this.children.push(o);}
+  setAttribute(){}
 }
 globalThis.document={createElement:tag=>new Element(tag)};
 globalThis.Option=class {constructor(text,value){this.text=text;this.value=value;}};
@@ -32,4 +33,9 @@ view.cabSync({number:63,busy:false,exists:false});assert.match(status.textConten
 view.cabSync({number:63,exists:true,override:true});assert.match(status.textContent,/CAB OVERRIDE/);
 view.ui.cabs=()=>({0:{label:'REPLACED'}});view.cabSync({number:1,exists:true,name:'REPLACED'});
 assert.match(select.children[1].text,/REPLACED/);
+const imports=[];view.ui.addFile=(...args)=>imports.push(args);
+const importRow=view.cabField(3,{number:63,exists:true,name:'OPEN BACK'});
+const importSelect=importRow.children[1];assert.equal(importSelect.children.length,65);
+const beforeImport=sent.length;importSelect.value='add';await importSelect.onchange();
+assert.deepEqual(imports,[['cabs',3]]);assert.equal(importSelect.value,63);assert.equal(sent.length,beforeImport);
 console.log('Live CAB protocol, dropdown, labels, edits and status pass.');

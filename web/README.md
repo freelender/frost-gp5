@@ -8,6 +8,7 @@ does not provide a supported Web MIDI connection.
 |---|---|
 | index.html, style.css | Page structure and approved Frost appearance |
 | app.js | Navigation, connection state and serialized transfers |
+| model_library.js | Combined model/IR routing, file detection, search and explicit block selection |
 | live.js | Six-slot live chain, effect inspector and preset recall/status |
 | pedal.js, store.js | USB-MIDI transport and packed pedal storage |
 | setlist.js, setlist_view.js | Song library, performance order and browser drafts |
@@ -21,6 +22,12 @@ After changing effect metadata, regenerate effects.json with
 `python tools/export_effects.py` from the repository root. After changing
 shared JavaScript, keep entry/import cache versions aligned. Browser tests
 under tests/js/ check the storage, conversion and flasher behavior.
+
+Documentation images in assets/docs/ are optimized browser screenshots of the
+current source. Populated examples use a local documentation fixture with
+synthetic names; the normal demo still has no storage. Keep original captures,
+fixtures and image-processing tools outside Frost, and update screenshot
+captions when a workflow changes. Never use private captures or pedal data.
 
 No firmware, capture or cabinet file is bundled in this directory. The
 firmware manifest's file field stays empty for separate beta delivery. The

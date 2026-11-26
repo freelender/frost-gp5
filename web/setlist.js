@@ -1,4 +1,4 @@
-import { crc32 } from './pedal.js?v=1.8.0';
+import { crc32 } from './pedal.js?v=1.9.0';
 export const SETLIST_BYTES = 3968;
 const enc = new TextEncoder(), dec = new TextDecoder();
 export const emptySetlist = () => ({ format: 'frost-setlist', version: 1, name: 'My setlist', songs: [], order: [] });

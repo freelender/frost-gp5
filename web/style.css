@@ -145,6 +145,8 @@ select {
   font-size: 16px;
   color: #82b8db;
 }
+.utilitynav { margin-top:auto; padding-top:24px; }
+.utilitynav + .sidebarfoot { margin-top:18px; }
 .sidebarfoot {
   margin-top: auto;
   padding: 16px 10px 0;
@@ -313,6 +315,24 @@ input:not([type="range"]):focus,
 select:focus {
   border-color: #6acfff;
 }
+select {
+  appearance:none;
+  -webkit-appearance:none;
+  padding-right:40px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%2386d9ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),linear-gradient(180deg,#192c42,#101d2e);
+  background-repeat:no-repeat;
+  background-position:right 14px center,0 0;
+  background-size:12px 8px,100% 100%;
+  box-shadow:inset 0 1px 0 #ffffff08,0 2px 4px #0003;
+  font-weight:600;
+  cursor:pointer;
+  transition:border-color .15s,box-shadow .15s;
+}
+select:hover:not(:disabled) { border-color:#5784a3; }
+select:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+select:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
+select option { background:#101d2e; color:var(--txt); }
+select[multiple],select[size] { appearance:auto; background-image:none; padding-right:12px; }
 input[type="range"] {
   width: 100%;
   accent-color: #62c9ff;
@@ -725,8 +745,11 @@ label {
   margin: 0;
 }
 .inspector .picker {
+  display:block;
   margin-bottom: 8px;
 }
+.inspector .picker > select { display:block; width:min(100%,320px); }
+.inspector .picker .noparams { margin:8px 0 12px; padding:0; max-width:540px; font-size:12px; }
 .headbtns {
   display: flex;
   align-items: center;
@@ -1195,6 +1218,20 @@ dialog p {
 }
 
 /* responsive */
+.model-tabs { display:inline-flex; gap:4px; padding:4px; border:1px solid var(--stroke); border-radius:12px; background:var(--surface); }
+.model-tabs .btn { background:transparent; border-color:transparent; box-shadow:none; }
+.model-tabs .btn[aria-pressed="true"] { background:#19436a; color:#e5f7ff; border-color:#3678a5; }
+.library-toolbar { display:flex; align-items:center; gap:16px; margin:22px 0 16px; }
+.library-toolbar .search { flex:1; margin:0; max-width:520px; }
+.model-pane h2 { margin:0; font:600 18px var(--head); }
+.model-pane .import-panel { margin-bottom:20px; max-width:760px; }
+.import-panel .panelhead { padding:0 0 16px; align-items:center; }
+.import-panel .drop { min-height:130px; }
+.training-help { margin-top:12px; color:var(--muted); font-size:12px; }
+.training-help summary { cursor:pointer; color:var(--blue); }
+.upload-result { border-color:#3678a5; flex-wrap:wrap; }
+.upload-result .actions { margin:0; flex-wrap:wrap; }
+#view-models.over { outline:2px dashed var(--blue); outline-offset:8px; }
 @media (max-width: 1180px) {
   .chainstrip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1220,6 +1257,11 @@ dialog p {
   }
 }
 @media (max-width: 760px) {
+  #nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; }
+  #nav a { padding:9px 10px; }
+  .utilitynav { margin-top:8px; padding-top:8px; border-top:1px solid var(--stroke); }
+  .library-toolbar { gap:10px; }
+  .library-toolbar .btn { padding-inline:12px; white-space:nowrap; }
   .app {
     display: block;
   }
@@ -1427,6 +1469,12 @@ button.presetnavname:disabled { cursor:default; opacity:.6; }
 .presetcaret { color:var(--blue); font-size:11px; flex:none; }
 .presetpick { position:absolute; z-index:40; top:calc(100% + 6px); right:0; width:min(340px,calc(100vw - 32px)); padding:10px; border:1px solid var(--stroke2); border-radius:12px; background:#0d1726; box-shadow:var(--shadow); }
 .presetpick[hidden] { display:none; }
+.editor-heading.heading { display:block; margin-bottom:20px; }
+.editor-heading .eyebrow { margin-bottom:10px; }
+.editor-heading .headingbuttons { justify-content:flex-start; }
+.editor-heading .presetnavname { width:clamp(140px,24vw,320px); min-width:0; max-width:none; height:42px; font-size:20px; }
+.editor-heading .presetnav > .btn { width:42px; height:42px; padding:0; }
+.editor-heading .presetpick { left:0; right:auto; }
 .presetpick input { width:100%; background:#0a1420; border-color:#344b62; }
 .presetpicklist { list-style:none; margin:8px 0 0; padding:0 2px 0 0; max-height:min(360px,55vh); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 .presetpicklist li { display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:8px; cursor:pointer; color:var(--txt); font-size:13px; }
@@ -1444,7 +1492,8 @@ button.presetnavname:disabled { cursor:default; opacity:.6; }
   box-shadow:inset 0 1px 0 #ffffff14,0 6px 0 #070b11,0 12px 24px #0007; }
 .inspector fieldset.pedalface.emptyface { background:#0d1624; border-style:dashed; box-shadow:none; }
 .inspector fieldset.pedalface.bypassed .knobrow { filter:saturate(.35) brightness(.8); }
-.pedalface .browse-effects { margin-bottom:6px; }
+.pedalface .effect-actions { display:flex; justify-content:flex-end; margin-bottom:12px; }
+.pedalface .browse-effects { margin:0; }
 .knobrow { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:18px 10px; margin-top:12px; }
 .pedalface .field { margin:0; display:flex; flex-direction:column; align-items:center; gap:8px; min-width:0; }
 .knobvalue { min-width:56px; max-width:100%; padding:3px 8px; border-radius:6px; border:1px solid #233246; background:#050a11; color:var(--ice);
@@ -1465,9 +1514,24 @@ button.presetnavname:disabled { cursor:default; opacity:.6; }
 .knobinput:focus-visible + .knob,.knobdial:focus-within .knob { outline:2px solid var(--focus); outline-offset:3px; }
 .pedalface fieldset:disabled .knob,.inspector fieldset.pedalface:disabled .knob { cursor:default; }
 .choicepill { position:relative; display:flex; align-items:center; height:74px; }
-.choicepill select { appearance:none; -webkit-appearance:none; min-width:104px; max-width:150px; height:38px; padding:0 30px 0 14px; border-radius:19px; border:1px solid color-mix(in srgb,var(--effect-color) 60%,#3a516b);
-  background:linear-gradient(180deg,#1c2d44,#142236); color:var(--txt); font:700 13px var(--head); cursor:pointer; box-shadow:0 3px 0 #070b11; }
-.choicecaret { position:absolute; right:12px; color:var(--blue); pointer-events:none; font-size:12px; }
+.choicepill select { appearance:none; -webkit-appearance:none; min-width:104px; max-width:150px; height:38px; padding:0 30px 0 14px; border:1px solid color-mix(in srgb,var(--effect-color) 60%,#3a516b);
+  border-radius:10px; background-color:#142236; color:var(--txt); font:700 13px var(--head); cursor:pointer; box-shadow:0 3px 0 #070b11; }
+.choicecaret { display:none; }
+/* Enhance the browser's own select picker; older browsers keep the styled
+   trigger and native menu. Keyboard, focus and change events remain native. */
+@supports (appearance:base-select) {
+  select:not([multiple]):not([size]),select:not([multiple]):not([size])::picker(select) { appearance:base-select; }
+  select:not([multiple]):not([size]) { display:inline-flex; justify-content:space-between; background-image:linear-gradient(180deg,#192c42,#101d2e); background-position:0 0; background-size:100% 100%; padding-right:14px; align-items:center; gap:12px; }
+  select::picker-icon { content:""; width:12px; height:8px; flex:none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%2386d9ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat; transition:transform .15s; }
+  select:open { border-color:var(--blue); box-shadow:0 0 0 3px #4ec3ff18; }
+  select:open::picker-icon { transform:rotate(180deg); }
+  select::picker(select) { margin:6px 0; padding:6px; border:1px solid #3b607d; border-radius:12px; background:#101c2c; color:var(--txt); box-shadow:0 12px 30px #0009; min-width:anchor-size(width); max-width:calc(100vw - 32px); max-height:min(360px,50vh); overflow-y:auto; scrollbar-width:thin; }
+  select option { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; background:transparent; font:500 13px/1.4 var(--head); white-space:normal; overflow-wrap:anywhere; }
+  select option:hover,select option:focus { background:#213d56; color:#fff; outline:none; }
+  select option:checked { background:#19446a; color:#c6f0ff; font-weight:700; }
+  select option::checkmark { color:var(--blue); }
+  select option:disabled { color:#71859b; }
+}
 .knobhint { margin:16px 0 0; color:var(--muted); font-size:11px; text-align:center; }
 @media(max-width:400px) { .knobrow { grid-template-columns:repeat(2,minmax(0,1fr)); } .presetnavname { min-width:110px; } }
 /* Signal chain, one row: guitar input -> six pedals -> output */

@@ -58,6 +58,21 @@ class WebStoreTests(unittest.TestCase):
         self.assertEqual(c.ge_preset_label(0),b'01 CLEAN LEAD');self.assertEqual(c.ge_store_preset(1),1)
         self.assertNotEqual(self.js(['get',0])[0],before)
         self.assertEqual(c.ge_flash_load(0),1);self.settle()                                      # the renamed preset still loads
+    def test_models_and_cabinets_can_be_renamed_without_changing_audio(self):
+        import struct,zlib
+        amp=self.rec('NAME',1.8)
+        ir=bytearray(1048);ir[:3]=b'CAB';struct.pack_into('<f',ir,16,0.01);struct.pack_into('<h',ir,20,100)
+        struct.pack_into('<I',ir,1044,zlib.crc32(ir[:1044]))
+        cabinet=ROOT/'build/store_rename_ir.bin';cabinet.write_bytes(ir)
+        self.js(['ampPut',7,amp],['irPut',0,str(cabinet)])
+        before=self.js(['ampGet',7],['irGet',0])
+        renamed=self.js(['ampRename',7,'NEW AMP'],['irRename',0,'NEW CAB'],['amps'],['irs'])
+        self.assertEqual(renamed[:2],[True,True]);self.assertEqual(renamed[2]['7']['label'],'NEW AMP');self.assertEqual(renamed[3]['0']['label'],'NEW CAB')
+        self.assertEqual(self.lib.ge_fcm_label(7),b'07 NEW AMP')
+        after=self.js(['ampGet',7],['irGet',0])
+        for old,new in zip(before,after):
+            old,new=bytes.fromhex(old),bytes.fromhex(new)
+            self.assertEqual(old[16:-4],new[16:-4]);self.assertEqual(zlib.crc32(new[:-4]),struct.unpack_from('<I',new,len(new)-4)[0])
     def test_swap_within_and_across_groups_reads_each_group_once(self):
         """beta.12: moving a preset was slow (three scans and reads before the
         write, then every AMP and cabinet group read back). One scan, one read

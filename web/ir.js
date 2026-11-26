@@ -1,4 +1,4 @@
-import { crc32 } from './pedal.js?v=1.8.0';
+import { crc32 } from './pedal.js?v=1.9.0';
 // Port of tools/cab_ir.py: RIFF decode, mono average, Blackman-windowed sinc,
 // 10% onset trim, 512 taps, end fade, response-peak calibration / L1 <= 7.999.
 export function irResponseGain(h) {

@@ -6,6 +6,11 @@
 for the GP-5. It manages the pedal through USB-MIDI. The pedal can play its
 saved presets and setlist without a browser connected.
 
+Screenshots show the current local website source. The Editor and library
+images use a documentation demo with synthetic preset, model and cabinet
+names; these sample stored files are not part of **Try the demo**. No private
+captures or pedal data are shown.
+
 ## Connect or try the demo
 
 1. Use desktop Chrome or Edge. Power the pedal and connect a USB data cable.
@@ -27,11 +32,19 @@ Bluetooth yet: USB carries only MIDI, for this website and for controllers.
 
 <p align="center"><img src="../assets/docs/website-connect.webp" alt="Frost Studio before connecting: Connect GP-5 or Try the demo" width="760"><br><sub>Frost Studio before connecting: Connect GP-5 or Try the demo</sub></p>
 
-## Live editor
+## Find your way around
 
-<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Live editor: the signal chain from guitar input to output, the selected block's knobs, and the Effects library (right)" width="760"><br><sub>Live editor: the signal chain from guitar input to output, the selected block's knobs, and the Effects library (right)</sub></p>
+The main navigation has **Editor**, **NAMs & IRs**, **Presets** and
+**Setlists**. Firmware and About are grouped below these everyday tools.
+NAMs & IRs combines captures and cabinets in one library; use its
+**Amp models / Cabinet IRs** switch to choose which list to manage.
 
-The **◀ ▶** arrows at the top of the Live editor load the previous or next
+## Editor
+
+<p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Editor: preset arrows at top left, six-block chain, compact named NAM selector and Replace effect at right" width="760"><br><sub>Editor: preset selector, named NAM model and effect controls (documentation demo)</sub></p>
+
+The preset selector is the main control at the top left of the Editor, above
+the signal chain. Its **◀ ▶** arrows load the previous or next
 stored preset; between them is the preset now playing. Click its name to open
 a list of every stored preset with a search box (name or number); one click
 loads a preset, and ↑/↓, Enter and Esc work from the keyboard. Like **Load**,
@@ -50,6 +63,8 @@ a preset.
 ### Choose and edit an effect
 
 1. Select a block.
+   Its right-aligned **Replace effect** button opens the Effects library;
+   an empty slot shows **Add Effect** instead.
 2. In the **Effects library** on the right, search or pick a category, then
    click an effect to load it into the selected block. You can also **drag an
    effect** from the library onto any block.
@@ -69,12 +84,23 @@ Six visible slots do not guarantee that every heavy chain fits the DSP budget.
 See the [Effects list](Effects%20list.md) for every effect and its controls,
 and the [User Guide](User%20Guide.md) for pedal-side position changes.
 
+### Capture model selector
+
+The **NAM FCM CAPTURE** block has a **MODEL** dropdown showing each position's
+number and stored model name in a compact selector above its knobs.
+MODEL 00 is the built-in default; empty positions
+are marked **Empty — default fallback**. Choosing a model changes the live
+sound immediately. Save the preset to keep the selection.
+Choose **Add a model…** at the end of the dropdown to open the library's
+import form for this block.
+
 ### Cabinet selector
 
 An IR block has an additional **CAB** selector. CAB 00 is built in; 01–63
 refer to imported cabinets. The status explains whether the cabinet is loading,
 missing or globally bypassed. An empty/missing custom cabinet uses the built-in
 fallback. Uploading a cabinet does not select it automatically.
+Choose **Add a cabinet…** in the CAB dropdown to import one for this block.
 
 ### Save your live sound
 
@@ -92,16 +118,51 @@ destination number, then **SAVE**. Saving to an occupied number replaces it.
 Changing presets or switching off before saving discards live edits. A backup
 contains stored data, not unsaved live settings.
 
-## AMP models
+## NAMs & IRs
+
+<p align="center"><img src="../assets/docs/website-nams-irs.webp" alt="NAMs and IRs library with Amp models selected, search, Add model and Rename, Download and Remove buttons" width="760"><br><sub>Amp models: search stored names or numbers, add a file, or manage an existing model (documentation demo)</sub></p>
+
+The library starts with your stored files and a search by name or number.
+Click **Add model** or **Add cabinet** to open an import form; **Close** hides
+the form and keeps its draft. You can also choose **Import file…** or drop a
+file on the page: `.nam` and `.fcm` open Amp models, and `.wav` opens Cabinet
+IRs. Training audio is chosen separately inside the NAM conversion form.
+Older links to the separate AMP models and Cabinet IRs pages still open the
+matching library view.
+
+### Rename a stored model or cabinet
+
+1. Choose **Amp models** or **Cabinet IRs**, then find the stored file by name
+   or number.
+2. Click that row's **Rename**. The window starts with the current name.
+3. Enter a name of up to 15 characters: letters, numbers, spaces and standard
+   punctuation. A blank name cannot be saved; outside spaces are trimmed.
+4. Choose **Save** to write the name to the pedal, or **Cancel** / Esc to keep
+   the old name. Enter also saves. Saving an unchanged name does not rewrite it.
+
+The model/cabinet stays at the same number with the same audio data, so
+presets keep referencing it. Names in the Editor and library refresh after
+saving. Storage writes can briefly interrupt audio.
+
+<p align="center"><img src="../assets/docs/website-rename.webp" alt="Rename MODEL 01 dialog prefilled with CLEAN CAPTURE, with Cancel and Save buttons" width="580"><br><sub>Rename starts with the stored name; Save writes it and Cancel leaves it unchanged</sub></p>
+
+### Use an uploaded file
+
+After writing, **Open Editor** returns to your sound. If you started from a
+NAM or IR block, **Use in this block** selects the uploaded file in that block.
+It does not turn the block on or save the preset. Save the preset when ready.
+
+### AMP models
 
 This page converts supported **NAM A2 WaveNet** captures to Frost FCM models
 and writes ready-made `.fcm` files. Unsupported architectures/layouts are
 rejected. The resulting sound is an approximation of the capture; Frost does
 not run native NAM on the pedal.
 
-### Convert a capture
+#### Convert a capture
 
-1. Drop a supported `.nam` into the model box or choose it from your computer.
+1. Open **NAMs & IRs → Amp models → Add model**, then drop a supported
+   `.nam` into the model box or choose it from your computer.
 2. Set a name (up to 15 characters) and destination **MODEL** number.
 3. Optionally choose the recommended training `input.wav` described by the
    page. **Clear** removes that optional audio selection.
@@ -112,7 +173,8 @@ not run native NAM on the pedal.
    it can be written to any Frost pedal later without converting again.
    Then click **Write to pedal** and confirm the destination. Wait for the
    transfer to finish.
-6. Select the matching MODEL in the pedal's **NAM** block and save the preset.
+6. Choose **Use in this block** when offered, or select the matching MODEL in
+   the Editor's or pedal's **NAM** block. Save the preset.
 
 Conversion runs in browser workers; the selected capture is not uploaded to a
 conversion server. A ready-made `.fcm` does not need NAM conversion: select
@@ -126,13 +188,17 @@ confirmation. Presets reference numbers: replacing or
 removing a model affects every preset using that number. A missing model
 uses the default rather than restoring the deleted capture.
 
-## Cabinet IRs
+### Cabinet IRs
 
-1. Drop a cabinet `.wav` into the import box.
+<p align="center"><img src="../assets/docs/website-cabinet-library.webp" alt="NAMs and IRs library with Cabinet IRs selected, named cabinet slots, Add cabinet and Rename actions" width="760"><br><sub>Cabinet IRs uses the same search, import and management layout (documentation demo)</sub></p>
+
+1. Open **NAMs & IRs → Cabinet IRs → Add cabinet**, then drop a cabinet
+   `.wav` into the import box.
 2. Read the parsed-file information, enter a name (up to 15 characters) and
    choose **CAB 01–63**.
 3. Click **Write to pedal**, confirm any replacement and wait.
-4. In the Live editor, select an IR block and choose that CAB number. Enable
+4. Choose **Use in this block** when offered, or select an IR block in the
+   Editor and choose that CAB number. Enable
    the block and save the preset on the pedal.
 
 The importer accepts supported WAV sample formats/rates and mono/stereo
@@ -140,7 +206,7 @@ input, converts to mono 44.1 kHz and prepares a 512-tap cabinet response.
 This is for short cabinet responses, not preserving long room/reverb tails.
 CAB 00 remains built in and is not a writable user position.
 
-The stored list offers **Download** and **Remove**. **Download** saves the
+The stored list offers **Rename**, **Download** and **Remove**. **Download** saves the
 cabinet as it is stored on the pedal: a mono 44.1 kHz, 32-bit float `.wav`
 of 512 samples. Importing that file again gives the same cabinet; it is not
 the original, longer WAV. Replacing a CAB changes every preset
@@ -220,7 +286,7 @@ There are two separate things: a **song library** of named parts and a
 **performance order** that arranges songs on the pedal.
 
 1. Save the presets your parts will use.
-2. Open **Songs & setlist**. To preserve an existing pedal library, start with
+2. Open **Setlists**. To preserve an existing pedal library, start with
    **Read from pedal**. Confirm only if you want to replace the browser draft.
 3. Click **New song**, enter its name and name its first part.
 4. Choose a saved preset number for each part. **Add part** creates another
@@ -270,7 +336,7 @@ the Ko-fi support link (ko-fi.com/freelender). It does not change pedal data.
 |---|---|
 | Connect fails | Check desktop browser, data cable, MIDI/SysEx permission and competing editors |
 | Controls disabled | Connect the pedal and wait for any current transfer |
-| Edits disappear | Use the pedal's PRESETS → destination → SAVE workflow |
+| Edits disappear | Use Editor → Save to pedal, or PRESETS → destination → SAVE on the pedal |
 | Model conversion rejected | Check that the capture is a supported NAM A2 layout |
 | Uploaded cabinet not heard | Select its CAB in IR, enable the block, disable CAB OVERRIDE |
 | NO SETLIST on the pedal | Add songs to performance order and Save to pedal |
@@ -279,8 +345,9 @@ the Ko-fi support link (ko-fi.com/freelender). It does not change pedal data.
 Storage writes can briefly interrupt sound. Prepare files and settings before
 performance; preset/part recall is the performance workflow.
 
-MODEL and CAB uploads retry a temporarily refused flash erase/write up to
-three times with a short delay. Data is read back before committing the new
+MODEL and CAB storage writes, including renames, retry temporarily refused
+flash erase/program requests up to eight attempts with short delays.
+Data is read back before committing the new
 file. If an upload still reports `program failed at 0x...` or `erase failed`,
 keep the full error and firmware version for a bug report. During replacement,
 the previous stored copy is retained until the new data and header are verified.

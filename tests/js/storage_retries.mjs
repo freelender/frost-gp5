@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { FILES, PedalFiles, crc32 } from '../../web/pedal.js';
-import { Store } from '../../web/store.js';
+import { FILES, PedalFiles, crc32, recordLabel } from '../../web/pedal.js';
+import { Store, assetName, recordCrc } from '../../web/store.js';
 
 // NOR-like flash with faults at the protocol boundary: a refused pause does
 // not write, whereas a lost acknowledgement can follow a completed write.
@@ -73,4 +73,43 @@ assert.equal(attempts, 1);
   const chunk = FILES.BASE + 0xb0; p.faults.set(`8:${chunk}`, Array(7).fill('refuse'));
   await p.store.ampPut(2, rec); assert.deepEqual(await p.store.slot('amp', 2), rec);
   assert.deepEqual(waits, [100, 200, 300, 400, 500, 600, 700]); }
-console.log('AMP/CAB transient refusal, lost reply, bounded failure and copy preservation checks passed');
+for (const [kind, size, index] of [['amp', 400, 1], ['ir', 1048, 0]]) {
+  const p = pedal(), original = record(size, 'ORIGINAL'), neighbour = record(size, 'NEIGHBOUR');
+  // Put non-zero synthetic audio data in the records so preserving it is tested.
+  original.fill(37,16,size-4);new DataView(original.buffer).setUint32(size-4,crc32(original.subarray(0,size-4)),true);
+  await p.store.putSlot(kind,index,original);await p.store.putSlot(kind,index+1,neighbour);
+  const rename = (name, expected=undefined) => kind==='amp' ? p.store.ampRename(index,name,expected) : p.store.irRename(index,name,expected);
+  assert.equal(await rename('  NEW NAME  ',recordCrc(original)),true);
+  const renamed=await p.store.slot(kind,index);
+  assert.equal(recordLabel(renamed),'NEW NAME');
+  assert.deepEqual(renamed.subarray(16,size-4),original.subarray(16,size-4));
+  assert.equal(recordCrc(renamed),crc32(renamed.subarray(0,size-4)));
+  assert.deepEqual(await p.store.slot(kind,index+1),neighbour);
+  const writes=()=>p.calls.filter(q=>q[1]===7 || q[1]===8).length, before=writes();
+  assert.equal(await rename('NEW NAME'),false);
+  for(const name of ['', '   ', '1234567890123456', 'Bad\nName', 'Guitár']) await assert.rejects(()=>rename(name));
+  await assert.rejects(()=>rename('STALE',recordCrc(original)),/changed on the pedal/);
+  assert.equal(writes(),before,'no writes for invalid, stale or unchanged names');
+  // Refuse programming in whichever sector the next copy-on-write will use.
+  const files=await p.store.scan(),used=new Set(files.flatMap(h=>Array.from({length:h.sectors},(_,k)=>h.sector+k)));
+  const spare=Array.from({length:FILES.SECTORS},(_,i)=>i).find(i=>!used.has(i));
+  p.faults.set(`8:${FILES.BASE+spare*FILES.SECTOR+0xb0}`,Array(8).fill('refuse'));
+  await assert.rejects(()=>rename('FAILED'),/program failed/);
+  assert.deepEqual(await p.store.slot(kind,index),renamed);
+  assert.deepEqual(await p.store.slot(kind,index+1),neighbour);
+  // A group changed after the rename read: reject its stale snapshot instead
+  // of overwriting the concurrent neighbour update.
+  const write=p.store.writeGroup,concurrent=record(size,'CONCURRENT');
+  p.store.writeGroup=async(...args)=>{
+    p.store.writeGroup=write;await p.store.putSlot(kind,index+1,concurrent);
+    return write.apply(p.store,args);
+  };
+  await assert.rejects(()=>rename('CONFLICT'),/group changed/);
+  assert.deepEqual(await p.store.slot(kind,index),renamed);
+  assert.deepEqual(await p.store.slot(kind,index+1),concurrent);
+}
+assert.equal(assetName('123456789012345'),'123456789012345');
+const empty=pedal();await assert.rejects(()=>empty.store.irRename(0,'EMPTY'),/missing or damaged/);
+await assert.rejects(()=>empty.store.ampRename(0,'BUILT IN'),/stored user/);
+await assert.rejects(()=>empty.store.irRename(63,'OUTSIDE'),/stored user/);
+console.log('AMP/CAB write recovery, rename payload/checksums, validation and copy preservation checks passed');

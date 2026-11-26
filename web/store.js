@@ -5,7 +5,7 @@
 //   AMP models: firmware FFCM, amp-0..amp-6, 10 x 400-byte records (MODEL 0..63)
 //   presets:    firmware FPST, pst-0..pst-3, 15 x 264-byte records (1..60)
 // Legacy single amp-NN files (Frost 31s/31t3) are migrated into the groups.
-import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.8.0';
+import { FILES, crc32, fileHeader, parseHeader, recordLabel, checkRecord } from './pedal.js?v=1.9.0';
 
 export const GROUPS = {
   amp: { firm: 0x4d434646, prefix: 'amp-', files: 7, slots: 10, size: 400 },
@@ -21,6 +21,13 @@ function groupDefinition(kind) {
 }
 const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
 const slotOk = (b, size) => b.length === size && crc32(b.subarray(0, size - 4)) === u32(b, size - 4);
+export function assetName(name) {
+  const text = name.trim();
+  if (!text) throw new Error('Enter a name.');
+  if (text.length > 15) throw new Error('Use up to 15 characters.');
+  if (/[^\x20-\x7e]/.test(text)) throw new Error('Use letters, numbers and standard punctuation.');
+  return text;
+}
 const isPreset = r => r[0] === 0x46 && r[1] === 0x50 && r[2] === 1 && slotOk(r, 264);
 export function presetName(rec) { let e = 4; while (e < 20 && rec[e]) e++; return new TextDecoder().decode(rec.subarray(4, e)); }
 export function checkPreset(rec) { if (!(rec instanceof Uint8Array) || rec.length !== 264 || !isPreset(rec)) throw new Error('not a Frost preset (v1)'); }
@@ -142,6 +149,26 @@ export class Store {
     if (rec) d.set(rec, o); else d.fill(0, o, o + G.size);
     await this.writeGroup(kind, g, d, say, h?.seq ?? null);
   }
+  /** Rename only name[16] and its CRC, preserving audio data and group neighbours. */
+  async renameAsset(kind, index, name, expectedCrc) {
+    if (kind !== 'amp' && kind !== 'ir') throw new Error('Only amp models and cabinets can be renamed here.');
+    const label = assetName(name), G = GROUPS[kind];
+    if (!Number.isInteger(index) || index < (kind === 'amp' ? 1 : 0) || index >= (kind === 'amp' ? 64 : 63)) throw new Error('Choose a stored user model or cabinet.');
+    if (kind === 'amp') await this.migrate();
+    const g = Math.floor(index / G.slots), offset = index % G.slots * G.size;
+    const files = await this.scan(), h = this.newest(files, G.firm, G.prefix + String(g).padStart(G.digits || 1, '0'));
+    const source = await this.readGroup(kind, g, files), rec = source?.subarray(offset, offset + G.size);
+    if (!rec || !slotOk(rec, G.size)) throw new Error('That file is missing or damaged. Refresh the library.');
+    if (expectedCrc != null && recordCrc(rec) !== expectedCrc) throw new Error('That file changed on the pedal. Refresh the library and retry.');
+    if (recordLabel(rec) === label) return false;
+    const data = Uint8Array.from(source), renamed = data.subarray(offset, offset + G.size);
+    renamed.fill(0, 0, 16); renamed.set(new TextEncoder().encode(label));
+    new DataView(data.buffer).setUint32(offset + G.size - 4, crc32(renamed.subarray(0, G.size - 4)), true);
+    await this.writeGroup(kind, g, data, undefined, h?.seq ?? null);
+    return true;
+  }
+  ampRename(i, name, expectedCrc) { return this.renameAsset('amp', i, name, expectedCrc); }
+  irRename(i, name, expectedCrc) { return this.renameAsset('ir', i, name, expectedCrc); }
   // ---- AMP models ----
   /** Move legacy amp-NN single files into the groups (MODEL numbers kept). Returns how many moved. */
   async migrate(say = () => {}) {

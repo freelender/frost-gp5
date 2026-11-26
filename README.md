@@ -30,8 +30,8 @@ in GLOBAL SETTINGS → SYSTEM → FIRMWARE; release notes come with each release
 
 - **Six-slot signal chain:** select effects, adjust parameters, change their
   order and bypass individual blocks.
-- **59 effect and amp types:** drives, distortion, dynamics, EQ, modulation,
-  delay, reverb, pitch effects, acoustic simulation and seven amp-head voices.
+- **62 effect and amp types:** drives, distortion, dynamics, EQ, modulation,
+  delay, reverb, pitch effects, acoustic simulation and eight amp-head voices.
 - **Capture models:** convert supported NAM A2 captures into Frost FCM models
   and manage up to 64 model positions through the website.
 - **Cabinet IRs:** a built-in cabinet plus 63 custom cabinet positions.
@@ -45,8 +45,9 @@ in GLOBAL SETTINGS → SYSTEM → FIRMWARE; release notes come with each release
 - **USB MIDI:** preset recall, every effect’s parameters and switches, expression,
   tap tempo, tuner, scene masks, global bypass and incoming MIDI Clock.
   See the [MIDI guide](docs/Midi%20Command.md) for mappings and USB host requirements.
-- **Browser tools:** live editing, local model conversion, IR import, preset
-  management and patch loading, backups and USB firmware installation.
+- **Browser tools:** live editing with named model/cabinet selectors, a shared
+  **NAMs & IRs** library with import, rename and download, preset management
+  and patch loading, backups and USB firmware installation.
 
 Frost plays converted capture approximations; it does **not** run native NAM.
 Heavy chains can exceed the DSP budget. Preset changes do not provide
@@ -68,7 +69,7 @@ reinstall it if you need them.
 3. Open [Frost Studio](https://frost.fretlexwins.workers.dev/) and follow the
    [Website Guide](docs/Website%20Guide.md) to connect and manage your pedal.
 
-<p align="center"><img src="assets/docs/website-live-editor.webp" alt="Frost Studio live editor (demo mode): every change plays on the pedal at once" width="760"><br><sub>Frost Studio live editor (demo mode): every change plays on the pedal at once</sub></p>
+<p align="center"><img src="assets/docs/website-live-editor.webp" alt="Frost Studio Editor with preset arrows, named NAM model selector and Replace effect button" width="760"><br><sub>Editor: preset selection, named captures and live controls (documentation demo with synthetic names)</sub></p>
 
 Developers: see [Build Firmware](docs/Build%20Firmware.md) and
 [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -87,7 +88,8 @@ All such names are trademarks of their respective owners, who are not
 affiliated with or endorsing Frost.
 
 Pedal screen images are rendered from the firmware's own display code;
-website images show the demo mode.
+website images use a local documentation demo with synthetic preset, capture
+and cabinet names. They do not show a connected pedal or measured audio results.
 
 ## Support the project
 

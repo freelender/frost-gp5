@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {libraryRoute,fileKind,matchingSlots,useLibraryFile} from '../../web/model_library.js';
+import {LiveChain} from '../../web/live.js';
+import {simulatedPedal} from '../../web/sim.js';
+for(const [route,kind] of [['amps','amps'],['cabs','cabs'],['models/amps','amps'],['models/cabs','cabs']])
+  assert.deepEqual(libraryRoute(route),{view:'models',kind});
+assert.deepEqual(libraryRoute('models'),{view:'models',kind:null});
+assert.deepEqual(libraryRoute('live'),{view:'live',kind:null});
+assert.equal(fileKind('My CAPTURE.NAM'),'amps');assert.equal(fileKind('clean.fcm'),'amps');assert.equal(fileKind('V30.WAV'),'cabs');
+assert.throws(()=>fileKind('capture.nam.json'),/Choose a NAM/);
+const stored={0:{label:'V30'},62:{label:'Open Back'}};
+assert.deepEqual(matchingSlots(stored,'',1),[0,62]);
+assert.deepEqual(matchingSlots(stored,'  OPEN ',1),[62]);
+assert.deepEqual(matchingSlots(stored,'63',1),[62]);
+assert.deepEqual(matchingSlots(stored,'01',1),[0]);
+assert.deepEqual(matchingSlots(stored,'missing',1),[]);
+assert.deepEqual(matchingSlots({1:{label:'Crunch'},63:{label:'Clean'}},'63'),[63]);
+const catalog=JSON.parse(readFileSync(new URL('../../web/effects.json',import.meta.url)));
+const sim=simulatedPedal(catalog),sent=[],live=new LiveChain(q=>{sent.push(q);return sim.ask(q);});
+const view={live,attached:true,act:async fn=>assert.equal(await fn(),true)};
+const amp={session:live,slot:2},cab={session:live,slot:3};
+await useLibraryFile(view,amp,'amps',63);
+assert.equal(view.selected,2);assert.deepEqual(sent.at(-1),[0x7e,0x15,2,0,63,0]);
+await useLibraryFile(view,cab,'cabs',1);
+assert.equal(view.selected,3);assert.deepEqual(sent.at(-1),[0x7e,0x1a,3,1]);
+await assert.rejects(()=>useLibraryFile(view,{session:{},slot:2},'amps',1),/Reconnect/);
+await assert.rejects(()=>useLibraryFile(view,cab,'amps',1),/block has changed/);
+// Disconnect during the asynchronous slot read: no write reaches the old pedal.
+const racing={slot:async()=>{view.live=null;return {type:33};},setParam:()=>assert.fail('stale connection write')};
+view.live=racing;
+await assert.rejects(()=>useLibraryFile(view,{session:racing,slot:2},'amps',1),/connection changed/);
+console.log('Library links, file detection, name/number search and explicit live selection pass (host only).');

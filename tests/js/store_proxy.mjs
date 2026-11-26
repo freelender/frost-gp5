@@ -14,12 +14,14 @@ for (const [op, ...a] of JSON.parse(process.argv[2])) {
   else if (op === 'setPut') { const sets = new SetlistStore(s); await sets.read(); await sets.write(a[0]); out.push(true); }
   else if (op === 'irPut') out.push(await s.irPut(a[0], new Uint8Array(fs.readFileSync(a[1]))));
   else if (op === 'irRemove') out.push(await s.irRemove(a[0]));
+  else if (op === 'irRename') out.push(await s.irRename(a[0], a[1]));
   else if (op === 'irs') out.push(await s.irs());
   else if (op === 'irGet') { const r = await s.irGet(a[0]); out.push(r ? Buffer.from(r).toString('hex') : null); }
   else if (op === 'migrate') out.push(await s.migrate());
   else if (op === 'ampPut') out.push(await s.ampPut(a[0], new Uint8Array(fs.readFileSync(a[1]))));
   else if (op === 'ampGet') { const r = await s.ampGet(a[0]); out.push(r ? Buffer.from(r).toString('hex') : null); }
   else if (op === 'ampRemove') out.push(await s.ampRemove(a[0]));
+  else if (op === 'ampRename') out.push(await s.ampRename(a[0], a[1]));
   else if (op === 'amps') out.push((await s.amps()).models);
   else if (op === 'presets') out.push(await s.presets());
   else if (op === 'rename') out.push(await s.presetRename(a[0], a[1]));
