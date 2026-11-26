@@ -3,6 +3,11 @@
 # MIDI commands — setup and examples
 
 Set your controller to **MIDI channel 1**.
+
+The optional experimental USB audio/BLE MIDI build also accepts these same
+messages from a BLE MIDI client. It advertises as **Frost**. BLE MIDI is
+wireless control, not Bluetooth audio; firmware installation remains USB-only.
+See [Build Firmware](Build%20Firmware.md) for the profile and qualification status.
 You can use these instructions in a controller editor without typing raw MIDI bytes.
 
 Start here: [COMP+ LEVEL example](#example-set-comp-level-to-10) ·
@@ -368,9 +373,13 @@ pedal to finish loading. It requires this firmware or newer. See the
 5. Send PC 0 to recall saved preset 01. Some controller editors display that
    program as 1: check whether their numbering starts at 0 or 1.
 
-Frost is a USB MIDI **device**, not a USB host or Bluetooth receiver. DIN/TRS
-MIDI and Bluetooth controllers need a host/bridge that routes USB MIDI to it.
-The firmware receives cable 0, channel 1 only; other channels are ignored.
+Frost is a USB MIDI **device**, not a USB host. DIN/TRS MIDI controllers need
+a host/bridge that routes USB MIDI to it. Standard images do not enable
+Bluetooth; the experimental media profile receives BLE MIDI from a connected
+client. Direct Bluetooth pairing with the Chocolate Plus has not been verified;
+stock Valeton pairing/SysEx instructions do not establish Frost compatibility.
+USB MIDI receives cable 0, channel 1 only; BLE MIDI uses channel 1 too. Other
+channels are ignored.
 There is no MIDI learn, channel menu, outgoing MIDI clock or parameter feedback
 in this version. Do not route the GP-5's own outgoing control messages back
 to its input; that can create feedback.

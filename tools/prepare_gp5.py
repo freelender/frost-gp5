@@ -8,7 +8,7 @@ import shutil
 import subprocess
 
 ROOT=Path(__file__).resolve().parents[1]
-def stage(platform,destination,controller='generic',bank=None,audio_input='synthetic',audio_output='muted',cab_ir=None,hot_ram=False,service_window_cycles=None,control_scheduler=False,cab_ir_taps=128,large_code=False,dsp_64k=False,flash_hash=False,xflash=False,overlays=False,reverb_int16=False,dsp_usage=False,fcm_bench=False,ir_link=False):
+def stage(platform,destination,controller='generic',bank=None,audio_input='synthetic',audio_output='muted',cab_ir=None,hot_ram=False,service_window_cycles=None,control_scheduler=False,cab_ir_taps=128,large_code=False,dsp_64k=False,flash_hash=False,xflash=False,overlays=False,reverb_int16=False,dsp_usage=False,fcm_bench=False,ir_link=False,media_platform=None):
     if audio_output not in ('muted','line-test'):raise ValueError('Unknown audio output profile')
     line_test=audio_output=='line-test'
     if type(control_scheduler) is not bool or (control_scheduler and (not line_test or hot_ram or service_window_cycles not in (None,16384))):
@@ -23,6 +23,10 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
     if type(overlays) is not bool or (overlays and not xflash):raise ValueError('overlays require xflash')
     if type(reverb_int16) is not bool or (reverb_int16 and not overlays):raise ValueError('reverb_int16 requires the overlay line-test profile')
     if type(ir_link) is not bool or (ir_link and (not overlays or not dsp_usage)):raise ValueError('ir_link requires the overlay + DSP-usage profile (stage 4)')
+    if media_platform is not None:
+        if not ir_link:raise ValueError('USB audio/BLE requires --ir-link (one shared audio transport)')
+        from media_compat import validate
+        media_platform,_=validate(media_platform)
     if fcm_bench and (not overlays or not (ROOT/'effects/fcm/model_bank.h').is_file()):raise ValueError('fcm_bench needs --overlays and a generated effects/fcm/model_bank.h')
     if type(dsp_usage) is not bool or (dsp_usage and (not control_scheduler or controller!='generic')):raise ValueError('dsp_usage requires the generic control-scheduler profile')
     if line_test and (audio_input!='adc' or controller!='generic' or bank is not None):
@@ -69,7 +73,7 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
     shutil.copytree(platform,destination,ignore=shutil.ignore_patterns('.git','fw-build','build','out','__pycache__'))
     for p in destination.rglob('*.sh'):p.write_bytes(p.read_bytes().replace(b'\r\n',b'\n'))
     fw=destination/'firmwares/frost';dsp=fw/'dsp';dsp.mkdir(parents=True)
-    for name in ('firmware.h','global_eq.h','output.h','input.h','link_rx.h','link_rx.inc','control_service.inc','stack_watch.h','stack_boot.inc','timing_watch.h','link_tx.h','link_tx.inc','link_tx_platform.inc','line_output.h','fault_report.inc','flash_probe.h','ir_files.h','ir_link.h'):
+    for name in ('firmware.h','global_eq.h','output.h','input.h','link_rx.h','link_rx.inc','control_service.inc','stack_watch.h','stack_boot.inc','timing_watch.h','link_tx.h','link_tx.inc','link_tx_platform.inc','line_output.h','fault_report.inc','flash_probe.h','ir_files.h','ir_link.h','media_audio.h'):
         shutil.copy2(ROOT/'firmware/dsp'/name,dsp/name)
     if audio_input=='adc':
         p=dsp/'firmware.h';p.write_text('#define FROST_AUDIO_ADC 1\n'+p.read_text())
@@ -88,7 +92,7 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
         shutil.copy2(ROOT/'engine'/name,fw/'nds32/engine'/name)
     (fw/'nds32/firmware/protocol').mkdir(parents=True)
     shutil.copy2(ROOT/'firmware/version.h',fw/'nds32/firmware/version.h')
-    for name in ('settings.h','slot_wire.h','sync_wire.h','preset_wire.h','quick_preset_wire.h','preset_read_wire.h','policy_wire.h','bank_read_wire.h','line_wire.h','dsp_usage_wire.h','fcm_wire.h','global_wire.h','tuner_wire.h','ir_wire.h','ir_link_wire.h'):
+    for name in ('settings.h','slot_wire.h','sync_wire.h','preset_wire.h','quick_preset_wire.h','preset_read_wire.h','policy_wire.h','bank_read_wire.h','line_wire.h','dsp_usage_wire.h','fcm_wire.h','global_wire.h','tuner_wire.h','ir_wire.h','ir_link_wire.h','media_audio.h'):
         shutil.copy2(ROOT/'firmware/protocol'/name,fw/'nds32/firmware/protocol'/name)
     ui=fw/'nds32/firmware.c';ui.write_text(('#define FROST_FACTORY_PRESETS 1\n' if controller=='generic' and line_test else '')+('#define FROST_IR_LINK 1\n#define FROST_EMPTY_BOOT_CHAIN 1\n' if ir_link else '')+('#define FROST_LINE_TEST 1\n' if line_test else '')+('#define FROST_DSP_USAGE 1\n' if dsp_usage else '')+('#define FROST_SLOT_EDITOR 1\n' if controller=='generic' else '')+
         ('#define FROST_USER_BANK 1\n' if bank_header is not None else '')+'#define FROST_CHAIN_BENCH 1\n'+ui.read_text())
@@ -194,20 +198,26 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
     builder=destination/'platform/dsp/build.py';text=builder.read_text();needle='        binf = d / "hello.bin"'
     if text.count(needle)!=1:raise ValueError('DSP ELF retention patch mismatch')
     builder.write_text(text.replace(needle,'        import shutil\n        audit = ROOT / "build" / "audit"\n        audit.mkdir(parents=True, exist_ok=True)\n        shutil.copy2(elf, audit / "dsp.elf")\n'+needle))
+    media=None
+    if media_platform is not None:
+        from media_compat import apply
+        media=apply(destination,media_platform)
     inputs={str(p.relative_to(ROOT)).replace('\\','/'):hashlib.sha256(p.read_bytes()).hexdigest()
             for name in ('engine','effects','firmware','assets/branding','tests/fixtures')
             for p in (ROOT/name).rglob('*') if p.is_file()}
-    (destination/'frost-input.json').write_text(json.dumps(dict(platform_commit=revision,release_version=re.search(r'#define FROST_VERSION "([^"]+)"',(ROOT/'firmware/version.h').read_text())[1],inputs=inputs,
+    (destination/'frost-input.json').write_text(json.dumps(dict(platform_commit=revision,media=media,release_version=re.search(r'#define FROST_VERSION "([^"]+)"',(ROOT/'firmware/version.h').read_text())[1],inputs=inputs,
         platform_adaptations=dict(dsp_tx='queued1024-drain16-reserve516',startup_prepare='one-private-block-reset-before-DMA',audio_timing_trace='first8-worst-firstlate-last',stack_watermark='4KiB-before-C',raw_uart_pacing='8bytes-3ticks-over16',dsp_rx_recovery='bounded-v1',panel_madctl='0xA8',pixel_packing='RGB565',raw_flash_commands=False,
             bank_bridge='7E46' if controller=='generic' else None),
-        staging_tools={name:hashlib.sha256((ROOT/'tools'/name).read_bytes()).hexdigest() for name in ('prepare_gp5.py','platform_compat.py')},
+        staging_tools={name:hashlib.sha256((ROOT/'tools'/name).read_bytes()).hexdigest() for name in ('prepare_gp5.py','platform_compat.py','media_compat.py')},
         purpose='Audio-capable unity-master line-input test; no native NAM' if line_test else 'Muted effects-only diagnostic; no NAM',ir_link=ir_link,audio_output=audio_output,output_package='GP5_Frost_line_test.bin' if line_test else 'GP5_Frost_muted.bin',line_test_cap_q16=65536 if line_test else 0,service_window_cycles=service_window_cycles or 16384,control_scheduler=control_scheduler,dsp_usage=dsp_usage,fcm_bench=fcm_bench,reverb_int16=reverb_int16,hot_ram=hot_ram,audio_input=audio_input,controller_profile=controller,user_bank=bank_info,cab_ir=None if cab_info is None else dict(cab_info,header_sha256=hashlib.sha256(cab_header.encode()).hexdigest()),hard_muted=not line_test,hardware_ready=False),indent=2)+'\n')
+    for p in destination.rglob("*.sh"):p.write_bytes(p.read_bytes().replace(b"\r\n",b"\n"))
     return destination
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--platform',type=Path,default=ROOT/'.deps/OpenGP5')
     p.add_argument('--stage',type=Path,default=ROOT/'build/gp5-muted')
+    p.add_argument('--media-platform',type=Path,help='Pinned OpenGP5Media checkout: enable experimental USB audio and BLE-MIDI')
     p.add_argument('--controller',choices=('generic','diagnostic'),default='generic')
     p.add_argument('--bank',type=Path,help='Validated lossless .fbank; immutable controller ROM, never flash storage')
     p.add_argument('--audio-input',choices=('synthetic','adc'),default='synthetic',help='chain input; both profiles always write stereo silence')
@@ -226,4 +236,4 @@ if __name__=='__main__':
     p.add_argument('--dsp-usage',action='store_true',help='31m: top-right DSP block-load meter from existing reports, no polling')
     p.add_argument('--xflash',action='store_true',help='31g: LARGE-code load image in a Frost-owned section 0x67 at DSP 0x14000 (needs --large-code)')
     p.add_argument('--dsp-64k',action='store_true',help='31e experiment: 64 KB DSP section and read-only flash hash command (needs --large-code)')
-    a=p.parse_args();print(stage(a.platform,a.stage,a.controller,a.bank,a.audio_input,a.audio_output,a.cab_ir,a.hot_ram,a.service_window_cycles,a.control_scheduler,a.cab_ir_taps,a.large_code,a.dsp_64k,a.flash_hash,a.xflash,a.overlays,a.reverb_int16,a.dsp_usage,a.fcm_bench,a.ir_link))
+    a=p.parse_args();print(stage(a.platform,a.stage,a.controller,a.bank,a.audio_input,a.audio_output,a.cab_ir,a.hot_ram,a.service_window_cycles,a.control_scheduler,a.cab_ir_taps,a.large_code,a.dsp_64k,a.flash_hash,a.xflash,a.overlays,a.reverb_int16,a.dsp_usage,a.fcm_bench,a.ir_link,a.media_platform))

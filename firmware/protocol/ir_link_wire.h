@@ -20,8 +20,13 @@
  * version as loaded. Both sides include this header. */
 #define FROST_IRL_SYNC_D 0xC0DE5A17u   /* DSP -> controller (as OpenGP5) */
 #define FROST_IRL_SYNC_N 0xC0DE5A71u   /* controller -> DSP */
+#ifdef FROST_USB_AUDIO
+#define FROST_IRL_MAGIC_D 0x334C4946u /* FIL3: media frame, refuse a legacy peer */
+#define FROST_IRL_MAGIC_N 0x344C4946u /* FIL4 */
+#else
 #define FROST_IRL_MAGIC_D 0x314C4946u  /* "FIL1" */
 #define FROST_IRL_MAGIC_N 0x324C4946u  /* "FIL2" */
+#endif
 #define FROST_IRL_PAD 32u
 #define FROST_IRL_BLOCK 64u
 #define FROST_IRL_STREAMS 2u
@@ -34,12 +39,19 @@
 #define FROST_IRL_W_SIDE 2u       /* D: bit31 valid, bits 0..3 stream, 4..7 chunk, 8..15 version. N: ctl cycles */
 #define FROST_IRL_W_SCALE 3u      /* D: float bits of the chunk's coefficient scale. N: ctl blocks */
 #define FROST_IRL_W_VERSIONS 4u   /* D: current versions v0 | v1 << 8. N: frames refused */
-#define FROST_IRL_W_INFO 5u       /* D: DSP cycles of the last block. N: 0 */
+#define FROST_IRL_W_INFO 5u       /* D: DSP cycles. N: USB direct-off in media profile, otherwise 0 */
 #define FROST_IRL_W_TAPS 6u       /* D: 32 words = 64 int16 taps (tap 2i low half). N: 0 */
 #define FROST_IRL_W_AUDIO 38u     /* 64 int32 per stream: D Q23 input, N raw sums */
-#define FROST_IRL_W_TAG (FROST_IRL_W_AUDIO+FROST_IRL_STREAMS*FROST_IRL_BLOCK)  /* 166, written last */
-#define FROST_IRL_WORDS (FROST_IRL_W_TAG+1u)                                  /* 167 */
-#define FROST_IRL_BYTES (4u+FROST_IRL_WORDS*4u+FROST_IRL_PAD)                /* 704 */
+#ifdef FROST_USB_AUDIO
+/* 64 packed stereo frames each way; the tag remains last. */
+#define FROST_IRL_W_USB (FROST_IRL_W_AUDIO+FROST_IRL_STREAMS*FROST_IRL_BLOCK)
+#define FROST_IRL_MEDIA_WORDS FROST_IRL_BLOCK
+#else
+#define FROST_IRL_MEDIA_WORDS 0u
+#endif
+#define FROST_IRL_W_TAG (FROST_IRL_MEDIA_WORDS+FROST_IRL_W_AUDIO+FROST_IRL_STREAMS*FROST_IRL_BLOCK)  /* 166 legacy / 230 media; written last */
+#define FROST_IRL_WORDS (FROST_IRL_W_TAG+1u)                                  /* 167 legacy / 231 media */
+#define FROST_IRL_BYTES (4u+FROST_IRL_WORDS*4u+FROST_IRL_PAD)                /* 704 legacy / 960 media */
 /* N ready word: version of stream j in bits 8j..8j+7, loaded flag in bit 16+j. */
 #define FROST_IRL_READY(v,j) ((((v)>>(16u+(j)))&1u) ? (((v)>>(8u*(j)))&0xffu) : 0x100u)
 /* Audio scaling: DSP sends x * 2^23 (|x| <= 16 by the chain contract); the

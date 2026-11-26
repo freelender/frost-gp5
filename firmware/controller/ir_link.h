@@ -30,7 +30,16 @@ static int32_t irl_in[FROST_IRL_WORDS];
 #ifdef FROST_IRL_HOST
 /* Host model: the test drives irl_exchange_done() itself. */
 static unsigned irl_host_armed;
-static void irl_spis_init(void){irl_host_armed=0;}
+#ifdef FROST_USB_AUDIO
+static unsigned irl_host_dma_error;
+static int irl_spis_error(void){return irl_host_dma_error!=0;}
+static void irl_spis_clear_errors(void){irl_host_dma_error=0;}
+#endif
+static void irl_spis_init(void){irl_host_armed=0;
+#ifdef FROST_USB_AUDIO
+irl_spis_clear_errors();
+#endif
+}
 static void irl_spis_start(const void *tx,void *rx,uint32_t n){(void)tx;(void)rx;(void)n;irl_host_armed=1;}
 static int irl_spis_done(void){return 1;}
 static void irl_spis_release(void){irl_host_armed=0;}
@@ -54,6 +63,14 @@ static void irl_spis_release(void){irl_host_armed=0;}
 #define IRL_W(a)      (*(volatile uint32_t *)(a))
 #define IRL_IRQ       13u                                   /* DMA channel 4 (receive) done */
 static uint32_t irl_mux_before;static int irl_mux_saved;
+#ifdef FROST_USB_AUDIO
+/* OpenGP5 1.0 spis.c: done+error (status 5) stops receive DMA. Clear all
+ * three W1C flags, including error, rather than repeatedly rearming it. */
+static int irl_spis_error(void)
+{return ((IRL_W(IRL_CH(IRL_CH_RX)+0x1Cu)|IRL_W(IRL_CH(IRL_CH_TX)+0x1Cu))&4u)!=0;}
+static void irl_spis_clear_errors(void)
+{IRL_W(IRL_CH(IRL_CH_RX)+0x1Cu)=0x700u;IRL_W(IRL_CH(IRL_CH_TX)+0x1Cu)=0x700u;}
+#endif
 static void irl_spis_init(void)
 {
     IRL_W(IRL_SPIS_CTRL)&=~0x60u;  /* stop the receiver before changing its DMA */
@@ -74,6 +91,9 @@ static void irl_spis_init(void)
     IRL_W(IRL_CH(IRL_CH_TX)+0x18u)=IRL_SPIS_TXD;
     IRL_W(IRL_CH(IRL_CH_TX)+0x1Cu)=0x100u;
     IRL_W(IRL_SPIS_CLR)|=0xFu;
+#ifdef FROST_USB_AUDIO
+    irl_spis_clear_errors();
+#endif
     IRL_W(IRL_DMA_EN)|=(1u<<IRL_CH_RX)|(1u<<IRL_CH_TX);
 }
 /* A channel only (re)starts when its enable bit goes 0 -> 1 (OpenGP5). */
@@ -140,6 +160,11 @@ static void irl_sideband(const int32_t *in)
 }
 /* rx: the frame just received; tx: the frame for the next exchange (already
  * armed: everything but the tag may go out stale, the tag goes last). */
+#ifdef FROST_USB_AUDIO
+#include "usb_audio.h"
+extern volatile uint8_t dsp_ctl_direct_off;
+extern volatile uint32_t gp5_link_t_in,gp5_link_t_out;
+#endif
 static void irl_work(const int32_t *rx,int32_t *tx)
 {
     uint32_t t0=IRL_CYCLES(),t,j,mask,n;const int32_t *in=irl_find(rx);int32_t *out=tx+1;
@@ -155,6 +180,10 @@ static void irl_work(const int32_t *rx,int32_t *tx)
         else{irc_clear(&irl.s[j]);for(n=0;n<FROST_IRL_BLOCK;++n)y[n]=0;}
     }
     out[FROST_IRL_W_MAGIC]=(int32_t)FROST_IRL_MAGIC_N;out[FROST_IRL_W_FLAGS]=(int32_t)irl.ready;
+#ifdef FROST_USB_AUDIO
+    usb_audio_link_block(in,out,t0);
+    out[FROST_IRL_W_INFO]=(int32_t)dsp_ctl_direct_off;
+#endif
     out[FROST_IRL_W_SCALE]=(int32_t)irl.blocks;out[FROST_IRL_W_VERSIONS]=(int32_t)irl.refused;
     t=IRL_CYCLES()-t0;irl.cycles=t;if(irl.blocks>64u && t>irl.worst)irl.worst=t;
     out[FROST_IRL_W_SIDE]=(int32_t)t;
@@ -168,6 +197,9 @@ void gp5_link_irq(void);
 void gp5_link_irq(void)
 {
     unsigned k=irl.cur,n=k^1u;
+#ifdef FROST_USB_AUDIO
+    gp5_link_t_in=IRL_CYCLES();
+#endif
     if(!irl_spis_done()){
         /* Receive done before send: comes again. Bounded: a storm would starve
          * the main loop (and its re-arm). 31y10 used 100000 and never reset the
@@ -188,6 +220,9 @@ void gp5_link_irq(void)
     irl_spis_start(irl_tx[n],irl_rx[n],FROST_IRL_BYTES);
     IRL_LINES_INVAL(irl_rx[k]);
     irl_work(irl_rx[k],irl_tx[n]);
+#ifdef FROST_USB_AUDIO
+    gp5_link_t_out=IRL_CYCLES();
+#endif
 }
 static void irl_start(void)
 {
@@ -256,6 +291,11 @@ static void __attribute__((unused)) irl_poll(uint32_t now)
      * let the master's quiet interval provide a clean resync boundary. */
     if(irl.blocks+irl.refused!=irl_seen_blocks){irl_seen_blocks=irl.blocks+irl.refused;irl_quiet_since=now;return;}
     if((int32_t)(now-irl_quiet_since)>=20){
+#ifdef FROST_USB_AUDIO
+        /* Clear a latched DMA error in place first. An unconditional re-arm
+         * repeatedly hit the same error on the physical USB/BLE build. */
+        if(irl_spis_error()){irl_spis_clear_errors();irl_quiet_since=now;return;}
+#endif
         /* A local re-arm can land in the master's next frame. Establish an
          * acknowledged quiet wire instead of endlessly restarting mid-frame. */
         irl_quiet_since=now;

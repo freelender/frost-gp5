@@ -56,7 +56,7 @@ static unsigned foot_down,foot_long,foot_toggled,tuner_ref_dirty,tuner_ref_unloc
 static uint32_t foot_down_ms;
 static unsigned tuner_home;                      /* the home view to return to */
 /* Stage 2b: global settings menu, home screens, long press (docs/User%20Guide.md). */
-enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_VERSION, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_FOOTSWITCH, SET_FIRMWARE, SET_ROWS };
+enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_VERSION, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_FOOTSWITCH, SET_FIRMWARE, SET_DIRECT_MONITOR, SET_BLUETOOTH, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
 /* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
@@ -66,9 +66,17 @@ enum { SM_TOP, SM_AUDIO, SM_DISPLAY, SM_SYSTEM, SM_EQ, SM_TAP, SM_MENUS };
 enum { SE_AUDIO=32, SE_DISPLAY, SE_SYSTEM, SE_EQ, SE_TAP };
 static const uint8_t settings_menus[SM_MENUS][7]={
     {SE_AUDIO,SE_DISPLAY,SE_TAP,SE_SYSTEM,SET_BACK,255,255},
+#ifdef FROST_USB_AUDIO
+    {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_DIRECT_MONITOR,SET_BACK},
+#else
     {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
+#endif
     {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_FOOTSWITCH,SET_BACK,255,255},
+#ifdef FROST_USB_AUDIO
+    {SET_FIRMWARE,SET_VERSION,SET_BLUETOOTH,SET_RESET,SET_FACTORY,SET_BACK,255},
+#else
     {SET_FIRMWARE,SET_VERSION,SET_RESET,SET_FACTORY,SET_BACK,255,255},
+#endif
     {SET_EQ_BASS,SET_EQ_MIDDLE,SET_EQ_TREBLE,SET_BACK,255,255,255},
     {SET_TAP_TEMPO,SET_TAP_NOTE,SET_TAP_TARGET,SET_TEMPO_LIGHT,SET_BACK,255,255}};
 /* Submenu entry SE_* <-> menu SM_*: SE_AUDIO..SE_SYSTEM map in order. */
@@ -303,6 +311,8 @@ static void settings_value(unsigned row,char out[24])
     case SET_OUT_LEVEL:q=number(q,globals.out_level);*q++='%';*q=0;break;
     case SET_OUT_MODE:{const char *t=globals.out_mode?"STEREO":"MONO";while(*t)*q++=*t++;*q=0;break;}
     case SET_CAB:{const char *t=globals.cab_override?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_DIRECT_MONITOR:{const char *t=direct_monitor_now()?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
+    case SET_BLUETOOTH:{const char *t=globals.bluetooth?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
     case SET_BRIGHT:q=number(q,globals.brightness);*q++='%';*q=0;break;
     case SET_HOME:{const char *t=globals.home==HOME_SETLIST?"SETLIST":globals.home==HOME_PRESET?"PRESET":globals.home==HOME_STOMP?"STOMP":"CHAIN";while(*t)*q++=*t++;*q=0;break;}
     case SET_SETLIST_HOLD:{const char *t=globals.setlist_hold?"PREV PART":"TUNER";while(*t)*q++=*t++;*q=0;break;}
@@ -323,7 +333,7 @@ static void settings_select(unsigned menu,unsigned pos)
 {settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
-    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","VERSION","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK","FOOTSWITCH","FIRMWARE"};
+    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","VERSION","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK","FOOTSWITCH","FIRMWARE","DIRECT MONITORING","BLUETOOTH"};
     static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ","TAP TEMPO"};
     static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ","TAP TEMPO"};
     unsigned i;char value[24];
@@ -571,7 +581,7 @@ void fw_init(void)
 #ifdef FROST_LINE_TEST
     frost_line_control_init(&line_control);
 #endif
-    globals_load();setlist_init();global_client_init(&global_client,gp5_ms());globals_apply_backlight();
+    globals_load();globals_apply_direct_monitor();globals_apply_bluetooth();setlist_init();global_client_init(&global_client,gp5_ms());globals_apply_backlight();
     settings_menu=settings_pos=0;settings_row=settings_dirty=settings_confirm=para_down=para_long=last_preset_dirty=boot_load_done=0;current_preset=globals.last_preset;
     ctl_mask=recall_ctl_mask=ctl_pending=0;{unsigned i;for(i=0;i<6u;++i)ctl_types[i]=FROST_EMPTY;}
     para_down_ms=last_input_ms=gp5_ms();recall_pending=editor_transport_status=0;
@@ -1029,7 +1039,7 @@ static void settings_press(void)
 #endif
         }
         else {unsigned keep=globals.last_preset,factory=globals.factory_state;globals_defaults(&globals);globals.last_preset=keep;globals.factory_state=factory;}
-        globals_apply_backlight();settings_dirty=1;(void)globals_save(gp5_ms());settings_dirty=0;
+        globals_apply_backlight();globals_apply_direct_monitor();globals_apply_bluetooth();settings_dirty=1;(void)globals_save(gp5_ms());settings_dirty=0;
         view=SETTINGS;settings_confirm=0;factory_stage=0;
     }
 }
@@ -1043,6 +1053,8 @@ static void settings_turn(int d)
     case SET_OUT_LEVEL:{int v=(int)globals.out_level+d;globals.out_level=(unsigned)(v<0?0:v>100?100:v);break;}
     case SET_OUT_MODE:globals.out_mode=(unsigned)(((int)globals.out_mode+d%2+2)%2);break;
     case SET_CAB:globals.cab_override=(unsigned)(((int)globals.cab_override+d%2+2)%2);break;
+    case SET_DIRECT_MONITOR:globals.direct_monitor=(unsigned)(((int)direct_monitor_now()+d%2+2)%2);globals_apply_direct_monitor();break;
+    case SET_BLUETOOTH:globals.bluetooth=(unsigned)(((int)globals.bluetooth+d%2+2)%2);globals_apply_bluetooth();break;
     case SET_BRIGHT:{int v=(int)globals.brightness+10*d;globals.brightness=(unsigned)(v<0?0:v>100?100:v);globals_apply_backlight();break;}
     case SET_HOME:globals.home=(unsigned)(((int)globals.home+d%HOMES+HOMES)%HOMES);break;
     case SET_SETLIST_HOLD:globals.setlist_hold=(unsigned)(((int)globals.setlist_hold+d%2+2)%2);break;

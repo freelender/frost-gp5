@@ -9,6 +9,10 @@
 #include "preset_store.h"
 #include "firmware/protocol/global_wire.h"
 #include "firmware/version.h"
+#ifdef FROST_USB_AUDIO
+#include "usb_audio.h"
+#include "bt/ble.h"
+#endif
 #define FROST_FIRMWARE_TEXT FROST_VERSION_DISPLAY
 #define FROST_GLB_FIRM 0x424c4746u            /* "FGLB" */
 #define FROST_GLB_BYTES 64u
@@ -34,6 +38,8 @@ typedef struct {
     unsigned tap_tempo;              /* 32u: 1 = footswitch hold on a tempo effect taps; 0 (default) = as before */
     unsigned footswitch_ctl;          /* 0 selected block (default), 1 preset CTL group */
     unsigned tap_target;             /* 0 (default) = a tap sets the selected effect, 1 = every tempo effect in the chain */
+    unsigned direct_monitor;         /* 1 (default) = hear the chain alongside USB playback */
+    unsigned bluetooth;              /* 1 (default) = BLE MIDI enabled */
 } FrostGlobals;
 static FrostGlobals globals;
 /* Performance controls are volatile: MIDI never saves global preferences. */
@@ -47,10 +53,10 @@ static unsigned tap_target_now(void){return midi_tap_target<=1u?midi_tap_target:
 static unsigned global_output_flags(void){return globals.out_mode | (midi_bypass?FROST_GLOBAL_BYPASS:0u);}
 void gp5_backlight_duty(unsigned percent);
 static void globals_defaults(FrostGlobals *g)
-{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;g->tap_target=0;g->footswitch_ctl=0;}
+{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;g->tap_target=0;g->footswitch_ctl=0;g->direct_monitor=1;g->bluetooth=1;}
 static int globals_valid(const FrostGlobals *g)
 {return g->eq_db[0]>=-12 && g->eq_db[0]<=12 && g->eq_db[1]>=-12 && g->eq_db[1]<=12 && g->eq_db[2]>=-12 && g->eq_db[2]<=12 && g->in_gain_db>=-20 && g->in_gain_db<=20 && g->out_level<=100 && g->out_mode<=1 && g->cab_override<=1 &&
-        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=425u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u && g->tap_target<=1u && g->footswitch_ctl<=1u;}
+        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=425u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u && g->tap_target<=1u && g->footswitch_ctl<=1u && g->direct_monitor<=1u && g->bluetooth<=1u;}
 /* record: 'FG' 1 0 | in_gain(i8) out_level out_mode cab brightness home last_preset 0 | 0... | crc32 @60 */
 static void globals_load(void)
 {
@@ -71,6 +77,8 @@ static void globals_load(void)
     g.tap_tempo=FROST_FILE_AT(d)[19]?FROST_FILE_AT(d)[19]-1u:0u;      /* 32u; 0 (older record) = off */
     g.tap_target=FROST_FILE_AT(d)[20]?FROST_FILE_AT(d)[20]-1u:0u;     /* 0 (older record) = selected */
     g.footswitch_ctl=FROST_FILE_AT(d)[21];
+    g.direct_monitor=FROST_FILE_AT(d)[22]?FROST_FILE_AT(d)[22]-1u:1u; /* older record = on */
+    g.bluetooth=FROST_FILE_AT(d)[23]?FROST_FILE_AT(d)[23]-1u:1u; /* older record = on */
     if(globals_valid(&g))globals=g;
 }
 /* 1 = written (or nothing to do). */
@@ -90,12 +98,35 @@ static int globals_save(uint32_t now)
     for(i=0;i<3u;++i)store_buf[14u+i]=(uint8_t)(int8_t)globals.eq_db[i];
     store_buf[17]=(uint8_t)(globals.tap_note+1u);store_buf[18]=(uint8_t)(globals.tempo_light+1u);store_buf[19]=(uint8_t)(globals.tap_tempo+1u);store_buf[20]=(uint8_t)(globals.tap_target+1u);
     store_buf[21]=(uint8_t)globals.footswitch_ctl;
+    store_buf[22]=(uint8_t)(globals.direct_monitor+1u);
+    store_buf[23]=(uint8_t)(globals.bluetooth+1u);
     frost_wire_put32(store_buf+60,store_crc_ram(store_buf,60));
     store_group_name(name,'g','l','b',0);
     return store_write_group(FROST_GLB_FIRM,name,bytes);
 }
 /* 0 % keeps a faint backlight (1 %) so the screen can still be read in the dark. */
 static void globals_apply_backlight(void){gp5_backlight_duty(globals.brightness?globals.brightness:1u);}
+/* Host commands may temporarily override this saved preference. */
+static unsigned direct_monitor_now(void)
+{
+#ifdef FROST_USB_AUDIO
+    return (unsigned)gp5_usb_audio_direct();
+#else
+    return globals.direct_monitor;
+#endif
+}
+static void globals_apply_direct_monitor(void)
+{
+#ifdef FROST_USB_AUDIO
+    gp5_usb_audio_set_direct((int)globals.direct_monitor);
+#endif
+}
+static void globals_apply_bluetooth(void)
+{
+#ifdef FROST_USB_AUDIO
+    gp5_bt_set_enabled((int)globals.bluetooth);
+#endif
+}
 static inline unsigned globals_level(unsigned knob_level){return knob_level*globals.out_level/100u;}
 /* Factory reset: erase the whole storage area (presets, AMP models, IRs, settings). */
 static void globals_factory_erase(void)

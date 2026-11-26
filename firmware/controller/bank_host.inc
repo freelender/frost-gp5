@@ -1,3 +1,8 @@
+#ifdef FROST_USB_AUDIO
+{extern unsigned fw_media_host(const uint8_t *,unsigned,uint8_t *,unsigned);
+ unsigned bytes=fw_media_host(proto_req,proto_req_len,pl,sizeof pl);
+ if(bytes){proto_reply(0x01,0,pl,bytes);return;}}
+#endif
 /* Inside the platform's serialized host_dsp_cmd(), before DSP bridge dispatch.
  * Controller-local readback; pl is the platform's100-byte bounded reply buffer. */
 if (proto_req_len >= 2 && proto_req[0] == 0x7e && proto_req[1] == 0x46) {

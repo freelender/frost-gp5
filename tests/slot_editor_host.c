@@ -24,6 +24,13 @@ static uint32_t host_load_budget=UINT32_MAX;
 #define fw_init dsp_init
 #include "../firmware/dsp/firmware.h"
 #undef fw_init
+#ifdef FROST_TEST_USB_MONITOR
+#define FROST_USB_AUDIO 1
+static unsigned host_direct=1,host_bluetooth=1;
+void gp5_bt_set_enabled(int on){host_bluetooth=on!=0;}
+void gp5_usb_audio_set_direct(int on){host_direct=on!=0;}
+int gp5_usb_audio_direct(void){return (int)host_direct;}
+#endif
 static uint32_t now;
 static uint16_t pixels[160*80];static unsigned bad_blit;
 uint32_t gp5_ms(void){return now;}
@@ -293,3 +300,22 @@ API unsigned ge_ctl_mask(void){ctl_sync();return ctl_mask;}
 API unsigned ge_ctl_mode(void){return globals.footswitch_ctl;}
 
 API const char *ge_firmware_name(void){static char s[24];settings_value(SET_FIRMWARE,s);return s;}
+
+#ifdef FROST_TEST_USB_MONITOR
+API unsigned ge_bluetooth_saved(void){return globals.bluetooth;}
+API unsigned ge_bluetooth_now(void){return host_bluetooth;}
+API unsigned ge_monitor_saved(void){return globals.direct_monitor;}
+API unsigned ge_monitor_now(void){return direct_monitor_now();}
+API void ge_monitor_override(unsigned on){gp5_usb_audio_set_direct((int)on);}
+API const char *ge_monitor_label(void){static char text[24];settings_value(SET_DIRECT_MONITOR,text);return text;}
+/* Simulate an older or corrupt-field record with a valid CRC. */
+static void ge_media_record(unsigned offset,unsigned encoded)
+{
+    uint32_t d;uint8_t *p;
+    (void)globals_save(now);d=globals_record();if(!d)return;
+    p=host_files+d-0x13f000u;p[offset]=(uint8_t)encoded;
+    frost_wire_put32(p+60,store_crc_ram(p,60));
+}
+API void ge_monitor_record(unsigned encoded){ge_media_record(22,encoded);}
+API void ge_bluetooth_record(unsigned encoded){ge_media_record(23,encoded);}
+#endif

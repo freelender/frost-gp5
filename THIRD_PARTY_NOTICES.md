@@ -8,6 +8,18 @@ Integer arithmetic in the separately archived native quantized research derives 
 
 The default hardware diagnostic uses a locally generated synthetic FIR, not a cabinet capture. No trained NAM weights, stock firmware or user IR assets are bundled. Historical migration records are retained outside the product source tree.
 
+## Optional USB audio and BLE MIDI drivers
+
+The `OpenGP5Media` pin in `dependencies.lock.json` identifies the OpenGP5 1.0
+sources used by `tools/media_compat.py`: USB composite descriptors, USB
+isochronous hardware driver, clock-following resampler, radio/BLE MIDI stack,
+protocol framing, log and formatting helpers. These MIT-licensed sources are
+copied only into an external build stage. Frost adapts their names, ordinary
+RAM placement, MIDI parser isolation and USB-only loader rule, and integrates
+them with its existing IR transport and float/master output path. The media
+profile also ports the upstream SPI DMA error-flag recovery rule. The OpenGP5
+MIT notice below applies. No vendor radio library or stock firmware is linked.
+
 ## Built-in cabinet impulse response
 
 Release firmware images embed one cabinet impulse response as the built-in cabinet (CAB 00): **"Cookie Monster"** (`01-cookie-monster.wav`) from the **Jesters Brutal Pack 1.0** by Jesters, released under **CC0 1.0** (public domain dedication). Frost obtained it from [OrbitCab](https://github.com/darwinscat/orbitcab) by Darwin's Cat (`resources/ir/`), whose [asset ledger](https://github.com/darwinscat/orbitcab/blob/main/docs/ASSET-LICENSES.md) records the pack's CC0 grant. For the firmware it is trimmed to 512 taps and stored as 16-bit coefficients. CC0 requires no attribution; this credit is given with thanks. The WAV itself is not part of this source tree.

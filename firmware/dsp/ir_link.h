@@ -31,7 +31,14 @@
 #define FROST_IRL_RESYNC_PAUSE 64u     /* 93 ms of silence on the wire */
 typedef struct {
     float out[FROST_IRL_STREAMS][FROST_IRL_BLOCK];    /* what the IR block mixes (gain-ramped) */
+#if defined(FROST_USB_AUDIO) && !defined(FROST_IRL_HOST)
+    float (*hold)[FROST_IRL_BLOCK]; /* free platform RAM at 0x1001FC00; keeps DMA/state below ABUF */
+#else
     float hold[FROST_IRL_STREAMS][FROST_IRL_BLOCK];   /* last valid controller block, for a fade-out */
+#endif
+#ifdef FROST_USB_AUDIO
+    float usb_direct_gain;uint32_t usb_direct_off;
+#endif
     float scale[FROST_IRL_STREAMS],inv[FROST_IRL_STREAMS],gain[FROST_IRL_STREAMS];
     uint32_t sum[FROST_IRL_STREAMS][FROST_IRL_CHUNKS];/* per-chunk coefficient fingerprints */
     uint32_t version[FROST_IRL_STREAMS];
@@ -43,6 +50,18 @@ typedef struct {
     uint32_t frames_ok,frames_bad,busy,ctl_cycles,switches;
 } FrostIrlState;
 
+#ifdef FROST_USB_AUDIO
+#ifdef FROST_IRL_HOST
+static uint32_t frost_media_record_host[64],frost_media_play_host[64];
+#define FROST_MEDIA_RECORD frost_media_record_host
+#define FROST_MEDIA_PLAY frost_media_play_host
+#else
+/* Free platform RAM, above the audio DMA area and the relocated IR hold.
+ * Never read/write a USB payload while SPI DMA owns the frame containing it. */
+#define FROST_MEDIA_RECORD ((uint32_t *)0x1001FE00u)
+#define FROST_MEDIA_PLAY ((uint32_t *)0x1001FF00u)
+#endif
+#endif
 #ifdef FROST_IRL_HOST
 static int32_t frost_irl_host_rx[(FROST_IRL_BYTES+3u)/4u],frost_irl_host_tx[(FROST_IRL_BYTES+3u)/4u];
 static FrostIrlState frost_irl_host_state;
@@ -58,9 +77,14 @@ static uint32_t frost_irl_host_busy,frost_irl_host_starts,frost_irl_host_finishe
 #define FROST_IRL_SPI_INIT() do{frost_irl_host_busy=0;}while(0)
 #define FROST_IRL_SPI_QUIET() do{frost_irl_host_busy=0;}while(0)
 #else
+#ifdef FROST_USB_AUDIO
+#define FROST_IRL_BUFFER_BYTES 0x3C0u
+#else
+#define FROST_IRL_BUFFER_BYTES 0x2C0u
+#endif
 #define FROST_IRL_RAW_RX 0x1001E800u
-#define FROST_IRL_RAW_TX (FROST_IRL_RAW_RX+0x2C0u)
-#define FROST_IRL_STATE (FROST_IRL_RAW_TX+0x2C0u)
+#define FROST_IRL_RAW_TX (FROST_IRL_RAW_RX+FROST_IRL_BUFFER_BYTES)
+#define FROST_IRL_STATE (FROST_IRL_RAW_TX+FROST_IRL_BUFFER_BYTES)
 #define FROST_IRL_RX ((volatile int32_t *)FROST_IRL_RAW_RX)
 #define FROST_IRL_TX ((volatile int32_t *)FROST_IRL_RAW_TX)
 #define FROST_IRL ((FrostIrlState *)FROST_IRL_STATE)
@@ -74,7 +98,7 @@ static uint32_t frost_irl_host_busy,frost_irl_host_starts,frost_irl_host_finishe
 #define FROST_IRL_SPI_INIT() frost_irl_spi_init()
 #define FROST_IRL_SPI_QUIET() frost_irl_spi_quiet()
 typedef char frost_irl_fits[(FROST_IRL_STATE+sizeof(FrostIrlState)<=0x1001F400u)?1:-1];
-typedef char frost_irl_buffers[(FROST_IRL_BYTES<=0x2C0u)?1:-1];
+typedef char frost_irl_buffers[(FROST_IRL_BYTES<=FROST_IRL_BUFFER_BYTES)?1:-1];
 void frost_irl_spi_init(void);
 void frost_irl_spi_init(void)
 {
@@ -124,6 +148,14 @@ void frost_irl_init(void)
     FrostIrlState *s=FROST_IRL;unsigned i,j;
     for(i=0;i<sizeof *s/4u;++i)((volatile uint32_t *)s)[i]=0;
     for(j=0;j<FROST_IRL_STREAMS;++j){s->version[j]=1u;for(i=0;i<FROST_IRL_CHUNKS;++i)s->sum[j][i]=0xffffffffu;}
+#if defined(FROST_USB_AUDIO) && !defined(FROST_IRL_HOST)
+    s->hold=(float (*)[FROST_IRL_BLOCK])0x1001FC00u;
+    for(j=0;j<FROST_IRL_STREAMS;++j)for(i=0;i<FROST_IRL_BLOCK;++i)s->hold[j][i]=0.0f;
+#endif
+#ifdef FROST_USB_AUDIO
+    s->usb_direct_gain=1.0f;
+    for(i=0;i<FROST_IRL_BLOCK;++i)FROST_MEDIA_RECORD[i]=FROST_MEDIA_PLAY[i]=0;
+#endif
     s->generation=frost_ir_generation;s->dirty=3u;    /* fingerprint everything first */
     FROST_IRL_SPI_INIT();
     FROST_IRL_TX[0]=(int32_t)FROST_IRL_SYNC_D;
@@ -197,6 +229,11 @@ FROST_AUDIO_RAM void frost_irl_check(void)
     ++s->magic_ok;s->last_tag=frost_irl_ld(r+4u*FROST_IRL_W_TAG);
     if(s->last_tag!=s->block-2u)return;
     s->ready=frost_irl_ld(r+4u*FROST_IRL_W_FLAGS);s->ctl_cycles=frost_irl_ld(r+4u*FROST_IRL_W_SIDE);s->frame_ok=1;
+#ifdef FROST_USB_AUDIO
+    /* Snapshot before any new exchange can replace this RX buffer. */
+    s->usb_direct_off=frost_irl_ld(r+4u*FROST_IRL_W_INFO)==1u;
+    for(o=0;o<FROST_IRL_BLOCK;++o)FROST_MEDIA_PLAY[o]=frost_irl_ld(r+4u*(FROST_IRL_W_USB+o));
+#endif
 }
 /* Coefficient sideband chunk: a stream the controller has not loaded first,
  * else round robin. Stage 4b: only while a stream is dirty or unloaded, and
@@ -241,6 +278,11 @@ FROST_AUDIO_RAM void frost_irl_send(void)
     t[FROST_IRL_W_FLAGS]=(int32_t)((frost_ir_remote&1u)|(s->written<<8));
     t[FROST_IRL_W_VERSIONS]=(int32_t)(s->version[0]|(s->version[1]<<8));
     t[FROST_IRL_W_INFO]=(int32_t)(s->cyc_prev>s->cyc_max?s->cyc_prev:s->cyc_max);
+#ifdef FROST_USB_AUDIO
+    /* Recording prepared after the previous chain block: one extra block of
+     * recording latency keeps Frost's original early IR exchange boundary. */
+    for(n=0;n<FROST_IRL_BLOCK;++n)t[FROST_IRL_W_USB+n]=(int32_t)FROST_MEDIA_RECORD[n];
+#endif
     t[FROST_IRL_W_TAG]=(int32_t)s->block;
     FROST_IRL_KICK();s->started=1;s->written|=0x100u;  /* bit 8: sent this block */
 }

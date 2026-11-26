@@ -7,9 +7,11 @@ RESET). Row numbers are the firmware's SET_* rows."""
 IN_GAIN,OUT_LEVEL,OUT_MODE,CAB,BRIGHT,HOME,SETLIST_HOLD,VERSION,RESET,FACTORY,EQ_BASS,EQ_MIDDLE,EQ_TREBLE,TAP_NOTE,TEMPO_LIGHT,TAP_TEMPO,TAP_TARGET,BACK=range(18)
 FOOTSWITCH=18
 FIRMWARE=19
+DIRECT_MONITOR=20
+BLUETOOTH=21
 TOP_AUDIO,TOP_DISPLAY,TOP_TAP,TOP_SYSTEM,TOP_BACK=range(5)
 AUDIO_EQ=4
-PATH={IN_GAIN:(TOP_AUDIO,None,0),OUT_LEVEL:(TOP_AUDIO,None,1),OUT_MODE:(TOP_AUDIO,None,2),CAB:(TOP_AUDIO,None,3),
+PATH={BLUETOOTH:(TOP_SYSTEM,None,2),DIRECT_MONITOR:(TOP_AUDIO,None,5),IN_GAIN:(TOP_AUDIO,None,0),OUT_LEVEL:(TOP_AUDIO,None,1),OUT_MODE:(TOP_AUDIO,None,2),CAB:(TOP_AUDIO,None,3),
       EQ_BASS:(TOP_AUDIO,AUDIO_EQ,0),EQ_MIDDLE:(TOP_AUDIO,AUDIO_EQ,1),EQ_TREBLE:(TOP_AUDIO,AUDIO_EQ,2),
       HOME:(TOP_DISPLAY,None,0),BRIGHT:(TOP_DISPLAY,None,1),SETLIST_HOLD:(TOP_DISPLAY,None,2),FOOTSWITCH:(TOP_DISPLAY,None,3),
       TAP_TEMPO:(TOP_TAP,None,0),TAP_NOTE:(TOP_TAP,None,1),TAP_TARGET:(TOP_TAP,None,2),TEMPO_LIGHT:(TOP_TAP,None,3),
@@ -23,6 +25,7 @@ def go_row(c,row):
     if row==BACK:turn_to(c,TOP_BACK);return
     first,sub,pos=PATH[row];turn_to(c,first);c.ge_press()
     if sub is not None:turn_to(c,sub);c.ge_press()
+    if row in (RESET,FACTORY) and hasattr(c,"ge_bluetooth_now"):pos+=1
     turn_to(c,pos)
     assert c.ge_settings_row()==row,(row,c.ge_settings_row())
 def leave(c):

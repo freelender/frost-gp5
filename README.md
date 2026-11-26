@@ -53,11 +53,12 @@ Frost plays converted capture approximations; it does **not** run native NAM.
 Heavy chains can exceed the DSP budget. Preset changes do not provide
 effect-tail spillover, and storage writes can briefly interrupt audio.
 
-**Not supported yet:** with Frost installed, the GP-5 does **not** work as a
-USB audio interface (no recording or playback over USB) and **Bluetooth is
-off** (no streaming of backing tracks from a phone). USB carries only MIDI for
-the website and controllers. Valeton's own firmware keeps both features;
-reinstall it if you need them.
+Standard beta images carry USB MIDI only. An **experimental USB audio and
+Bluetooth MIDI build** is available from source; see the [build guide](docs/Build%20Firmware.md).
+It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
+Short device checks cover USB recording/playback and BLE MIDI reception.
+The profile remains experimental; long-session stability and heavy-chain load
+still need qualification. Bluetooth phone-audio streaming is not implemented.
 
 ## Getting started
 

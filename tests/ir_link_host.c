@@ -20,6 +20,20 @@ static float ws_spectrum[FROST_IR_FFT_PARTS][FROST_IR_FFT_SIZE];
 #endif
 #include "../firmware/dsp/ir_link.h"
 #include "../firmware/controller/ir_link.h"
+#ifdef FROST_USB_AUDIO
+volatile uint8_t dsp_ctl_direct_off;
+volatile uint32_t gp5_link_t_in,gp5_link_t_out;
+static unsigned media_blocks;static uint32_t media_record[64],media_play;
+void usb_audio_link_block(const int32_t *in,int32_t *out,uint32_t t)
+{unsigned i;(void)t;++media_blocks;for(i=0;i<64;++i){media_record[i]=(uint32_t)in[FROST_IRL_W_USB+i];out[FROST_IRL_W_USB+i]=(int32_t)media_play;}}
+API void ln_media_dma_error(void){irl_host_dma_error=1;}
+API unsigned ln_media_blocks(void){return media_blocks;}
+API void ln_media_play(unsigned word){media_play=word;}
+API unsigned ln_media_record(unsigned i){return media_record[i];}
+API unsigned ln_media_received(unsigned i){return FROST_IRL->frame_ok?FROST_MEDIA_PLAY[i]:0;}
+API void ln_media_overwrite_rx(void){for(unsigned i=0;i<64;++i)memset((uint8_t *)frost_irl_host_rx+FROST_IRL->rxoff+4u*(FROST_IRL_W_USB+i),0,4);}
+API unsigned ln_media_legacy_peer(void){uint32_t old=0x324c4946u;memcpy((uint8_t *)frost_irl_host_rx+FROST_IRL->rxoff,&old,4);frost_irl_check();return FROST_IRL->frame_ok;}
+#endif
 static unsigned ln_starts_seen,ln_lag,ln_deliver=1,ln_ctl_skip,ln_shifted,ln_ms,ln_lost_seen;
 API void ln_init(unsigned two)
 {
@@ -51,6 +65,9 @@ API int ln_load(unsigned slot,const float *h,unsigned taps)
 API float ln_level(unsigned slot){return frost_chain.slots[slot].target[0];}
 static void ln_wire(void)
 {
+#ifdef FROST_USB_AUDIO
+    if(irl_host_dma_error)return;
+#endif
     const uint8_t *dsp_tx=(const uint8_t *)frost_irl_host_tx,*ctl_tx=(const uint8_t *)irl_tx[irl.cur];
     uint8_t *ctl_rx=(uint8_t *)irl_rx[irl.cur],*dsp_rx=(uint8_t *)frost_irl_host_rx;unsigned i;
     /* A shifted slave (re-armed mid-exchange) sees each frame offset by
@@ -67,9 +84,13 @@ static void ln_wire(void)
 API int ln_block(const float *in,float *out)
 {
     int r;
+#ifdef FROST_USB_AUDIO
+    for(unsigned i=0;i<64;++i)FROST_MEDIA_RECORD[i]=((FROST_IRL->block+1u)<<16)|i;
+#endif
     frost_irl_block_begin();
     r=frost_chain_process_guarded(&frost_chain,in,out,64,0);
     frost_irl_block_end();
+
     {unsigned kicked=frost_irl_host_starts!=ln_starts_seen;
      if(kicked){ln_starts_seen=frost_irl_host_starts;if(ln_deliver)ln_wire();}
      /* the controller's main loop: 1.45 ms per block, its 20 ms re-arm when no

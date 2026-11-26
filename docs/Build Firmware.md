@@ -165,6 +165,58 @@ Check `firmware/version.h` for the canonical semantic version and uppercase
 display spelling. Custom builds have their own checksum, even if they retain
 the same version text. A checksum identifies bytes; it is not a signature.
 
+### Optional USB audio and BLE MIDI integration
+
+The separate **OpenGP5Media** source pin supplies OpenGP5 1.0's USB audio,
+resampler and BLE MIDI drivers. Frost's base platform remains pinned separately
+because its UART, storage and recovery adaptations depend on that version.
+Fetch the media source to a fresh external directory:
+
+```sh
+python tools/fetch_platform.py --component media --destination "$FROST_WORK/OpenGP5Media"
+```
+
+For a new build, add `--media-platform "$FROST_WORK/OpenGP5Media"` to the
+playable ADC command in section 6, keeping `--ir-link` and all its prerequisites.
+Use a new stage directory. The checked cabinet profile uses the section 6
+512-tap cabinet options. Build normally with `tools/build_gp5.sh`.
+
+The two processors share **one** SPI transport: 167 Frost IR/control words
+plus 64 packed stereo USB frames (231 words total). The controller runs the
+upstream USB resampler after its IR work. The DSP records after the stereo
+effects/EQ, before playback mixing and the listening master. Separate recording
+and playback staging buffers preserve the early IR exchange timing; USB
+recording gains one block (64 samples) of buffering. DSP media code
+uses the existing extended code region; firmware memory limits are unchanged.
+Both IR streams remain available. Bluetooth starts before USB attachment and
+uses the existing MIDI handler with separate USB/BLE SysEx parser storage.
+
+Short device checks have exercised USB recording/playback with a BLE MIDI
+connection and IR processing, and received MIDI messages over BLE. The profile
+remains experimental: long-session audio continuity and heavy-chain headroom
+are not qualified. Host tests do not measure physical real-time load. It supports BLE MIDI, not
+Bluetooth audio streaming. It does not change the default build profile.
+
+Native integration tests use `FROST_MEDIA_PLATFORM=/path/to/OpenGP5Media` in
+the environment; without the checkout those integration tests skip.
+Upstream's `platform/nds32/test/usb_audio_test.sh` checks resampling and clock
+drift with modeled IO. A physical read-only status check after an authorized
+flash is:
+
+```sh
+python tools/probe_media.py --stage "$FROST_WORK/gp5-media"
+```
+
+That command reports USB streaming flags, playback/recording buffer counters,
+clock correction, BLE state, and MIDI queue counters. Optional `--direct off`
+or `--direct on` changes volatile monitoring. Frost uses **7E 21** for this
+operation: upstream's **7E 19** is already Frost's live-slot query. The USB
+name stays **GP-5 Open FW** for existing Frost tools, with a new audio-profile
+serial so Windows re-reads the composite descriptors; BLE advertises **Frost**.
+Flash both processors and DSP-data together when moving between media and
+standard profiles. Their SPI frame lengths differ. No source build flashes
+anything by itself.
+
 ## 8. Install only when intended
 
 Building does not install anything. Follow the [Installation Guide](Installation%20Guide.MD)

@@ -8,11 +8,12 @@ Frost provides a six-slot signal chain, amp heads, converted capture models,
 cabinet IRs, editable presets, a tuner, and songs/setlist navigation. Once your
 sounds and setlist are saved, the pedal works without the website connected.
 
-**Not supported yet:** with Frost installed, the GP-5 does **not** work as a
-USB audio interface (no recording or playback over USB) and **Bluetooth is
-off** (no streaming of backing tracks from a phone). USB carries only MIDI for
-the website and controllers. Valeton's own firmware keeps both features;
-reinstall it if you need them.
+Standard beta images carry USB MIDI only. An **experimental USB audio and
+Bluetooth MIDI build** is available from source; see the [build guide](Build%20Firmware.md).
+It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
+Short device checks cover USB recording/playback and BLE MIDI reception.
+The profile remains experimental; long-session stability and heavy-chain load
+still need qualification. Bluetooth phone-audio streaming is not implemented.
 
 ## 1. Get started
 
@@ -27,6 +28,36 @@ including SysEx messages, when the browser asks. Close other pedal editors or
 browser tabs using the device.
 
 **Try the demo** lets you explore the live editor without changing a pedal.
+
+### Experimental USB audio and BLE MIDI profile
+
+This profile enumerates as **GP-5 Open FW** for USB audio and MIDI. Select
+44,100 Hz / 16-bit stereo in the computer's recording/playback application.
+The recording contains Frost's finished stereo effects output, before the
+listening volume. Computer playback is mixed into the pedal outputs after
+the effects; it does not feed back into the recording. Leave headroom in
+patches: recording clips above digital full scale even with a low volume knob.
+
+Bluetooth advertises as **Frost** with the BLE MIDI service. Connect through
+a BLE MIDI client; normal Bluetooth audio pairing is not the MIDI connection.
+Use the same CC/program-change mappings as USB. Firmware updates remain USB-only.
+In **GLOBAL SETTINGS → SYSTEM → BLUETOOTH**, choose **ON** (default) or
+**OFF**. OFF stops advertising, disconnects the BLE MIDI client and clears
+queued Bluetooth MIDI; USB MIDI and USB audio continue. ON resumes advertising
+without a restart. Leave settings with BACK to save the choice across restarts.
+This switch controls BLE MIDI; Bluetooth music playback from a phone is not
+implemented in Frost.
+
+For DAW monitoring, open **GLOBAL SETTINGS → AUDIO → DIRECT MONITORING**.
+Choose **OFF** to hear only the computer's USB playback, including your VST
+processing. **ON** (default) mixes the pedal's direct sound with USB playback.
+Recording continues in either mode. Leave Global Settings with BACK to save
+the preference across restarts; it applies to every preset. Without an open
+USB playback stream, the pedal's direct sound remains audible.
+
+The source utility `tools/probe_media.py --stage STAGE --direct off` (or
+`--direct on`) can temporarily override the setting until restart or a menu
+edit. It does not save the override.
 
 ## 2. Pedal controls
 
@@ -482,6 +513,7 @@ and exits.
 | AUDIO | OUTPUT LEVEL | Scale overall output, 0–100% |
 | AUDIO | OUTPUT MODE | MONO sends the same signal to both outputs. STEREO lets stereo effects (PING) spread across the left and right outputs; everything else stays mono |
 | AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
+| AUDIO | DIRECT MONITORING | Experimental USB audio profile: ON (default) mixes the chain with USB playback; OFF hears USB playback alone. Recording is unchanged; without USB playback, direct sound remains audible |
 | AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
 | DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
@@ -493,6 +525,7 @@ and exits.
 | TAP TEMPO | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | FIRMWARE | FROST (read-only; first System row) |
 | SYSTEM | VERSION | The installed Frost version (read-only) |
+| SYSTEM | BLUETOOTH | Experimental media profile: ON (default) enables BLE MIDI; OFF stops advertising and disconnects clients. Saved globally |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 
@@ -544,8 +577,8 @@ not a firmware image.
 | Overload or repeated cuts | Select a lighter preset; report the exact chain and reproduction steps |
 | CHAIN TOO BIG | The chosen effects do not fit together; replace one of the larger effects (see section 3) |
 | DSP LIMIT | The chain would overload the audio processor; replace a heavy effect (see section 3) |
-| The computer or phone sees no GP-5 audio device | Not supported yet: Frost does not provide USB audio (recording or playback) |
-| A phone cannot find the GP-5 over Bluetooth | Not supported yet: Bluetooth is off in Frost |
+| The computer sees no GP-5 audio device | Standard beta images carry MIDI only. The experimental media profile adds USB audio; check that the intended profile was installed |
+| A phone cannot find the GP-5 over Bluetooth | Standard beta images have Bluetooth off. The experimental media profile advertises Frost to BLE MIDI clients; it is not a Bluetooth audio device |
 
 This is beta firmware. Not every hardware setup and heavy chain has been
 qualified. Report firmware version, OS/browser, guitar/pickups, audio

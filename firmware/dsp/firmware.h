@@ -411,10 +411,19 @@ FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_pr
 #endif
 }
 #ifdef FROST_LINE_TEST
+#ifdef FROST_USB_AUDIO
+#include "media_audio.h"
+#endif
 /* Out of line so the boot rehearsal warms the same instructions the DMA path runs. */
 FROST_HOT FROST_CORE __attribute__((noinline)) static void fw_output_block(const int32_t *left,const int32_t *right,
                             volatile uint32_t *out_left,volatile uint32_t *out_right,uint32_t requested)
-{frost_line_render(&line_output,&frost_output_meter,left,right,out_left,out_right,GP5_BLOCK,requested);}
+{
+#ifdef FROST_USB_AUDIO
+ frost_media_output(left,right,out_left,out_right,requested);
+#else
+ frost_line_render(&line_output,&frost_output_meter,left,right,out_left,out_right,GP5_BLOCK,requested);
+#endif
+}
 #endif
 /* Boot only, before DMA/clock/interface enable. Exercise the same out-of-line
  * processing function, discard private scratch outputs, then restore normal

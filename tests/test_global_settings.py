@@ -43,10 +43,10 @@ class GlobalSettingsTests(unittest.TestCase):
             for pos in range(c.ge_settings_count()):
                 settings_nav.turn_to(c,pos);rows[top].append(c.ge_settings_row())
         N=settings_nav
-        self.assertEqual(rows[0][:4]+rows[0][5:],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB,N.BACK])
+        self.assertEqual(rows[0][:4]+rows[0][5:],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB]+([N.DIRECT_MONITOR] if hasattr(c,"ge_monitor_now") else [])+[N.BACK])
         self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.FOOTSWITCH,N.BACK])
         self.assertEqual(rows[2],[N.TAP_TEMPO,N.TAP_NOTE,N.TAP_TARGET,N.TEMPO_LIGHT,N.BACK])
-        self.assertEqual(rows[3],[N.FIRMWARE,N.VERSION,N.RESET,N.FACTORY,N.BACK])
+        self.assertEqual(rows[3],[N.FIRMWARE,N.VERSION]+([N.BLUETOOTH] if hasattr(c,"ge_bluetooth_now") else [])+[N.RESET,N.FACTORY,N.BACK])
         c.ge_press();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,3))   # BACK -> top, on SYSTEM
         settings_nav.turn_to(c,2);c.ge_press();self.assertEqual(c.ge_settings_menu(),5)
         settings_nav.turn_to(c,4);c.ge_press();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,2))   # on TAP TEMPO
