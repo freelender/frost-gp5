@@ -17,7 +17,7 @@ static inline FROST_CTL_INLINE unsigned quick_preset_status(FrostPresetTransfer 
     frost_wire_put32(reply+4,1);frost_wire_put32(reply+8,token);frost_wire_put32(reply+12,status);
     frost_wire_put32(reply+16,s->revision);frost_wire_put32(reply+20,chain->transition);
     frost_wire_put32(reply+24,s->last_write[1]>t->last_request[1]?s->last_write[1]:t->last_request[1]);
-    frost_wire_put32(reply+28,0);return status;
+    frost_wire_put32(reply+28,FROST_QUICK_CAP_RETAIN_IR);return status;
 }
 FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotProtocol *s,FrostChain *chain,
     const uint8_t *q,unsigned n,FrostQuickBuiltin builtin)
@@ -32,7 +32,7 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
         return FROST_SLOT_REPLAYED;
     }
     if(n==12u)return FROST_SLOT_BAD_REQUEST_ID;
-    if(n<FROST_QUICK_HEADER || n>FROST_QUICK_MAX_BYTES || q[16]>6u || q[19]&0xfcu || q[20] || q[21])return FROST_SLOT_BAD_FRAME;
+    if(n<FROST_QUICK_HEADER || n>FROST_QUICK_MAX_BYTES || q[16]>6u || q[19]&0xfcu || (q[20]&0xc0u) || q[21])return FROST_SLOT_BAD_FRAME;
     if(chain->transition || t->state==FROST_TRANSFER_RECEIVING)return FROST_SLOT_BUSY;
     revision=frost_wire_get32(q+12);
     if(revision!=s->revision)return FROST_SLOT_STALE_REVISION;
@@ -62,6 +62,19 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
      * Full preset validation still runs before publishing the transition. */
     p->version=FROST_PRESET_VERSION_EXTENDED;
     if(pos!=n || !builtin(p))return FROST_SLOT_BAD_ROUTE;
+    /* Retain only explicitly requested, existing IR slots. The controller
+     * checks the selected asset and stored CRC; the revision fences that
+     * decision against route mutations before this snapshot is accepted. */
+    for(i=0,j=0;i<FROST_SLOTS;++i){
+        if(q[20]&(1u<<i)){
+            const FrostIR *ir;
+            if(p->types[i]!=FROST_IR || chain->slots[i].type!=FROST_IR)return FROST_SLOT_BAD_ROUTE;
+            ir=chain->slots[i].state.ir;
+            p->ir_taps[j]=ir->taps;
+            for(unsigned k=0;k<FROST_IR_MAX;++k)p->ir_coefficients[j][k]=k<ir->taps?ir->coefficients[k]:0.0f;
+        }
+        if(p->types[i]==FROST_IR)++j;
+    }
     {unsigned status=frost_slots_request_preset(s,chain,p,revision);if(status!=FROST_SLOT_ACCEPTED)return status;}
     for(i=0;i<8;++i)s->last_write[i]=0;s->last_write[1]=token;s->cached=FROST_CACHE_QUICK;
     for(i=0;i<n;++i)t->quick_request[i]=q[i];t->quick_bytes=n;
@@ -79,4 +92,5 @@ FROST_COLD void frost_quick_preset_command(FrostPresetTransfer *t,FrostSlotProto
     frost_wire_put32(reply+4,1);frost_wire_put32(reply+8,token);frost_wire_put32(reply+12,status);
     frost_wire_put32(reply+16,s->revision);frost_wire_put32(reply+20,chain->transition);
     frost_wire_put32(reply+24,s->last_write[1]>t->last_request[1]?s->last_write[1]:t->last_request[1]);
+    frost_wire_put32(reply+28,FROST_QUICK_CAP_RETAIN_IR);
 }

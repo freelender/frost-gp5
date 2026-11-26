@@ -186,7 +186,12 @@ plus 64 packed stereo USB frames (231 words total). The controller runs the
 upstream USB resampler after its IR work. The DSP records after the stereo
 effects/EQ, before playback mixing and the listening master. Separate recording
 and playback staging buffers preserve the early IR exchange timing; USB
-recording gains one block (64 samples) of buffering. DSP media code
+recording gains one block (64 samples) of buffering. Bypassed IRs (including
+custom IR uploads) and empty chains also start their zero-stream exchange
+before chain processing, leaving the controller its usual processing window.
+Coefficient mirroring pauses while the receive/validation/expansion stages use
+the coefficient area as scratch, then resumes with the validated cabinet.
+DSP media code
 uses the existing extended code region; firmware memory limits are unchanged.
 Both IR streams remain available. Bluetooth starts before USB attachment and
 uses the existing MIDI handler with separate USB/BLE SysEx parser storage.

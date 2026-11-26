@@ -399,6 +399,16 @@ Long reverberation tails are not retained as a full room impulse response.
 Replacing a CAB number changes every preset referencing it. If a referenced
 custom cabinet is missing, Frost uses the built-in cabinet until it is replaced.
 
+Preset recall uses the compact fast transaction even when custom IRs differ.
+If the same unchanged custom IR is already loaded in the same block, its
+coefficients are reused with no upload. A different cabinet still transfers
+and prepares its coefficients after the preset route change; it does not
+repeat the slower multi-frame preset transaction first. Until the new IR is
+ready, the previous cabinet follows the established loading/fade behavior.
+Changed or missing files and older DSP firmware retain the normal recovery
+and loading paths. Preset changes still cut effect tails; this is not gapless
+switching and there is no multi-cabinet RAM cache.
+
 If IR seems bypassed, check that the block is enabled and Global **CAB OVERRIDE**
 is OFF. If the tone is quiet, check amp level, IR VOL, Global OUTPUT LEVEL and
 the physical volume control before adding more gain everywhere.

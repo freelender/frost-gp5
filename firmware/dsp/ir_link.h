@@ -17,6 +17,9 @@
 #ifndef FROST_IRL_CLOCK
 #define FROST_IRL_CLOCK() 0u
 #endif
+#ifndef FROST_IRL_ASSETS_BUSY
+#define FROST_IRL_ASSETS_BUSY 0
+#endif
 #define FROST_IRL_GOOD_BLOCKS 64u      /* valid frames before switching to remote (93 ms) */
 #define FROST_IRL_BAD_BLOCKS 690u      /* invalid frames before falling back to local (1 s) */
 #define FROST_IRL_BOOT_BLOCKS 256u     /* first exchange after boot (0.37 s) */
@@ -267,12 +270,12 @@ FROST_AUDIO_RAM void frost_irl_send(void)
     FrostIrlState *s=FROST_IRL;volatile int32_t *t=FROST_IRL_TX+1;unsigned j,n;
     if(s->quiet || s->pause)return;
     if(FROST_IRL_BUSY()){++s->busy;return;}
-    if(frost_ir_generation!=s->generation){s->generation=frost_ir_generation;s->dirty=3u;s->scan_c=0;s->scan_changed=0;}
+    if(!FROST_IRL_ASSETS_BUSY && frost_ir_generation!=s->generation){s->generation=frost_ir_generation;s->dirty=3u;s->scan_c=0;s->scan_changed=0;}
     for(j=0;j<FROST_IRL_STREAMS;++j)if(!(s->written&(1u<<j)) && !(s->zeroed&(1u<<j))){
         for(n=0;n<FROST_IRL_BLOCK;++n)t[FROST_IRL_W_AUDIO+j*FROST_IRL_BLOCK+n]=0;
         s->zeroed|=1u<<j;
     }
-    if(s->dirty || FROST_IRL_READY(s->ready,0)!=s->version[0] || FROST_IRL_READY(s->ready,1)!=s->version[1] || !(s->block&15u))frost_irl_side(t);
+    if(!FROST_IRL_ASSETS_BUSY && (s->dirty || FROST_IRL_READY(s->ready,0)!=s->version[0] || FROST_IRL_READY(s->ready,1)!=s->version[1] || !(s->block&15u)))frost_irl_side(t);
     else t[FROST_IRL_W_SIDE]=0;
     t[FROST_IRL_W_MAGIC]=(int32_t)FROST_IRL_MAGIC_D;
     t[FROST_IRL_W_FLAGS]=(int32_t)((frost_ir_remote&1u)|(s->written<<8));
@@ -326,7 +329,15 @@ FROST_AUDIO_RAM void frost_irl_block_begin(void)
             const FrostIR *ir=frost_chain.slots[i].state.ir;
             if(ir==&frost_chain.ir_pool[0])s->expect|=1u;else if(ir==&frost_chain.ir_pool[1])s->expect|=2u;
         }
-    if(!s->expect)s->expect=0x200u;   /* no stream: send at the end */
+    if(!s->expect){
+        s->expect=0x200u;
+        /* IR uploads bypass the cabinet for many blocks. Keep the exchange
+         * early even then: starting after a heavy chain leaves the slave too
+         * little time before the next block checks the reply. USB recording
+         * is already staged from the previous block. No current IR input is
+         * needed, so send zero streams now instead of waiting for block_end. */
+        if(!s->quiet && s->block>=FROST_IRL_BOOT_BLOCKS){frost_irl_check();frost_irl_send();}
+    }
     s->cyc_run=FROST_IRL_CLOCK()-t0;
 }
 /* After the chain: send if no stream did, then health and mode. */

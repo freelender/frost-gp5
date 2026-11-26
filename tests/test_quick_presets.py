@@ -10,6 +10,7 @@ from pathlib import Path
 import struct
 import sys
 import unittest
+import zlib
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
 from host import build
@@ -18,9 +19,10 @@ sys.path.insert(0,str(Path(__file__).resolve().parent));import settings_nav
 class QuickPresetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        c=cls.lib=ct.CDLL(str(build(ROOT/('build/quick_presets.dll' if os.name=='nt' else 'build/quick_presets.so'),ROOT/'tests/quick_presets_host.c',includes=[ROOT/'tests/stubs'])))
+        c=cls.lib=ct.CDLL(str(build(ROOT/('build/quick_presets.dll' if os.name=='nt' else 'build/quick_presets.so'),ROOT/'tests/quick_presets_host.c',includes=[ROOT/'tests/stubs'],flags=['-DFROST_IR_FFT_PARTS=8u'])))
         c.ge_actual_value.restype=ct.c_float
         c.ge_raw.restype=ct.c_uint
+        c.ge_ir_coefficient.restype=ct.c_float
         c.qp_packet.argtypes=[ct.POINTER(ct.c_uint8)]
         c.qp_record.argtypes=[ct.c_uint,ct.POINTER(ct.c_uint8)]
         c.qp_dispatch.argtypes=[ct.POINTER(ct.c_uint8),ct.c_uint,ct.POINTER(ct.c_uint8)]
@@ -80,6 +82,87 @@ class QuickPresetTests(unittest.TestCase):
     def test_identical_cabinet_does_not_invalidate_ir_mirror(self):
         c=self.lib;self.load(1);generation=c.qp_ir_generation();self.load(5)
         self.assertEqual(c.qp_ir_generation(),generation)
+    def custom_cab(self,index=0,variant=0):
+        record=bytearray(1048);record[:8]=b'TEST CAB'
+        struct.pack_into('<f',record,16,1.0/32767)
+        struct.pack_into('<h',record,20+2*variant,32767)
+        struct.pack_into('<I',record,1044,zlib.crc32(record[:1044]))
+        self.assertEqual(self.lib.irf_store_write(index,(ct.c_uint8*1048).from_buffer_copy(record)),1)
+    def custom_presets(self):
+        c=self.lib;self.custom_cab();c.irf_cab(3,1)
+        c.ge_pump(350);self.assertEqual(c.irf_busy(),0)
+        self.custom_values={}
+        for preset in (25,26):
+            self.assertEqual(c.ge_queue(0,0,preset-23),1);self.settle()
+            self.custom_values[preset]=c.ge_raw(0,0)
+            self.assertEqual(c.ge_flash_save(preset),1);self.settle()
+        return [c.ge_ir_coefficient(3,i) for i in range(512)]
+    def test_same_custom_ir_fast_recall_preserves_coefficients_and_mirror(self):
+        c=self.lib;want=self.custom_presets();generation=c.qp_ir_generation();c.qp_probe_again()
+        for preset in (25,26,25):
+            c.qp_reset_trace();ticks=self.load(preset)
+            self.assertLessEqual(ticks,12)
+            self.assertEqual((c.qp_count(0),c.qp_count(2),c.qp_count(3)),(1,0,0))
+            self.assertEqual(self.packet()[20],1<<3)
+            self.assertEqual(c.ge_raw(0,0),self.custom_values[preset])
+            c.ge_pump(350)  # no delayed coefficient transaction after ready
+            self.assertEqual(c.qp_count(3),0)
+            self.assertEqual(c.qp_ir_generation(),generation)
+            self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],want)
+    def test_replaced_custom_ir_still_reloads_and_then_reuses_it(self):
+        c=self.lib;self.custom_presets();self.custom_cab(0,1)
+        c.qp_reset_trace();self.load(25);c.ge_pump(350)
+        self.assertEqual(c.qp_count(2),0);self.assertGreater(c.qp_count(3),0)
+        self.assertEqual(c.ge_ir_coefficient(3,0),0)
+        self.assertGreater(c.ge_ir_coefficient(3,1),0.9)
+        c.qp_reset_trace();self.load(26);c.ge_pump(350)
+        self.assertEqual((c.qp_count(0),c.qp_count(2),c.qp_count(3)),(1,0,0))
+    def test_old_quick_dsp_without_retain_capability_uses_established_transfer(self):
+        c=self.lib;want=self.custom_presets();c.qp_old_capabilities();c.qp_reset_trace()
+        self.load(25);c.ge_pump(350)
+        self.assertEqual(c.qp_count(0),0);self.assertGreater(c.qp_count(2),0)
+        self.assertGreater(c.qp_count(3),0)
+        self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],want)
+    def test_first_probe_without_capability_falls_back_before_mutation(self):
+        c=self.lib;want=self.custom_presets();c.qp_probe_again();c.qp_reset_trace()
+        self.assertEqual(c.ge_flash_load(25),1);c.qp_old_probe_reply();self.settle();c.ge_pump(350)
+        self.assertEqual(c.qp_count(0),0);self.assertGreater(c.qp_count(2),0)
+        self.assertGreater(c.qp_count(3),0)
+        self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],want)
+    def test_reused_custom_and_builtin_ir_share_one_fast_recall(self):
+        c=self.lib;want=self.custom_presets()
+        self.assertEqual(c.ge_type_change(4,3),1);self.settle();c.ge_pump(350)
+        self.assertEqual(c.ge_flash_save(27),1);self.settle()
+        generation=c.qp_ir_generation();c.qp_reset_trace();self.load(27);c.ge_pump(350)
+        self.assertEqual((c.qp_count(0),c.qp_count(2),c.qp_count(3)),(1,0,0))
+        self.assertEqual(c.qp_ir_generation(),generation)
+        self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],want)
+        self.assertEqual(c.ge_actual_type(4),3)
+    def two_custom_cabinets(self):
+        c=self.lib;a=self.custom_presets();self.custom_cab(1,1)
+        c.irf_cab(3,2);c.ge_pump(350)
+        self.assertEqual(c.irf_busy(),0)
+        b=[c.ge_ir_coefficient(3,i) for i in range(512)]
+        self.assertNotEqual(a,b)
+        self.assertEqual(c.ge_flash_save(27),1);self.settle()
+        return {25:a,26:a,27:b}
+    def test_different_irs_use_fast_route_then_upload_the_new_cabinet(self):
+        c=self.lib;expected=self.two_custom_cabinets();c.qp_probe_again()
+        for preset in (25,27,26,27):
+            c.qp_reset_trace();revision=c.ge_actual_revision();self.load(preset);c.ge_pump(350)
+            self.assertEqual(c.qp_count(0),1)
+            self.assertEqual(c.qp_count(2),0)  # no multi-frame legacy preset transfer
+            self.assertGreater(c.qp_count(3),0)  # changed coefficients still transfer
+            self.assertEqual(c.ge_actual_revision(),revision+1)
+            self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],expected[preset])
+
+    def test_retain_mask_cannot_reuse_a_non_ir_slot(self):
+        c=self.lib;self.load(0);q=bytearray(self.packet())
+        struct.pack_into('<II',q,8,struct.unpack_from('<I',q,8)[0]+100,c.ge_actual_revision())
+        non_ir=next(i for i in range(6) if c.ge_actual_type(i)!=3)
+        q[20]=1<<non_ir;revision=c.ge_actual_revision()
+        self.assertEqual(self.send(q)[1],13)  # BAD_ROUTE
+        self.assertEqual(c.ge_actual_revision(),revision)
     def test_receipt_retry_collision_and_status_do_not_restart_fade(self):
         c=self.lib;self.load(1);q=self.packet();revision=c.ge_actual_revision()
         self.assertEqual(self.send(q)[1],1) # REPLAYED

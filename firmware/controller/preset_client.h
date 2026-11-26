@@ -11,7 +11,7 @@ typedef struct {
     unsigned state,profile,awaiting,pending,error;
     const uint32_t *snapshot;
     uint32_t fence;
-    unsigned quick_bytes,quick_failures,quick,quick_known;
+    unsigned quick_bytes,quick_failures,quick,quick_known,quick_caps;
 } FrostPresetClient;
 static uint32_t client_crc_word(uint32_t crc,uint32_t value)
 {
@@ -22,7 +22,7 @@ static uint32_t client_crc_word(uint32_t crc,uint32_t value)
     return crc;
 }
 static void preset_client_init(FrostPresetClient *c)
-{c->state=PRESET_IDLE;c->quick_bytes=c->quick_failures=c->quick=c->quick_known=0;c->profile=c->awaiting=c->pending=c->error=0;c->session=c->revision=c->next=c->checksum=0;c->crc=UINT32_MAX;c->snapshot=0;c->fence=0;}
+{c->state=PRESET_IDLE;c->quick_bytes=c->quick_failures=c->quick=c->quick_known=c->quick_caps=0;c->profile=c->awaiting=c->pending=c->error=0;c->session=c->revision=c->next=c->checksum=0;c->crc=UINT32_MAX;c->snapshot=0;c->fence=0;}
 static uint32_t preset_client_word(const FrostPresetClient *c,unsigned index)
 {return c->snapshot?c->snapshot[index]:ram_bank_word(c->profile,index);}
 static int preset_client_begin(FrostPresetClient *c,FrostEditor *e,unsigned profile,const uint32_t *snapshot,uint32_t fence)
@@ -41,13 +41,13 @@ static int preset_client_start(FrostPresetClient *c,FrostEditor *e,unsigned prof
 /* Controller-private loan of immutable staging storage, retained until idle.
  * The captured revision MUST still match discovery; never rebase a partial edit
  * over a newer live configuration. No caller-owned snapshot copy is allocated. */
-static int preset_client_start_snapshot(FrostPresetClient *c,FrostEditor *e,const uint32_t *words,uint32_t revision)
+static inline int preset_client_start_snapshot(FrostPresetClient *c,FrostEditor *e,const uint32_t *words,uint32_t revision)
 {return words?preset_client_begin(c,e,0,words,revision):0;}
-static int preset_client_start_quick(FrostPresetClient *c,FrostEditor *e,const uint32_t *w,uint32_t revision)
+static int preset_client_start_quick_assets(FrostPresetClient *c,FrostEditor *e,const uint32_t *w,uint32_t revision,unsigned retain_ir)
 {
     unsigned i,j,pos=FROST_QUICK_HEADER,order=0;uint32_t token;
     if(!w || w[0]!=FROST_PRESET_VERSION_COMPACT || !preset_client_begin(c,e,0,w,revision))return 0;
-    if(c->quick_known==2u)return 1; /* Older DSP: preserve the established protocol. */
+    if(c->quick_known==2u || (retain_ir && c->quick_known && !(c->quick_caps&FROST_QUICK_CAP_RETAIN_IR)))return 1; /* Older DSP: preserve the established protocol. */
     token=editor_token(e);if(!token){c->state=PRESET_IDLE;return 0;}
     for(i=0;i<FROST_QUICK_HEADER;++i)c->saved[i]=0;
     editor_header(c->saved,FROST_QUICK_COMMAND,FROST_QUICK_HEADER,token);frost_wire_put32(c->saved+12,revision);c->saved[16]=(uint8_t)w[2];
@@ -61,10 +61,13 @@ static int preset_client_start_quick(FrostPresetClient *c,FrostEditor *e,const u
             else {c->saved[pos++]=250;frost_wire_put32(c->saved+pos,bits);pos+=4;}
         }
     }
+    c->saved[20]=(uint8_t)retain_ir;
     c->saved[17]=(uint8_t)order;c->saved[18]=(uint8_t)(order>>8);c->saved[19]=(uint8_t)(order>>16);
     c->saved[2]=(uint8_t)pos;c->saved[3]=(uint8_t)(pos>>8);
     c->quick_bytes=pos;c->quick_failures=0;c->quick=1;c->revision=revision;c->state=c->quick_known?PRESET_QUICK:PRESET_QUICK_PROBE;return 1;
 }
+static inline int preset_client_start_quick(FrostPresetClient *c,FrostEditor *e,const uint32_t *w,uint32_t revision)
+{return preset_client_start_quick_assets(c,e,w,revision,0);}
 static void preset_client_quick_adopt(FrostPresetClient *c,FrostEditor *e,uint32_t revision,uint32_t now)
 {
     unsigned i,j;editor_reconnect(e,now);e->stage_pre=c->snapshot[2];e->stage_revision=revision;
@@ -139,7 +142,11 @@ static int preset_client_reply(FrostPresetClient *c,FrostEditor *e,const uint8_t
         if(c->state==PRESET_QUICK_PROBE){
             if(status!=FROST_SLOT_APPLIED || revision!=c->revision){preset_client_finish(c,e,now,1);return 0;}
             if(floor>=frost_wire_get32(c->saved+8)){uint32_t next_token=editor_token(e);if(!next_token){preset_client_finish(c,e,now,1);return 0;}frost_wire_put32(c->saved+8,next_token);}
-            c->quick_known=1;c->state=PRESET_QUICK;return 1;
+            c->quick_known=1;c->quick_caps=frost_wire_get32(p+28);
+            if(c->saved[20] && !(c->quick_caps&FROST_QUICK_CAP_RETAIN_IR)){
+                c->quick=0;c->state=PRESET_DISCOVER;c->pending=0;return 1;
+            }
+            c->state=PRESET_QUICK;return 1;
         }
         if(status==FROST_SLOT_BUSY && c->state==PRESET_QUICK){c->quick=0;c->state=PRESET_DISCOVER;c->pending=0;return 1;}
         if((status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED) || revision!=c->revision+1u || phase>3u){preset_client_finish(c,e,now,status==FROST_SLOT_CHAIN_FULL?2u:status==FROST_SLOT_DSP_LIMIT?3u:1u);return 0;}

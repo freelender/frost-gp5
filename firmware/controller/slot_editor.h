@@ -695,20 +695,33 @@ static int fw_flash_save(unsigned preset)
 static uint32_t load_words[FROST_PRESET_COMPACT_WORDS];
 static int fw_flash_load(unsigned preset)
 {
-    uint8_t rec[FROST_PST_BYTES];uint32_t r=store_preset(preset);unsigned k,builtin=1,b=0;
+    uint8_t rec[FROST_PST_BYTES];uint32_t r=store_preset(preset);unsigned k,retain_ir=0,reuse_ir=0,custom_ir=0,b=0;
     fw_recall_finish();
     if(!r || ir_file_client.state || capture_client.state || preset_client.state)return 0;
     for(k=0;k<FROST_PST_BYTES;++k)rec[k]=FROST_FILE_AT(r)[k];
     if(!store_record_to_words(rec,load_words))return 0;
-    for(k=0;k<6u;++k)if(load_words[3+k]==FROST_IR && b<2u){unsigned ref=rec[248+2*b]|rec[249+2*b]<<8;++b;if(ref<63u)builtin=0;}
-    if(!(builtin?preset_client_start_quick(&preset_client,&editor,load_words,editor.revision):
-                  preset_client_start_snapshot(&preset_client,&editor,load_words,editor.revision)))return 0;
+    for(k=0;k<6u;++k)if(load_words[3+k]==FROST_IR && b<2u){
+        unsigned ref=rec[248+2*b]|rec[249+2*b]<<8;++b;
+        if(ref<63u){
+            uint32_t crc=0,r=store_ir_record(ref,&crc);custom_ir|=1u<<k;
+            /* Keep the previous cabinet during the route fade, as compact
+             * legacy recall does. Changed cabinets still upload afterward. */
+            if(editor.types[k]==FROST_IR)retain_ir|=1u<<k;
+            if(r && !ir_file_client.recover && !ir_file_client.error[k] && editor.types[k]==FROST_IR &&
+               ir_file_client.types[k]==FROST_IR && ir_cabs[k]==ref+1u &&
+               ir_file_client.held_cab[k]==ref+1u && ir_file_client.held_crc[k]==crc)reuse_ir|=1u<<k;
+        }
+    }
+    if(!preset_client_start_quick_assets(&preset_client,&editor,load_words,editor.revision,retain_ir))return 0;
     recall_ctl_mask=rec[27]&63u;recall_pending=1;recall_previous=current_preset;for(k=0;k<6u;++k)recall_old_cabs[k]=ir_cabs[k];
     {unsigned b=0;for(k=0;k<6;++k){
         unsigned ref=0xffffu;
         if(load_words[3+k]==FROST_IR && b<2){ref=rec[248+2*b]|rec[249+2*b]<<8;++b;}
         ir_cabs[k]=ref<63?ref+1u:0;
-        ir_file_client.types[k]=load_words[3+k];ir_file_client.held_cab[k]=builtin && preset_client.quick?0u:64u;ir_file_client.held_crc[k]=0;
+        ir_file_client.types[k]=load_words[3+k];
+        if(!(preset_client.quick && (reuse_ir&(1u<<k)))){
+            ir_file_client.held_cab[k]=preset_client.quick && !(custom_ir&(1u<<k))?0u:64u;ir_file_client.held_crc[k]=0;
+        }
     }}
     ir_file_client.next_check=0;
     capture_client.error=0;

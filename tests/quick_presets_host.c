@@ -2,7 +2,7 @@
 #define FROST_HOST_FAST_CONTROL 1
 static unsigned qp_hook(const uint8_t *,unsigned);
 #define FROST_HOST_REQUEST_HOOK qp_hook
-#include "slot_editor_host.c"
+#include "ir_files_host.c"
 #include "../firmware/controller/factory_bank.h"
 static uint8_t qp_last[FROST_QUICK_MAX_BYTES];
 static unsigned qp_bytes,qp_quick,qp_status,qp_old,qp_ir,qp_hide;
@@ -46,4 +46,14 @@ API unsigned qp_factory(void)
         store_group_name(name,'p','s','t',g);if(!store_write_group(FROST_PST_FIRM,name,3960))return 0;
     }
     return 1;
+}
+
+API void qp_old_capabilities(void){preset_client.quick_known=1;preset_client.quick_caps=0;}
+API void qp_probe_again(void){preset_client.quick_known=0;}
+
+API void qp_old_probe_reply(void)
+{
+    uint8_t r[32]={0};r[0]=0x4d;r[1]=0x7f;r[2]=32;
+    frost_wire_put32(r+4,1);frost_wire_put32(r+16,editor.revision);
+    preset_client.awaiting=1;(void)fw_editor_reply(r,32);
 }

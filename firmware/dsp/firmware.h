@@ -92,6 +92,8 @@ FROST_COLD int frost_quick_builtin(FrostPreset *p)
     return 1;
 }
 #ifdef FROST_IR_LINK
+/* The receive buffer aliases coefficient storage until expansion completes. */
+#define FROST_IRL_ASSETS_BUSY (frost_ir_rx.state==FROST_IR_RECEIVING || frost_ir_rx.state==FROST_IR_VALIDATING || frost_ir_rx.state==FROST_IR_EXPANDING)
 #include "ir_link.h"
 #if FROST_IRL_QUIET_COMMAND == FROST_QUICK_COMMAND
 #error IR status/quiet must not share the quick-preset opcode

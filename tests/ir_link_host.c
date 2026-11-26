@@ -18,6 +18,8 @@ static FrostIRFFT ws;
 #ifdef FROST_IR_FFT_SPLIT_SPECTRUM
 static float ws_spectrum[FROST_IR_FFT_PARTS][FROST_IR_FFT_SIZE];
 #endif
+static unsigned ln_assets_busy;
+#define FROST_IRL_ASSETS_BUSY ln_assets_busy
 #include "../firmware/dsp/ir_link.h"
 #include "../firmware/controller/ir_link.h"
 #ifdef FROST_USB_AUDIO
@@ -37,6 +39,7 @@ API unsigned ln_media_legacy_peer(void){uint32_t old=0x324c4946u;memcpy((uint8_t
 static unsigned ln_starts_seen,ln_lag,ln_deliver=1,ln_ctl_skip,ln_shifted,ln_ms,ln_lost_seen;
 API void ln_init(unsigned two)
 {
+    ln_assets_busy=0;
     unsigned types[6]={FROST_IR,255,255,255,255,255};
     memset(&frost_chain,0,sizeof frost_chain);memset(&ws,0,sizeof ws);
     if(two)types[1]=FROST_IR;
@@ -137,3 +140,18 @@ API float ln_scale(unsigned j){return FROST_IRL->scale[j];}
 static IrcStream ln_k;
 API void ln_kernel_reset(const int16_t *q){unsigned i;irc_clear(&ln_k);for(i=0;i<256;++i)ln_k.q[i]=(uint16_t)q[2*i]|((uint32_t)(uint16_t)q[2*i+1]<<16);}
 API void ln_kernel(const int32_t *in,int32_t *out){irc_block(&ln_k,in,out);}
+
+/* Observe exchange timing without running any chain or end-of-block work. */
+API unsigned ln_begin_without_ir(unsigned bypass)
+{
+    unsigned before=frost_irl_host_starts;
+    frost_ir_bypass=bypass;frost_irl_block_begin();
+    return frost_irl_host_starts-before;
+}
+API unsigned ln_end_without_ir(void)
+{
+    unsigned before=frost_irl_host_starts;
+    frost_irl_block_end();return frost_irl_host_starts-before;
+}
+
+API void ln_upload_busy(unsigned on){ln_assets_busy=on;frost_ir_bypass=on;}

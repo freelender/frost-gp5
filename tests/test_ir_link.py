@@ -176,4 +176,28 @@ class RequiredRemoteTests(unittest.TestCase):
         c.ln_set(0,1,0);y=self.run_blocks(x[64*1500:])
         self.assertGreater(max(map(abs,y[-64*100:])),.01)
 
+    def test_upload_scratch_never_changes_mirrored_coefficients(self):
+        c=self.setup();self.run_blocks([],blocks=700);version=c.ln_stat(6)
+        c.ln_upload_busy(1)
+        h=cab(seed=19);self.assertEqual(c.ln_load(0,F64(*h[:64]) if len(h)==64 else (ct.c_float*len(h))(*h),len(h)),1)
+        ok=c.ln_stat(0);self.run_blocks([],blocks=100)
+        self.assertEqual(c.ln_stat(6),version)
+        self.assertGreater(c.ln_stat(0),ok+80)
+        c.ln_upload_busy(0);self.run_blocks([],blocks=500)
+        self.assertNotEqual(c.ln_stat(6),version)
+        self.assertEqual(c.ln_remote(),1)
+
+    def test_bypassed_ir_upload_starts_exchange_before_chain_processing(self):
+        c=self.setup();self.run_blocks([],blocks=700)
+        self.assertEqual(c.ln_begin_without_ir(1),1)
+        self.assertEqual(c.ln_end_without_ir(),0)  # exactly one DMA exchange
+    def test_active_ir_still_waits_for_current_block_input(self):
+        c=self.setup();self.run_blocks([],blocks=700)
+        self.assertEqual(c.ln_begin_without_ir(0),0)
+    def test_empty_chain_also_starts_exchange_early(self):
+        c=self.setup();types=(ct.c_uint*6)(*([255]*6))
+        self.assertEqual(c.ln_route(types),1);self.run_blocks([],blocks=700)
+        self.assertEqual(c.ln_begin_without_ir(0),1)
+        self.assertEqual(c.ln_end_without_ir(),0)
+
 if __name__=='__main__':unittest.main()
