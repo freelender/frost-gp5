@@ -396,8 +396,10 @@ on. Unsaved edits are not kept: SAVE the preset to keep them.
 
 Acoustic uses compression, acoustic simulation and reverb, without an amp head
 or electric cabinet. Factory reverb mix/effect level stays at or below 25%.
-Levels were balanced using an offline reference; your guitar and playing can
-still produce differences.
+Factory amp master and output levels are set individually for each sound;
+your guitar and playing can still produce differences. Vintage Trem starts
+with Classic Tremolo at 2.10 Hz. Updated factory settings apply when an empty
+bank is initialized; firmware updates preserve your existing saved presets.
 
 ## 7. Songs and setlists
 

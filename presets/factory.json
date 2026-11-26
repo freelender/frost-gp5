@@ -25,7 +25,7 @@
             "TOP": 48,
             "MODE": 0,
             "MIX": 100,
-            "LEVEL": 41
+            "LEVEL": 65
           }
         },
         {
@@ -58,8 +58,8 @@
           "type": 45,
           "params": {
             "GAIN": 26,
-            "MASTER": 60,
-            "LEVEL": 57,
+            "MASTER": 78,
+            "LEVEL": 69,
             "BASS": 48,
             "MID": 52,
             "TREBLE": 48,
@@ -91,7 +91,7 @@
           "type": 46,
           "params": {
             "GAIN": 27,
-            "MASTER": 60,
+            "MASTER": 64,
             "LEVEL": 78,
             "BASS": 46,
             "MID": 49,
@@ -126,7 +126,7 @@
           "params": {
             "GAIN": 25,
             "MASTER": 60,
-            "LEVEL": 62,
+            "LEVEL": 84,
             "BASS": 53,
             "MID": 56,
             "TREBLE": 35,
@@ -166,8 +166,8 @@
           "type": 45,
           "params": {
             "GAIN": 28,
-            "MASTER": 60,
-            "LEVEL": 58,
+            "MASTER": 74,
+            "LEVEL": 76,
             "BASS": 43,
             "MID": 51,
             "TREBLE": 53,
@@ -217,8 +217,8 @@
           "type": 47,
           "params": {
             "GAIN": 29,
-            "MASTER": 60,
-            "LEVEL": 50,
+            "MASTER": 74,
+            "LEVEL": 66,
             "BASS": 43,
             "MID": 52,
             "TREBLE": 51,
@@ -260,7 +260,7 @@
           "params": {
             "GAIN": 36,
             "MASTER": 60,
-            "LEVEL": 32,
+            "LEVEL": 68,
             "BASS": 42,
             "MID": 56,
             "TREBLE": 48,
@@ -304,7 +304,7 @@
           "params": {
             "GAIN": 33,
             "MASTER": 60,
-            "LEVEL": 18,
+            "LEVEL": 45,
             "BASS": 46,
             "MID": 56,
             "TREBLE": 46,
@@ -346,7 +346,7 @@
           "params": {
             "GAIN": 35,
             "MASTER": 60,
-            "LEVEL": 29,
+            "LEVEL": 51,
             "BASS": 43,
             "MID": 60,
             "TREBLE": 45,
@@ -378,8 +378,8 @@
           "type": 45,
           "params": {
             "GAIN": 34,
-            "MASTER": 60,
-            "LEVEL": 57,
+            "MASTER": 66,
+            "LEVEL": 65,
             "BASS": 48,
             "MID": 54,
             "TREBLE": 46,
@@ -395,7 +395,7 @@
         {
           "type": 27,
           "params": {
-            "RATE": 285,
+            "RATE": 210,
             "WAVE": 25,
             "DEPTH": 32
           }
@@ -419,8 +419,8 @@
           "type": 49,
           "params": {
             "GAIN": 42,
-            "MASTER": 45,
-            "LEVEL": 21,
+            "MASTER": 51,
+            "LEVEL": 48,
             "BASS": 43,
             "MID": 58,
             "TREBLE": 47,
@@ -453,8 +453,8 @@
           "type": 49,
           "params": {
             "GAIN": 49,
-            "MASTER": 45,
-            "LEVEL": 19,
+            "MASTER": 51,
+            "LEVEL": 43,
             "BASS": 43,
             "MID": 57,
             "TREBLE": 46,
@@ -505,7 +505,7 @@
           "params": {
             "GAIN": 34,
             "MASTER": 45,
-            "LEVEL": 18,
+            "LEVEL": 51,
             "BASS": 42,
             "MID": 58,
             "TREBLE": 45,
@@ -549,7 +549,7 @@
           "params": {
             "GAIN": 44,
             "MASTER": 45,
-            "LEVEL": 19,
+            "LEVEL": 52,
             "BASS": 40,
             "MID": 54,
             "TREBLE": 44,
@@ -605,7 +605,7 @@
           "params": {
             "GAIN": 43,
             "MASTER": 45,
-            "LEVEL": 15,
+            "LEVEL": 47,
             "BASS": 38,
             "MID": 54,
             "TREBLE": 43,
@@ -637,7 +637,7 @@
           "params": {
             "GAIN": 46,
             "MASTER": 45,
-            "LEVEL": 15,
+            "LEVEL": 47,
             "BASS": 40,
             "MID": 63,
             "TREBLE": 42,
@@ -689,7 +689,7 @@
           "params": {
             "GAIN": 29,
             "MASTER": 60,
-            "LEVEL": 17,
+            "LEVEL": 47,
             "BASS": 43,
             "MID": 57,
             "TREBLE": 40,
@@ -733,8 +733,8 @@
           "type": 45,
           "params": {
             "GAIN": 35,
-            "MASTER": 60,
-            "LEVEL": 65,
+            "MASTER": 68,
+            "LEVEL": 71,
             "BASS": 45,
             "MID": 57,
             "TREBLE": 42,
@@ -800,7 +800,7 @@
           "type": 48,
           "params": {
             "GAIN": 25,
-            "MASTER": 60,
+            "MASTER": 67,
             "LEVEL": 95,
             "BASS": 40,
             "MID": 51,
@@ -825,7 +825,7 @@
           "type": 46,
           "params": {
             "GAIN": 25,
-            "MASTER": 60,
+            "MASTER": 69,
             "LEVEL": 90,
             "BASS": 44,
             "MID": 51,
