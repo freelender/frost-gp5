@@ -10,13 +10,34 @@ Screenshots show the current local website source. The Editor and library
 images use a documentation demo with synthetic preset, model and cabinet
 names; these sample stored files are not part of **Try the demo**. No private
 captures or pedal data are shown.
+The **Frost detected** screenshot uses a documentation-only identity fixture;
+it illustrates the returning-user screen, not a physical detection test.
 
 ## Connect or try the demo
 
+**Still using Valeton stock firmware?** The welcome panel starts with
+**Install Frost first**, its main blue button. The header also offers
+**Install Frost**. Both open **Firmware**. Back up stock presets with
+Valeton's editor, close it, then install from that page. **Connect GP-5**
+connects the live editor after Frost is installed; it is not required before
+installation. The installer still asks you to confirm before writing.
+
+If you have already allowed MIDI/SysEx access, the page checks the connected
+pedal for a Frost identity reply when opened or brought back into focus.
+When confirmed, it shows **Frost detected on your GP-5** and makes
+**Connect GP-5** the main button. The check only reads identity; click Connect
+to start editing. It does not prompt for permission on arrival, and a missing
+reply keeps the installation guidance without claiming stock was detected.
+
 1. Use desktop Chrome or Edge. Power the pedal and connect a USB data cable.
 2. Close other editors and tabs connected to the GP-5.
-3. Open Frost Studio, click **Connect GP-5** and allow MIDI/SysEx access.
+3. Open Frost Studio, click **Already installed? Connect GP-5** below the
+   installation section (or **Connect GP-5** in the header) and allow MIDI/SysEx access.
 4. Wait until the connection status shows the pedal is connected.
+
+If the pedal does not answer the Frost editor, the connection notice offers
+**Open Firmware**, alongside reconnect guidance for pedals already running
+Frost. A missing reply alone does not confirm that the pedal runs stock firmware.
 
 The status bar distinguishes disconnected, connecting, connected, busy, demo
 and error states. During file transfers, wait for the operation to finish
@@ -32,7 +53,9 @@ as described in the [build guide](Build%20Firmware.md);
 recording and playback use a computer audio application. BLE MIDI does not
 stream phone audio.
 
-<p align="center"><img src="../assets/docs/website-connect.webp" alt="Frost Studio before connecting: Connect GP-5 or Try the demo" width="760"><br><sub>Frost Studio before connecting: Connect GP-5 or Try the demo</sub></p>
+<p align="center"><img src="../assets/docs/website-connect.webp" alt="Frost Studio welcome screen with Install Frost first as the main blue button and Already installed? Connect GP-5 below" width="760"><br><sub>First visit: install Frost first; connecting an existing Frost pedal is the secondary action</sub></p>
+
+<p align="center"><img src="../assets/docs/website-frost-detected.webp" alt="Frost detected on your GP-5, with Connect GP-5 as the main blue button and no install prompt" width="760"><br><sub>Frost confirmed: Connect GP-5 becomes the main action (simulated identity for documentation)</sub></p>
 
 ## Find your way around
 
@@ -322,6 +345,8 @@ Use this page to select a local `.bin`, review its identity/sections and
 confirm installation. A bundled Install Frost button is available only when
 that site copy includes a firmware download. The installer also accepts the
 correct official Valeton image you supply for restoring stock firmware.
+
+<p align="center"><img src="../assets/docs/website-firmware.webp" alt="Firmware page explaining that stock-firmware users can install directly without connecting the editor first" width="760"><br><sub>Install from stock firmware here; this local source copy has no bundled firmware, so it shows the file-based installation path</sub></p>
 
 Follow the [Installation Guide](Installation%20Guide.MD) for backups,
 installation, verification and recovery. Keep power/USB connected until the

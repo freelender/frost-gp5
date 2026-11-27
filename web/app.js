@@ -1,19 +1,21 @@
 // Frost web: connection, navigation, live editor, AMP models, cabinets, presets, firmware.
 // Device protocols live in pedal.js / store.js / live.js / firmware.js; this file is the page glue.
-import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.9.0';
-import { Store, PRESETS, parsePresetFile, recordCrc, assetName } from './store.js?v=1.9.0';
-import { convertIr, readWav, irWav } from './ir.js?v=1.9.0';
-import { LiveView, loadCatalog } from './live.js?v=1.9.0';
-import { initFirmware, isBusy } from './firmware.js?v=1.9.0';
-import { SetlistView } from './setlist_view.js?v=1.9.0';
-import { simulatedPedal } from './sim.js?v=1.9.0';
-import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.0';
+import { MidiPedal, PedalFiles, checkRecord, recordLabel } from './pedal.js?v=1.9.1';
+import { Store, PRESETS, parsePresetFile, recordCrc, assetName } from './store.js?v=1.9.1';
+import { convertIr, readWav, irWav } from './ir.js?v=1.9.1';
+import { LiveView, loadCatalog } from './live.js?v=1.9.1';
+import { initFirmware, isBusy } from './firmware.js?v=1.9.1';
+import { SetlistView } from './setlist_view.js?v=1.9.1';
+import { simulatedPedal } from './sim.js?v=1.9.1';
+import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.1';
+import { detectFrost } from './onboarding.js?v=1.9.1';
 
-export const VERSION = '1.9.0';
+export const VERSION = '1.9.1';
 const $ = id => document.getElementById(id);
 const pad2 = i => String(i).padStart(2, '0');
 const state = {
   mode: 'off',        // off | connecting | frost | demo
+  checking: false, detectedFrost: false,
   op: null,           // a running device operation ('firmware', 'Writing MODEL 03', ...): blocks conflicting ones
   pedal: null, files: null, store: null, models: {}, cabs: {}, presets: {},
   record: null, nam: null, worker: null, cab: null, dirty: false, train: null,
@@ -27,13 +29,19 @@ function showStatus() {
   if (state.mode === 'connecting') return status('busy', 'Connecting…');
   if (state.mode === 'frost') return status('ok', 'Connected · Frost');
   if (state.mode === 'demo') return status('demo', 'Demo · simulated pedal');
+  if (state.detectedFrost) return status('ok', 'Frost detected · ready to connect');
   status($('status').dataset.kind === 'error' ? 'error' : 'off', $('status').dataset.kind === 'error' ? $('status-text').textContent : 'Not connected');
 }
 function toast(text, kind = '') {
   const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = text; t.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
   $('toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'bad' ? 7000 : 4200);
 }
-function notice(text) { $('notice-text').textContent = text || ''; $('notice').hidden = !text; }
+function notice(text, { firmware = false, title = 'Something went wrong' } = {}) {
+  $('notice-text').textContent = text || ''; $('notice').hidden = !text;
+  $('notice-title').textContent = title;
+  $('notice').className = 'banner ' + (firmware ? 'warn' : 'bad');
+  $('notice-firmware').hidden = !text || !firmware;
+}
 $('notice-close').onclick = () => notice('');
 /** Promise<bool> (or the typed text when `input` is given, or the chosen numbers
  * when `selects` [{label, options: [[value, text]], value}] is given; null on cancel). */
@@ -132,6 +140,7 @@ const setlists = new SetlistView($('setlist-editor'), {
   download: (text, name) => save(new TextEncoder().encode(text), name),
 });
 async function connect() {
+  if (state.checking || state.mode === 'connecting') return;
   if (state.op || isBusy()) { toast('Wait until the running operation finishes.', 'bad'); return; }
   disconnect(); notice(''); state.mode = 'connecting'; showStatus(); updateButtons();
   try {
@@ -139,8 +148,11 @@ async function connect() {
     const who = await files.who();
     if (!who || who.firmware !== 'frost') {
       pedal.close(); state.mode = 'off';
-      status('error', who ? 'Stock firmware' : 'No answer');
-      notice(who ? 'The pedal is connected but not running Frost. Install it from the Firmware page.' : 'The pedal did not answer. Switch it off and on, then connect again.');
+      status('error', who ? 'Frost not installed' : 'Frost not detected');
+      notice(who
+        ? 'This pedal is not running Frost. Open Firmware to install it, then return here to connect the editor. Nothing is installed until you confirm.'
+        : 'The pedal did not answer the Frost editor. Still using Valeton stock firmware? Open Firmware to install Frost first. If Frost is already installed, check power and USB, close other pedal editors, then reconnect.',
+        { firmware: true, title: who ? 'Install Frost to use the editor' : 'Need help connecting?' });
       if (who) go('firmware');
       return;
     }
@@ -160,7 +172,7 @@ function disconnect() {
   for (const kind of ['amps', 'cabs']) {
     delete importTargets[kind]; delete uploadedTargets[kind]; $(libraryPrefix(kind) + '-result').hidden = true;
   }
-  Object.assign(state, { pedal: null, files: null, store: null, mode: 'off', models: {}, cabs: {}, presets: {}, dirty: false });
+  Object.assign(state, { pedal: null, files: null, store: null, mode: 'off', detectedFrost: false, models: {}, cabs: {}, presets: {}, dirty: false });
   setlists.attach(null, {}); setLivePanel(); renderLists(); updateButtons();
 }
 function lost() {
@@ -384,7 +396,7 @@ $('amp-name').oninput = () => { $('amp-name').value = $('amp-name').value.replac
 $('amp-convert').onclick = () => {
   if (!state.nam || state.worker) return;
   const name = ($('amp-name').value || 'AMP').slice(0, 15), workers = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  const w = new Worker(new URL('./convert_worker.js?v=1.9.0', import.meta.url), { type: 'module' }); state.worker = w;
+  const w = new Worker(new URL('./convert_worker.js?v=1.9.1', import.meta.url), { type: 'module' }); state.worker = w;
   const t0 = performance.now(), prog = (s, v) => { $('amp-progress').hidden = false; $('amp-bar').style.width = `${Math.round(100 * v)}%`; $('amp-stage').textContent = `${s} · ${Math.round((performance.now() - t0) / 1000)} s`; };
   const stop = () => { state.worker = null; w.terminate(); updateButtons(); };
   prog('Starting', 0);
@@ -654,13 +666,33 @@ $('restore-file').onchange = async e => {
 };
 
 // ---------- enable/disable with reasons ----------
+async function detectInstalledFrost() {
+  const idle = () => state.mode === 'off' && !state.op && !isBusy();
+  if (state.checking || !idle()) return;
+  state.checking = true; updateButtons();
+  try {
+    const found = await detectFrost(navigator, idle);
+    if (idle()) state.detectedFrost = found;
+  } finally { state.checking = false; showStatus(); updateButtons(); }
+}
 function updateButtons() {
   const on = !!state.store, op = state.op || (isBusy() ? 'firmware' : null), conv = !!state.worker;
   const offline = state.mode === 'demo' ? 'The demo cannot write. Connect a pedal running Frost.' : 'Connect a pedal running Frost to write.';
   const why = (id, text) => { $(id).textContent = text || ''; };
-  $('connect').disabled = !!op || state.mode === 'connecting';
+  const returning = state.detectedFrost || state.mode === 'frost';
+  $('connect').disabled = !!op || state.checking || state.mode === 'connecting';
   $('connect').textContent = state.mode === 'frost' ? 'Reconnect' : 'Connect GP-5';
-  $('demo').disabled = !!op;
+  $('connect').className = 'btn ' + (returning ? 'primary' : 'ghost');
+  $('install-start').hidden = returning;
+  $('onboarding-title').textContent = returning ? 'Frost detected on your GP-5' : 'Start by installing Frost';
+  $('onboarding-install').hidden = $('onboarding-install-note').hidden = returning;
+  $('onboarding-intro').hidden = returning;
+  $('onboarding-existing').classList.toggle('onboarding-existing', !returning);
+  const welcomeConnect = document.querySelector('[data-connect]');
+  welcomeConnect.disabled = $('connect').disabled;
+  welcomeConnect.textContent = returning ? 'Connect GP-5' : 'Already installed? Connect GP-5';
+  welcomeConnect.className = 'btn ' + (returning ? 'primary' : 'ghost');
+  $('demo').disabled = !!op || state.checking;
   $('amp-convert').disabled = !state.nam || conv || !!state.record; $('amp-cancel').hidden = !conv;
   $('amp-download').hidden = !(state.converted && state.record) || conv;
   $('amp-convert').hidden = !state.nam;
@@ -691,3 +723,5 @@ function updateButtons() {
 }
 renderLists(); setLivePanel(); updateButtons();
 if (new URLSearchParams(location.search).has('demo')) demo(false);
+else detectInstalledFrost();
+addEventListener('focus', () => detectInstalledFrost());

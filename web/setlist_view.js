@@ -1,4 +1,4 @@
-import { emptySetlist, encodeSetlist, SetlistStore } from './setlist.js?v=1.9.0';
+import { emptySetlist, encodeSetlist, SetlistStore } from './setlist.js?v=1.9.1';
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 export class SetlistView {
   constructor(root, ui) {
