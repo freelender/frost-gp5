@@ -73,7 +73,7 @@ def stage(platform,destination,controller='generic',bank=None,audio_input='synth
     shutil.copytree(platform,destination,ignore=shutil.ignore_patterns('.git','fw-build','build','out','__pycache__'))
     for p in destination.rglob('*.sh'):p.write_bytes(p.read_bytes().replace(b'\r\n',b'\n'))
     fw=destination/'firmwares/frost';dsp=fw/'dsp';dsp.mkdir(parents=True)
-    for name in ('firmware.h','global_eq.h','output.h','input.h','link_rx.h','link_rx.inc','control_service.inc','stack_watch.h','stack_boot.inc','timing_watch.h','link_tx.h','link_tx.inc','link_tx_platform.inc','line_output.h','fault_report.inc','flash_probe.h','ir_files.h','ir_link.h','media_audio.h'):
+    for name in ('firmware.h','global_eq.h','recall_gate.h','output.h','input.h','link_rx.h','link_rx.inc','control_service.inc','stack_watch.h','stack_boot.inc','timing_watch.h','link_tx.h','link_tx.inc','link_tx_platform.inc','line_output.h','fault_report.inc','flash_probe.h','ir_files.h','ir_link.h','media_audio.h'):
         shutil.copy2(ROOT/'firmware/dsp'/name,dsp/name)
     if audio_input=='adc':
         p=dsp/'firmware.h';p.write_text('#define FROST_AUDIO_ADC 1\n'+p.read_text())

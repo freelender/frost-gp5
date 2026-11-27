@@ -17,7 +17,25 @@ static inline FROST_CTL_INLINE unsigned quick_preset_status(FrostPresetTransfer 
     frost_wire_put32(reply+4,1);frost_wire_put32(reply+8,token);frost_wire_put32(reply+12,status);
     frost_wire_put32(reply+16,s->revision);frost_wire_put32(reply+20,chain->transition);
     frost_wire_put32(reply+24,s->last_write[1]>t->last_request[1]?s->last_write[1]:t->last_request[1]);
-    frost_wire_put32(reply+28,FROST_QUICK_CAP_RETAIN_IR);return status;
+    frost_wire_put32(reply+28,FROST_QUICK_CAPS);return status;
+}
+/* Small preparation command: bounded RAM path while the old audio plays.
+ * No preset decoding, validation, asset copy or history reset here. */
+FROST_RECALL_VALIDATE_RAM static unsigned quick_preset_prepare(FrostPresetTransfer *t,FrostSlotProtocol *s,FrostChain *chain,
+    const uint8_t *q,uint8_t *reply)
+{
+    uint32_t token=frost_wire_get32(q+8);unsigned status=FROST_SLOT_BAD_FRAME;
+    if(q[0]==0x4d && q[1]==0x7f && q[2]==16 && !q[3]){
+        if(frost_wire_get32(q+4)!=1u)status=FROST_SLOT_BAD_VERSION;
+        else if(!token || token<=s->last_write[1] || token<=t->last_request[1])status=FROST_SLOT_BAD_REQUEST_ID;
+        else if(frost_wire_get32(q+12)!=s->revision)status=FROST_SLOT_STALE_REVISION;
+        else if(chain->recall_token==token && chain->transition==FROST_ROUTE_QUIET)status=chain->fade_position>=2u*FROST_SIDE_BLOCK?FROST_SLOT_APPLIED:FROST_SLOT_ACCEPTED;
+        else if(chain->recall_token==token && chain->transition==FROST_ROUTE_OUT)status=FROST_SLOT_ACCEPTED;
+        else if(chain->transition || t->state==FROST_TRANSFER_RECEIVING)status=FROST_SLOT_BUSY;
+        else {chain->recall_token=token;chain->fade_position=0;chain->transition=FROST_ROUTE_OUT;status=FROST_SLOT_ACCEPTED;}
+    }
+    (void)quick_preset_status(t,s,chain,q,reply);
+    frost_wire_put32(reply+12,status);return status;
 }
 FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotProtocol *s,FrostChain *chain,
     const uint8_t *q,unsigned n,FrostQuickBuiltin builtin)
@@ -33,7 +51,7 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
     }
     if(n==12u)return FROST_SLOT_BAD_REQUEST_ID;
     if(n<FROST_QUICK_HEADER || n>FROST_QUICK_MAX_BYTES || q[16]>6u || q[19]&0xfcu || (q[20]&0xc0u) || q[21])return FROST_SLOT_BAD_FRAME;
-    if(chain->transition || t->state==FROST_TRANSFER_RECEIVING)return FROST_SLOT_BUSY;
+    if((chain->transition && !(chain->transition==FROST_ROUTE_QUIET && chain->recall_token==token && chain->fade_position>=2u*FROST_SIDE_BLOCK)) || t->state==FROST_TRANSFER_RECEIVING)return FROST_SLOT_BUSY;
     revision=frost_wire_get32(q+12);
     if(revision!=s->revision)return FROST_SLOT_STALE_REVISION;
     if(token<=s->last_write[1] || token<=t->last_request[1])return FROST_SLOT_BAD_REQUEST_ID;
@@ -75,7 +93,12 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
         }
         if(p->types[i]==FROST_IR)++j;
     }
-    {unsigned status=frost_slots_request_preset(s,chain,p,revision);if(status!=FROST_SLOT_ACCEPTED)return status;}
+    {unsigned quiet=chain->transition==FROST_ROUTE_QUIET,status;
+        if(quiet)chain->transition=FROST_ROUTE_IDLE;
+        status=frost_slots_request_preset(s,chain,p,revision);
+        if(status!=FROST_SLOT_ACCEPTED){if(quiet)chain->transition=FROST_ROUTE_QUIET;return status;}
+        if(quiet){chain->fade_position=0;chain->transition=FROST_ROUTE_COMMIT;}
+    }
     for(i=0;i<8;++i)s->last_write[i]=0;s->last_write[1]=token;s->cached=FROST_CACHE_QUICK;
     for(i=0;i<n;++i)t->quick_request[i]=q[i];t->quick_bytes=n;
     return FROST_SLOT_ACCEPTED;
@@ -83,14 +106,17 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
 FROST_COLD void frost_quick_preset_command(FrostPresetTransfer *t,FrostSlotProtocol *s,FrostChain *chain,
     const uint8_t *q,unsigned n,uint8_t *reply,FrostQuickBuiltin builtin)
 {
+    if(q && n==16u){(void)quick_preset_prepare(t,s,chain,q,reply);return;}
     if(q && n==12u){(void)quick_preset_status(t,s,chain,q,reply);return;}
     unsigned i,status=FROST_SLOT_BAD_FRAME;uint32_t token=n>=12u?frost_wire_get32(q+8):0;
     if(n>=12u && (unsigned)(q[0]|q[1]<<8)==FROST_QUICK_COMMAND && (unsigned)(q[2]|q[3]<<8)==n)
         status=quick_preset_apply(t,s,chain,q,n,builtin);
+    if(n>=FROST_QUICK_HEADER && status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED &&
+       chain->transition==FROST_ROUTE_QUIET && chain->recall_token==token){chain->fade_position=0;chain->transition=FROST_ROUTE_IN;}
     for(i=0;i<FROST_QUICK_REPLY_BYTES;++i)reply[i]=0;
     reply[0]=0x4d;reply[1]=0x7f;reply[2]=FROST_QUICK_REPLY_BYTES;
     frost_wire_put32(reply+4,1);frost_wire_put32(reply+8,token);frost_wire_put32(reply+12,status);
     frost_wire_put32(reply+16,s->revision);frost_wire_put32(reply+20,chain->transition);
     frost_wire_put32(reply+24,s->last_write[1]>t->last_request[1]?s->last_write[1]:t->last_request[1]);
-    frost_wire_put32(reply+28,FROST_QUICK_CAP_RETAIN_IR);
+    frost_wire_put32(reply+28,FROST_QUICK_CAPS);
 }

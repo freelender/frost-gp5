@@ -16,7 +16,7 @@ void frost_side_route(const FrostChain *s,const FrostAmpStage *amp);   /* beta.1
 FROST_COLD void frost_chain_init(FrostChain *s)
 {
     unsigned i;s->faults=0;s->started=0;s->delay_workspace=0;s->modulation_pool=0;s->reverb_workspace=0;
-    s->pre_count=3;s->transition=FROST_ROUTE_IDLE;s->fade_position=0;
+    s->pre_count=3;s->transition=FROST_ROUTE_IDLE;s->fade_position=0;s->recall_token=0;
     s->pending_preset_active=0;
     s->pending_policy_slot=FROST_SLOTS;s->pending_policy_value=0;
     /* 31a: an (re)initialized chain starts without FFT workspaces. */
@@ -280,6 +280,11 @@ static int frost_chain_process_core(FrostChain *s,const float *input,float *outp
     frost_side_begin();
     if(count)s->started=1;
     for(n=0;n<count;++n){
+        if(s->transition==FROST_ROUTE_QUIET){
+            output[n]=0.0f;
+            if(++s->fade_position>=44100u){s->fade_position=0;s->transition=FROST_ROUTE_IN;}
+            continue;
+        }
         float x=input[n];unsigned bad=!signal_valid(x);
         if(!bad){
             for(i=0;i<s->pre_count && !bad;++i){
@@ -311,11 +316,15 @@ static int frost_chain_process_core(FrostChain *s,const float *input,float *outp
         if(s->transition==FROST_ROUTE_OUT){
             x*= (float)(FROST_ROUTE_FADE-1u-s->fade_position)/(float)FROST_ROUTE_FADE;
             if(++s->fade_position==FROST_ROUTE_FADE){
-                frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;
+                if(s->recall_token){s->fade_position=0;s->transition=FROST_ROUTE_QUIET;}
+                else {frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;}
             }
         }else if(s->transition==FROST_ROUTE_IN){
             x*= (float)(s->fade_position+1u)/(float)FROST_ROUTE_FADE;
-            if(++s->fade_position==FROST_ROUTE_FADE){s->fade_position=0;s->transition=FROST_ROUTE_IDLE;}
+            if(++s->fade_position==FROST_ROUTE_FADE){s->fade_position=0;s->transition=FROST_ROUTE_IDLE;s->recall_token=0;}
+        }
+        if(s->transition==FROST_ROUTE_WARM){
+            x=0.0f;if(++s->fade_position==2u*FROST_SIDE_BLOCK){s->fade_position=0;s->transition=FROST_ROUTE_IN;}
         }
         output[n]=x;
     }
@@ -362,13 +371,17 @@ FROST_HOT FROST_CORE FROST_NOINLINE FROST_COLD void frost_chain_fade_block(Frost
             float g=(float)(FROST_ROUTE_FADE-1u-s->fade_position)/(float)FROST_ROUTE_FADE;
             x[n]*=g;if(frost_side_used && n<FROST_SIDE_BLOCK)frost_side[n]*=g;   /* beta.14: the side fades too */
             if(++s->fade_position==FROST_ROUTE_FADE){
-                if(frost_chain_commit_alone && n+1u==count){s->fade_position=0;s->transition=FROST_ROUTE_COMMIT;}
+                if(s->recall_token){s->fade_position=0;s->transition=FROST_ROUTE_QUIET;}
+                else if(frost_chain_commit_alone && n+1u==count){s->fade_position=0;s->transition=FROST_ROUTE_COMMIT;}
                 else{frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;}
             }
+        }else if(s->transition==FROST_ROUTE_WARM){
+            x[n]=0.0f;if(frost_side_used && n<FROST_SIDE_BLOCK)frost_side[n]=0.0f;
+            if(++s->fade_position==2u*FROST_SIDE_BLOCK){s->fade_position=0;s->transition=FROST_ROUTE_IN;}
         }else{
             float g=(float)(s->fade_position+1u)/(float)FROST_ROUTE_FADE;
             x[n]*=g;if(frost_side_used && n<FROST_SIDE_BLOCK)frost_side[n]*=g;
-            if(++s->fade_position==FROST_ROUTE_FADE){s->fade_position=0;s->transition=FROST_ROUTE_IDLE;}
+            if(++s->fade_position==FROST_ROUTE_FADE){s->fade_position=0;s->transition=FROST_ROUTE_IDLE;s->recall_token=0;}
         }
     }
 }
@@ -387,15 +400,30 @@ FROST_XCODE void frost_side_follow(const FrostInstance *s,float w0,unsigned coun
     for(n=0;n<count;++n){w0+=step;frost_side[n]*=w0;}
 }
 unsigned frost_chain_commit_alone;
+/* Runs only during the silent transition; keep cold work outside audio RAM. */
+FROST_XCODE FROST_NOINLINE static int frost_chain_silent_block(FrostChain *s,float *output,unsigned count,const FrostAmpStage *amp)
+{
+    unsigned n;
+    if(s->transition==FROST_ROUTE_QUIET){
+        for(n=0;n<count;++n)output[n]=0.0f;
+        s->fade_position+=count;
+        /* A disconnected controller cannot leave the pedal muted forever. */
+        if(s->fade_position>=44100u){s->fade_position=0;s->transition=FROST_ROUTE_IN;}
+        return 1;
+    }
+    if(s->transition==FROST_ROUTE_COMMIT){   /* the silent commit-only block */
+        for(n=0;n<count;++n)output[n]=0.0f;
+        frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=s->recall_token?FROST_ROUTE_WARM:FROST_ROUTE_IN;
+        return 1;
+    }
+    return 1;
+}
 FROST_HOT FROST_CORE FROST_AUDIO_RAM int frost_chain_process_guarded(FrostChain *s,const float *input,float *output,unsigned count,const FrostAmpStage *amp)
 {
     unsigned i,n,result,fading;uint32_t begin,end;
     frost_side_begin();                     /* beta.14: stereo effects write this block's side */
-    if(s->transition==FROST_ROUTE_COMMIT){   /* the silent commit-only block */
-        for(n=0;n<count;++n)output[n]=0.0f;
-        frost_chain_commit_route(s,amp);s->fade_position=0;s->transition=FROST_ROUTE_IN;
-        return 1;
-    }
+    if(s->transition==FROST_ROUTE_QUIET || s->transition==FROST_ROUTE_COMMIT)
+        return frost_chain_silent_block(s,output,count,amp);
     fading=s->transition!=FROST_ROUTE_IDLE;
 #if defined(__arm__) && defined(GP5_FIRMWARE)
     /* 31a target: the per-sample core is not linked (DSP flash). With fixed

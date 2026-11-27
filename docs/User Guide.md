@@ -400,6 +400,9 @@ Replacing a CAB number changes every preset referencing it. If a referenced
 custom cabinet is missing, Frost uses the built-in cabinet until it is replaced.
 
 Preset recall uses the compact fast transaction even when custom IRs differ.
+Matching controller/DSP builds fade the final stereo output to silence before
+decoding and committing a preset, then warm the new path for two audio blocks
+and fade back in. This includes a brief silent gap and cuts effect tails.
 If the same unchanged custom IR is already loaded in the same block, its
 coefficients are reused with no upload. A different cabinet still transfers
 and prepares its coefficients after the preset route change; it does not
@@ -408,6 +411,14 @@ ready, the previous cabinet follows the established loading/fade behavior.
 Changed or missing files and older DSP firmware retain the normal recovery
 and loading paths. Preset changes still cut effect tails; this is not gapless
 switching and there is no multi-cabinet RAM cache.
+
+You can select another preset while an IR is loading using MIDI, website Load,
+PRESET home-screen rotation or a PRESET footswitch tap. The latest selection
+wins; repeated next/previous actions advance from the queued selection. An
+obsolete transfer stops at a safe request boundary and restores a valid cabinet
+before handing off. An IR already finishing preparation/restoration is allowed
+to complete that final step. Loading the newly selected cabinet still takes
+time; the pedal no longer has to finish an obsolete full upload first.
 
 If IR seems bypassed, check that the block is enabled and Global **CAB OVERRIDE**
 is OFF. If the tone is quiet, check amp level, IR VOL, Global OUTPUT LEVEL and

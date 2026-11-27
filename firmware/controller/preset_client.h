@@ -4,7 +4,7 @@
 #include "firmware/protocol/preset_wire.h"
 #include "firmware/protocol/quick_preset_wire.h"
 enum { PRESET_IDLE,PRESET_DISCOVER,PRESET_ABORTING,PRESET_BEGINNING,
-       PRESET_WRITING,PRESET_COMMITTING,PRESET_WAITING,PRESET_REFRESH,PRESET_QUICK,PRESET_QUICK_WAIT,PRESET_QUICK_PROBE };
+       PRESET_WRITING,PRESET_COMMITTING,PRESET_WAITING,PRESET_REFRESH,PRESET_QUICK,PRESET_QUICK_WAIT,PRESET_QUICK_PROBE,PRESET_QUICK_PREPARE };
 typedef struct {
     uint8_t saved[FROST_QUICK_MAX_BYTES];
     uint32_t session,revision,next,crc,checksum,total;
@@ -64,7 +64,7 @@ static int preset_client_start_quick_assets(FrostPresetClient *c,FrostEditor *e,
     c->saved[20]=(uint8_t)retain_ir;
     c->saved[17]=(uint8_t)order;c->saved[18]=(uint8_t)(order>>8);c->saved[19]=(uint8_t)(order>>16);
     c->saved[2]=(uint8_t)pos;c->saved[3]=(uint8_t)(pos>>8);
-    c->quick_bytes=pos;c->quick_failures=0;c->quick=1;c->revision=revision;c->state=c->quick_known?PRESET_QUICK:PRESET_QUICK_PROBE;return 1;
+    c->quick_bytes=pos;c->quick_failures=0;c->quick=1;c->revision=revision;c->state=c->quick_known?((c->quick_caps&FROST_QUICK_CAP_QUIET)?PRESET_QUICK_PREPARE:PRESET_QUICK):PRESET_QUICK_PROBE;return 1;
 }
 static inline int preset_client_start_quick(FrostPresetClient *c,FrostEditor *e,const uint32_t *w,uint32_t revision)
 {return preset_client_start_quick_assets(c,e,w,revision,0);}
@@ -87,8 +87,8 @@ static void preset_client_finish(FrostPresetClient *c,FrostEditor *e,uint32_t no
 static unsigned preset_client_next(FrostPresetClient *c,FrostEditor *e,uint8_t *p,uint32_t now)
 {
     unsigned i,op;uint32_t token;
-    if(c->state==PRESET_QUICK || c->state==PRESET_QUICK_WAIT || c->state==PRESET_QUICK_PROBE){
-        unsigned n=c->state==PRESET_QUICK?c->quick_bytes:12u;if(c->awaiting)return 0;
+    if(c->state==PRESET_QUICK || c->state==PRESET_QUICK_WAIT || c->state==PRESET_QUICK_PROBE || c->state==PRESET_QUICK_PREPARE){
+        unsigned n=c->state==PRESET_QUICK?c->quick_bytes:c->state==PRESET_QUICK_PREPARE?16u:12u;if(c->awaiting)return 0;
         for(i=0;i<n;++i)p[i]=c->saved[i];p[2]=(uint8_t)n;p[3]=(uint8_t)(n>>8);
         if(c->state==PRESET_QUICK_PROBE)frost_wire_put32(p+8,0);
         c->awaiting=1;return n;
@@ -129,7 +129,7 @@ static int preset_client_reply(FrostPresetClient *c,FrostEditor *e,const uint8_t
     if(c->state==PRESET_IDLE || c->state==PRESET_REFRESH)return editor_reply(e,p,n,now);
     if(!c->awaiting)return 0;
     c->awaiting=0;
-    if(c->state==PRESET_QUICK || c->state==PRESET_QUICK_WAIT || c->state==PRESET_QUICK_PROBE){
+    if(c->state==PRESET_QUICK || c->state==PRESET_QUICK_WAIT || c->state==PRESET_QUICK_PROBE || c->state==PRESET_QUICK_PREPARE){
         if(!p || n!=FROST_QUICK_REPLY_BYTES || p[0]!=0x4d || p[1]!=0x7f || p[2]!=n || p[3] ||
            frost_wire_get32(p+4)!=1u || frost_wire_get32(p+8)!=(c->state==PRESET_QUICK_PROBE?0u:frost_wire_get32(c->saved+8))){
             /* Silence/malformed replies are uncertain transport, not evidence
@@ -146,10 +146,16 @@ static int preset_client_reply(FrostPresetClient *c,FrostEditor *e,const uint8_t
             if(c->saved[20] && !(c->quick_caps&FROST_QUICK_CAP_RETAIN_IR)){
                 c->quick=0;c->state=PRESET_DISCOVER;c->pending=0;return 1;
             }
-            c->state=PRESET_QUICK;return 1;
+            c->state=(c->quick_caps&FROST_QUICK_CAP_QUIET)?PRESET_QUICK_PREPARE:PRESET_QUICK;return 1;
+        }
+        if(c->state==PRESET_QUICK_PREPARE){
+            if(revision!=c->revision){preset_client_finish(c,e,now,1);return 0;}
+            if(status==FROST_SLOT_APPLIED && phase==4u)c->state=PRESET_QUICK;
+            else if(status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_BUSY){preset_client_finish(c,e,now,1);return 0;}
+            return 1;
         }
         if(status==FROST_SLOT_BUSY && c->state==PRESET_QUICK){c->quick=0;c->state=PRESET_DISCOVER;c->pending=0;return 1;}
-        if((status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED) || revision!=c->revision+1u || phase>3u){preset_client_finish(c,e,now,status==FROST_SLOT_CHAIN_FULL?2u:status==FROST_SLOT_DSP_LIMIT?3u:1u);return 0;}
+        if((status!=FROST_SLOT_ACCEPTED && status!=FROST_SLOT_REPLAYED) || revision!=c->revision+1u || phase>((c->quick_caps&FROST_QUICK_CAP_QUIET)?5u:3u)){preset_client_finish(c,e,now,status==FROST_SLOT_CHAIN_FULL?2u:status==FROST_SLOT_DSP_LIMIT?3u:1u);return 0;}
         if(!phase)preset_client_quick_adopt(c,e,revision,now);else c->state=PRESET_QUICK_WAIT;
         return 1;
     }

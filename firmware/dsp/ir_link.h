@@ -327,7 +327,7 @@ FROST_AUDIO_RAM void frost_irl_block_begin(void)
     /* A dedicated silent commit block does not run any IR instances. Treat
      * it like bypass here so its exchange never slips to block_end between
      * two early exchanges (preset and upload-bypass transitions both use it). */
-    if(frost_ir_remote && !frost_ir_bypass && frost_chain.transition!=FROST_ROUTE_COMMIT)
+    if(frost_ir_remote && !frost_ir_bypass && frost_chain.transition!=FROST_ROUTE_COMMIT && frost_chain.transition!=FROST_ROUTE_QUIET)
         for(i=0;i<FROST_SLOTS;++i)if(frost_chain.slots[i].type==FROST_IR){
             const FrostIR *ir=frost_chain.slots[i].state.ir;
             if(ir==&frost_chain.ir_pool[0])s->expect|=1u;else if(ir==&frost_chain.ir_pool[1])s->expect|=2u;

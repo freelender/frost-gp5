@@ -946,7 +946,7 @@ static void foot_press(uint32_t now)
 #ifdef FROST_BOOT_SPLASH
     if(!boot_complete)return;
 #endif
-    if(ir_file_client.state || preset_client.state || capture_client.state)return;
+    if(preset_client.state || capture_client.state || (ir_file_client.state && view!=PRESET_HOME))return;
     last_input_ms=now;
     if(view==TUNER){view=tuner_home;tuner_client.want=0;if(tuner_ref_dirty && globals_save(now))tuner_ref_dirty=0;++generation;return;}
     if(!is_home_view(view)){foot_back();++generation;return;}
@@ -984,7 +984,7 @@ static void foot_release(void)
             foot_long=0;return;}
         if(tap_pending){tap_pending=0;if(!foot_long)tap_press(tap_press_ms);foot_long=0;return;}   /* 32v: a short press is a tap */
         if(!foot_long && view==SETLIST_HOME)setlist_step(1,0);
-        if(!foot_long && view==PRESET_HOME){unsigned next=preset_step(current_preset,1);if(next!=255u && fw_flash_load(next))++generation;}
+        if(!foot_long && view==PRESET_HOME){unsigned from=midi_preset<FROST_PRESETS?midi_preset:current_preset;unsigned next=preset_step(from,1);if(next!=255u && midi_load(next))++generation;}
         foot_long=0;return;
     }
     if(!foot_held)return;
@@ -1172,8 +1172,9 @@ void fw_para_turn(int detents)
     if(view==TUNER){int r;if(!tuner_ref_unlocked)return;r=detents>20?450:detents< -20?425:(int)globals.tuner_ref+detents;globals.tuner_ref=(unsigned)(r<425?425:r>450?450:r);tuner_ref_dirty=1;tuner_client_update(&tuner_client,globals.tuner_ref);++generation;return;}
     if(view==SETLIST_HOME){setlist_step(detents>0?1:-1,1);++generation;return;}
     if(view==PRESET_HOME){
-        if(!(preset_client.state || capture_client.state)){
-            unsigned next=preset_step(current_preset,detents>0?1:-1);if(next!=255u)(void)fw_flash_load(next);
+        if(!capture_client.state){
+            unsigned from=midi_preset<FROST_PRESETS?midi_preset:current_preset;
+            unsigned next=preset_step(from,detents>0?1:-1);if(next!=255u)(void)midi_load(next);
         }
         ++generation;return;
     }

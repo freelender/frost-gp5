@@ -7,7 +7,7 @@
 #define FROST_SLOTS FROST_SLOT_COUNT
 #define FROST_IR_WORKSPACES FROST_PRESET_IRS
 #define FROST_ROUTE_FADE 128u
-enum { FROST_ROUTE_IDLE, FROST_ROUTE_OUT, FROST_ROUTE_IN, FROST_ROUTE_COMMIT };
+enum { FROST_ROUTE_IDLE, FROST_ROUTE_OUT, FROST_ROUTE_IN, FROST_ROUTE_COMMIT, FROST_ROUTE_QUIET, FROST_ROUTE_WARM };
 /* 31y14: with frost_chain_commit_alone set (target firmware), a finished
  * fade-out does not commit inside the same block; the next block is silent,
  * runs no slot, only commits (cold flash code: resets, overlays), then the
@@ -33,6 +33,7 @@ typedef struct {
     unsigned order[FROST_SLOTS], pre_count;
     unsigned pending_types[FROST_SLOTS], pending_order[FROST_SLOTS], pending_pre_count;
     unsigned transition, fade_position;
+    uint32_t recall_token; /* negotiated pre-fade owner; zero for ordinary routes */
     FrostPreset pending_preset;
     unsigned pending_preset_active;
     unsigned pending_policy_slot,pending_policy_value;

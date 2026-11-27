@@ -6,14 +6,14 @@
 /* CAB numbers are controller asset references, not DSP parameters. */
 static uint16_t ir_cabs[6];
 typedef struct {
-    unsigned state,awaiting,slot,next,count,op,recover,retries;
+    unsigned state,awaiting,slot,next,count,op,recover,retries,dsp_state;
     uint32_t crc,record,next_check,epoch,held_crc[6],source_crc,normal_scale;
     unsigned held_cab[6],types[6],error[6];
     uint8_t saved[112];unsigned bytes;
 } FrostIrFileClient;
 static FrostIrFileClient ir_file_client;
 static void ir_file_client_init(const FrostEditor *e)
-{unsigned i;FrostIrFileClient *c=&ir_file_client;c->state=c->awaiting=c->next_check=0;c->recover=1;c->retries=0;c->epoch=files_epoch;for(i=0;i<6;++i){c->error[i]=0;c->held_cab[i]=65;c->held_crc[i]=0;c->types[i]=e->types[i];}}
+{unsigned i;FrostIrFileClient *c=&ir_file_client;c->state=c->awaiting=c->next_check=0;c->recover=1;c->retries=0;c->dsp_state=FROST_IR_IDLE;c->epoch=files_epoch;for(i=0;i<6;++i){c->error[i]=0;c->held_cab[i]=65;c->held_crc[i]=0;c->types[i]=e->types[i];}}
 /* Virtual transfer record: adjust scale/CRC in RAM, leaving stored IR files
  * and backups intact. Old L1-normalized uploads gain the same calibration. */
 static uint32_t ir_file_word(const FrostIrFileClient *c,unsigned index)
@@ -36,6 +36,21 @@ static unsigned ir_file_frame(FrostEditor *e,unsigned op,unsigned count,uint8_t 
     frost_wire_put32(c->saved+24,c->next);frost_wire_put32(c->saved+28,count);
     for(i=0;i<count;++i)frost_wire_put32(c->saved+32+4*i,ir_file_word(c,c->next+i));
     for(i=0;i<c->bytes;++i)p[i]=c->saved[i];return c->bytes;
+}
+/* Stop obsolete work only between serialized requests. CLEAR replaces any
+ * partial coefficient/receive buffer with a valid built-in cabinet, then the
+ * existing COMMIT/fade handshake releases the session. Never drop a live
+ * session or mark a half-written custom IR as loaded. */
+static int ir_file_cancel(FrostEditor *e)
+{
+    FrostIrFileClient *c=&ir_file_client;
+    if(!c->state || c->awaiting || c->slot>=6u || c->op==FROST_IR_STATUS || c->recover==2u)return 0;
+    /* Validated coefficients are already complete: finish preparation/restore
+     * rather than rebuilding the built-in cabinet and extending the wait. */
+    if(c->dsp_state==FROST_IR_PREPARING || c->dsp_state==FROST_IR_RESTORING)return 0;
+    if(!ir_file_frame(e,FROST_IR_CLEAR,0,c->saved))return 0;
+    c->record=0;c->next=0;c->recover=2u;
+    return 1;
 }
 static unsigned ir_file_next(FrostEditor *e,uint8_t *p,uint32_t now)
 {
@@ -69,7 +84,7 @@ static int ir_file_reply(FrostEditor *e,const uint8_t *p,unsigned n)
     FrostIrFileClient *c=&ir_file_client;unsigned status,state,count;
     c->awaiting=0;
     if(!p || n!=32 || p[0]!=0x4c || p[1]!=0x7f || p[2]!=32 || p[3] || frost_wire_get32(p+4)!=1 || frost_wire_get32(p+8)!=frost_wire_get32(c->saved+8))return 0;
-    status=frost_wire_get32(p+12);state=frost_wire_get32(p+16);c->retries=0;
+    status=frost_wire_get32(p+12);state=frost_wire_get32(p+16);c->dsp_state=state;c->retries=0;
     if(c->op==FROST_IR_STATUS){
         if(c->recover==3 && state==FROST_IR_IDLE && status==FROST_SLOT_APPLIED){
             c->recover=0;

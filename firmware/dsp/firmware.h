@@ -350,9 +350,11 @@ FROST_COLD static void fw_init(void)
     frost_ovl_load(&frost_chain);
 #endif
 }
+#include "recall_gate.h"
 FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_process(const int32_t *in,int32_t *left,int32_t *right)
 {
     float dry[GP5_BLOCK],wet[GP5_BLOCK],side[GP5_BLOCK],g=frost_in_gain;unsigned i;
+    unsigned recall=frost_chain.recall_token,phase=frost_chain.transition,position=frost_chain.fade_position;
     frost_side=side;   /* beta.14: this block's stereo side signal (engine/stereo.h) */
     if(g!=frost_in_gain_target){float d=frost_in_gain_target-g;g=d<1e-4f && d>-1e-4f?frost_in_gain_target:g+0.25f*d;frost_in_gain=g;}
     for(i=0;i<GP5_BLOCK;++i){
@@ -395,6 +397,7 @@ FROST_HOT FROST_CORE __attribute__((noinline)) FROST_AUDIO_RAM static void fw_pr
 #ifdef FROST_IR_LINK
     frost_irl_block_end();
 #endif
+    if(recall)frost_recall_gate(wet,side,GP5_BLOCK,phase,position,frost_side_used);
     for(i=0;i<GP5_BLOCK;++i){
 #ifdef FROST_LINE_TEST
         if(frost_side_used){left[i]=frost_output_pack(wet[i]+frost_side[i]);right[i]=frost_output_pack(wet[i]-frost_side[i]);}
@@ -456,9 +459,9 @@ __attribute__((unused,noinline)) static void fw_prepare(void)
 FROST_CTL_RAM static void frost_slot_command_ram(const uint8_t *p,uint32_t n)
 {
     uint8_t reply[FROST_SLOT_REPLY_BYTES];uint32_t status;unsigned bytes=FROST_SLOT_REPLY_BYTES;
-    if(n==12u && p[0]==0x4d && p[1]==0x7f){
-        status=quick_preset_status(&preset_transfer,&slot_protocol,&frost_chain,p,reply);bytes=FROST_QUICK_REPLY_BYTES;
-        if(status!=FROST_SLOT_APPLIED && status!=FROST_SLOT_REPLAYED)++rejected;
+    if((n==12u || n==16u) && p[0]==0x4d && p[1]==0x7f){
+        status=n==16u?quick_preset_prepare(&preset_transfer,&slot_protocol,&frost_chain,p,reply):quick_preset_status(&preset_transfer,&slot_protocol,&frost_chain,p,reply);bytes=FROST_QUICK_REPLY_BYTES;
+        if(status!=FROST_SLOT_APPLIED && status!=FROST_SLOT_REPLAYED && status!=FROST_SLOT_ACCEPTED)++rejected;
     }else{
     frost_slots_command(&slot_protocol,&frost_chain,p,n,reply);
     status=frost_wire_get32(reply+12);

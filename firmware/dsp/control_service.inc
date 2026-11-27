@@ -64,7 +64,7 @@
                         ST[6]++;
                         /* 25c: slot frames take the RAM path; handle() would only log
                          * then reach fw_command's identical slot case. */
-                        if(cmd==FROST_SLOT_COMMAND || (cmd==FROST_QUICK_COMMAND && frame==16u)){
+                        if(cmd==FROST_SLOT_COMMAND || (cmd==FROST_QUICK_COMMAND && (frame==16u || frame==20u))){
                             log_frame(cmd,buf+8,frame-8);frost_slot_command_ram(buf+4,frame-4);
                         }
                         else handle(buf+4,frame-4);

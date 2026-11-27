@@ -62,6 +62,10 @@ static int midi_load(unsigned preset)
 }
 static void midi_service(void)
 {
+    /* Finish a short CLEAR/restore handshake instead of the obsolete upload.
+     * The one-slot mailbox remains latest-wins while cancellation runs. */
+    if(midi_preset<FROST_PRESETS && midi_preset!=current_preset && !preset_client.state &&
+       !capture_client.state && ir_file_client.state)(void)ir_file_cancel(&editor);
     if(midi_preset<FROST_PRESETS && midi_editable() && fw_editor_ready() && !tuner_client.dsp_active && view!=TUNER){
         if(fw_flash_load(midi_preset)){
             midi_preset=255;boot_load_done=1;changed=0;   /* last_preset_service saves it */

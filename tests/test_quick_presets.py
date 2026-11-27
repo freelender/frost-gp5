@@ -20,6 +20,7 @@ class QuickPresetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         c=cls.lib=ct.CDLL(str(build(ROOT/('build/quick_presets.dll' if os.name=='nt' else 'build/quick_presets.so'),ROOT/'tests/quick_presets_host.c',includes=[ROOT/'tests/stubs'],flags=['-DFROST_IR_FFT_PARTS=8u'])))
+        c.qp_gate.restype=ct.c_float
         c.ge_actual_value.restype=ct.c_float
         c.ge_raw.restype=ct.c_uint
         c.ge_ir_coefficient.restype=ct.c_float
@@ -72,7 +73,7 @@ class QuickPresetTests(unittest.TestCase):
     def test_lost_acceptance_retries_identical_mutation_once(self):
         c=self.lib;c.ge_drop(2,1);self.load(0) # lost probes must not disable fast recall
         self.assertEqual(c.qp_count(2),0)
-        revision=c.ge_actual_revision();c.qp_reset_trace();c.ge_drop(2,1)
+        revision=c.ge_actual_revision();c.qp_reset_trace();c.qp_drop_mutation(2)
         self.load(1);self.assertEqual(c.ge_actual_revision(),revision+1)
         self.assertEqual(c.qp_count(0),3);self.assertEqual(c.qp_count(2),0)
     def test_old_dsp_falls_back_before_any_quick_mutation(self):
@@ -156,6 +157,56 @@ class QuickPresetTests(unittest.TestCase):
             self.assertEqual(c.ge_actual_revision(),revision+1)
             self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],expected[preset])
 
+    def start_ir_load_until(self,preset,phase):
+        c=self.lib;self.assertEqual(c.ge_flash_load(preset),1)
+        for _ in range(400):
+            if c.qp_ir_phase()==phase and (phase!=2 or c.qp_ir_next()>=40):return
+            c.qp_step()
+        self.fail(f'IR phase {phase} not reached: {c.qp_ir_phase()}')
+    def wait_for_selected_preset(self,preset):
+        c=self.lib
+        for i in range(150):
+            if c.ge_current_preset()==preset:return i
+            c.qp_step()
+        self.fail('new selection blocked behind old IR load')
+    def test_new_midi_preset_cancels_obsolete_ir_load_at_each_stage(self):
+        c=self.lib
+        for phase in (1,2,4,5,6,3):  # fade, receive, validate, expand, prepare, restore
+            with self.subTest(phase=phase):
+                self.setUp();expected=self.two_custom_cabinets();c.qp_reset_trace()
+                self.start_ir_load_until(25,phase);writes=c.qp_count(4)
+                c.ge_midi(12,0xc0,27,0)
+                self.wait_for_selected_preset(27)
+                self.assertEqual(c.qp_count(4),writes)  # no obsolete data after new request
+                self.settle();c.ge_pump(350)
+                if phase not in (6,3):self.assertGreater(c.qp_count(5),0)  # valid CLEAR/restore handoff
+                else:self.assertEqual(c.qp_count(5),0)  # finish already-validated IR
+                self.assertEqual(c.qp_pending_preset(),255)
+                self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],expected[27])
+                self.assertEqual(c.ge_dsp_global(1),0)  # bypass restored
+    def test_latest_request_wins_during_cancellation_and_lost_reply(self):
+        c=self.lib;expected=self.two_custom_cabinets();c.qp_reset_trace()
+        self.start_ir_load_until(25,2);writes=c.qp_count(4)
+        c.ge_midi(12,0xc0,26,0);c.irf_lost_reply(1);c.qp_step()
+        c.ge_midi(12,0xc0,27,0)
+        self.wait_for_selected_preset(27);self.assertEqual(c.qp_count(4),writes)
+        self.settle();c.ge_pump(350)
+        self.assertEqual(c.ge_current_preset(),27)
+        self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],expected[27])
+        self.assertEqual(c.ge_dsp_global(1),0)
+    def test_pedal_preset_navigation_queues_during_ir_load(self):
+        c=self.lib
+        for control in ('foot','para'):
+            with self.subTest(control=control):
+                self.setUp();expected=self.two_custom_cabinets()
+                self.start_ir_load_until(25,2);c.qp_preset_home()
+                if control=='foot':c.ge_foot();c.ge_foot()
+                else:c.ge_turn(1);c.ge_turn(1)
+                self.assertEqual(c.qp_pending_preset(),27)  # 25 -> queued 26 -> queued 27
+                self.wait_for_selected_preset(27);self.settle();c.ge_pump(350)
+                self.assertEqual(c.ge_current_preset(),27)
+                self.assertEqual([c.ge_ir_coefficient(3,i) for i in range(512)],expected[27])
+
     def test_retain_mask_cannot_reuse_a_non_ir_slot(self):
         c=self.lib;self.load(0);q=bytearray(self.packet())
         struct.pack_into('<II',q,8,struct.unpack_from('<I',q,8)[0]+100,c.ge_actual_revision())
@@ -224,5 +275,56 @@ class QuickPresetTests(unittest.TestCase):
             q.extend((b'\xfa'+struct.pack('<f',1.6)+bytes([100])+b'\xfa'+struct.pack('<f',20000.0))*count)   # IR: LEVEL, LOW CUT 0, HIGH CUT off
             self.assertEqual(self.send(q)[1],15);self.assertEqual(c.qp_unused_assets_zero(),1)
             c.ge_audio(8)
+
+    def prepared_packet(self):
+        c=self.lib;self.load(1);q=bytearray(self.packet())
+        struct.pack_into('<II',q,8,struct.unpack_from('<I',q,8)[0]+100,c.ge_actual_revision())
+        prepare=q[:16];struct.pack_into('<H',prepare,2,16)
+        return q,prepare
+    def test_prepare_fades_before_mutation_and_waits_for_zero_dma_blocks(self):
+        c=self.lib;q,p=self.prepared_packet();revision=c.ge_actual_revision();generation=c.qp_ir_generation()
+        self.assertEqual(self.send(p)[1],15)
+        self.assertEqual(c.qp_phase(),1)
+        self.assertEqual(self.send(p)[1],15) # idempotent
+        c.ge_audio(2);self.assertEqual(c.qp_phase(),4)
+        self.assertEqual(self.send(p)[1],15) # last DMA frame still contains fade
+        c.ge_audio(1);self.assertEqual(self.send(p)[1],15)
+        c.ge_audio(1);self.assertEqual(self.send(p)[1],0)
+        self.assertEqual(c.ge_actual_revision(),revision);self.assertEqual(c.qp_ir_generation(),generation)
+        self.assertEqual(self.send(q)[1],15);self.assertEqual(c.qp_phase(),3)
+        c.ge_audio(1);self.assertEqual(c.qp_phase(),5)
+        c.ge_audio(1);self.assertEqual(c.qp_phase(),5)
+        c.ge_audio(1);self.assertEqual(c.qp_phase(),2)
+        c.ge_audio(2);self.assertEqual(c.qp_phase(),0);self.assertEqual(c.qp_owner(),0)
+    def test_abandoned_prepare_times_out_and_bad_mutation_releases_silence(self):
+        c=self.lib;q,p=self.prepared_packet();self.send(p);c.ge_audio(700)
+        self.assertEqual(c.qp_phase(),0);self.assertEqual(c.qp_owner(),0)
+        self.send(p);c.ge_audio(4);q[17]=0
+        self.assertNotIn(self.send(q)[1],(0,1,15))
+        self.assertEqual(c.qp_phase(),2);c.ge_audio(2);self.assertEqual(c.qp_owner(),0)
+    def test_prepare_ownership_and_revision_are_fenced_on_fast_path(self):
+        c=self.lib;q,p=self.prepared_packet();revision=c.ge_actual_revision()
+        data=(ct.c_uint8*16)(*p);r=(ct.c_uint8*32)()
+        rejected=c.qp_rejected()
+        self.assertEqual(c.qp_fast_dispatch(data,16,r),32)
+        self.assertEqual(c.qp_rejected(),rejected)
+        self.assertEqual(struct.unpack_from('<I',bytes(r),12)[0],15)
+        self.assertEqual(bytes(r),struct.pack('<HH7I',0x7f4d,32,1,*self.send(p),3))
+        other=p.copy();struct.pack_into('<I',other,8,struct.unpack_from('<I',p,8)[0]+1)
+        self.assertEqual(self.send(other)[1],12) # BUSY
+        stale=p.copy();struct.pack_into('<I',stale,12,revision+1)
+        self.assertEqual(self.send(stale)[1],7)
+        self.assertEqual(c.ge_actual_revision(),revision)
+    def test_final_envelope_covers_bypass_eq_and_both_channels(self):
+        c=self.lib
+        for stereo in (0,1):
+            self.assertEqual(c.qp_gate_invalid(stereo),1) # silence cannot conceal a numeric fault
+            scale=0.5 if stereo else 1.0
+            for phase in (3,4,5):
+                self.assertEqual(c.qp_gate(phase,0,0,stereo),0)
+                self.assertEqual(c.qp_gate(phase,0,63,stereo),0)
+            self.assertEqual(c.qp_gate(1,64,63,stereo),0)
+            self.assertEqual(c.qp_gate(2,64,63,stereo),scale)
+            self.assertEqual(c.qp_gate(1,0,0,stereo),scale*127/128)
 
 if __name__=='__main__':unittest.main()

@@ -191,6 +191,11 @@ custom IR uploads), silent route-commit blocks and empty chains start their zero
 before chain processing, leaving the controller its usual processing window.
 Coefficient mirroring pauses while the receive/validation/expansion stages use
 the coefficient area as scratch, then resumes with the validated cabinet.
+Quick recall negotiates a pre-fade handshake with the DSP. The controller
+waits for two fully silent blocks before sending the full preset; commit
+and two-block warm-up run under a final stereo envelope after bypass/EQ.
+Older peers retain their existing recall path. This is a transition strategy,
+not physical audio-continuity qualification.
 DSP media code
 uses the existing extended code region; firmware memory limits are unchanged.
 Both IR streams remain available. Bluetooth starts before USB attachment and
