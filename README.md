@@ -51,10 +51,14 @@ in GLOBAL SETTINGS → SYSTEM → VERSION; release notes come with each release.
 
 Frost plays converted capture approximations; it does **not** run native NAM.
 Heavy chains can exceed the DSP budget. Preset changes do not provide
-effect-tail spillover, and storage writes can briefly interrupt audio.
+effect-tail spillover. Recall fades through a silent gap; changed custom IRs
+still take time to load. Storage writes can briefly interrupt audio.
+The latest transition changes have passed focused device telemetry checks,
+but click-free switching and professional live use remain unqualified.
 
 Standard beta images carry USB MIDI only. An **experimental USB audio and
-Bluetooth MIDI build** is available from source; see the [build guide](docs/Build%20Firmware.md).
+Bluetooth MIDI profile** is supplied as a separate experimental release candidate
+and can also be built from source; see the [build guide](docs/Build%20Firmware.md).
 It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
 Short device checks cover USB recording/playback and BLE MIDI reception.
 The profile remains experimental; long-session stability and heavy-chain load

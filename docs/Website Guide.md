@@ -28,7 +28,7 @@ It is useful for exploring the interface, not for judging the sound or testing
 real hardware compatibility. Use the connection control to disconnect when
 finished. Listen through the GP-5's normal audio output; this editor is not a
 USB audio recorder. Standard Frost beta images carry USB MIDI only. The optional experimental
-USB audio/BLE MIDI profile is described in the [build guide](Build%20Firmware.md);
+USB audio/BLE MIDI release candidate is described in the [build guide](Build%20Firmware.md);
 recording and playback use a computer audio application. BLE MIDI does not
 stream phone audio.
 

@@ -9,7 +9,8 @@ cabinet IRs, editable presets, a tuner, and songs/setlist navigation. Once your
 sounds and setlist are saved, the pedal works without the website connected.
 
 Standard beta images carry USB MIDI only. An **experimental USB audio and
-Bluetooth MIDI build** is available from source; see the [build guide](Build%20Firmware.md).
+Bluetooth MIDI profile** is supplied as a separate experimental release candidate
+and can also be built from source; see the [build guide](Build%20Firmware.md).
 It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
 Short device checks cover USB recording/playback and BLE MIDI reception.
 The profile remains experimental; long-session stability and heavy-chain load
@@ -54,6 +55,11 @@ processing. **ON** (default) mixes the pedal's direct sound with USB playback.
 Recording continues in either mode. Leave Global Settings with BACK to save
 the preference across restarts; it applies to every preset. Without an open
 USB playback stream, the pedal's direct sound remains audible.
+
+Windows DAW/backend compatibility is still under test. WASAPI Exclusive
+failures have been reported, and DirectSound can add substantial monitoring
+latency. Selecting 44,100 Hz alone does not establish low-latency operation;
+verify the full input/VST/output path in your own DAW.
 
 The source utility `tools/probe_media.py --stage STAGE --direct off` (or
 `--direct on`) can temporarily override the setting until restart or a menu
@@ -236,7 +242,7 @@ DIGI, BBD, TAPE, PING, SPACE and SPRING have a **TAIL** setting (OFF by default)
   died away, the effect rests and uses no DSP.
 
 TAIL is saved with the preset. The generic DELAY and REVERB behave as TAIL OFF.
-On a preset change, tails are cut with the usual short crossfade.
+On a preset change, tails are cut and the output fades through a silent gap.
 
 ### Stereo and the ping-pong delay
 

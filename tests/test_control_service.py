@@ -49,8 +49,8 @@ class ControlServiceTests(unittest.TestCase):
         self.assertEqual(self.c.cs_value(0),4)
         self.assertGreater(self.c.cs_value(1),10)
         self.assertEqual(self.c.cs_value(10),0)
-    def test_only_short_quick_polls_use_the_ram_dispatcher(self):
-        for cmd,length,fast in ((0x7f4d,12,1),(0x7f4d,34,0),(0x7f30,12,0),(0x7f40,36,1)):
+    def test_only_short_quick_polls_and_prepare_use_the_ram_dispatcher(self):
+        for cmd,length,fast in ((0x7f4d,12,1),(0x7f4d,16,1),(0x7f4d,20,0),(0x7f4d,34,0),(0x7f30,12,0),(0x7f40,36,1)):
             self.c.cs_init();self.feed(frame(struct.pack('<HH',cmd,length)+bytes(length-4)))
             for _ in range(12):self.step()
             self.assertEqual(self.c.cs_value(0),1,(cmd,length))

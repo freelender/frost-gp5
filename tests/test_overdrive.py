@@ -65,7 +65,7 @@ class OverdriveTests(unittest.TestCase):
         c=self.lib
         self.assertEqual([c.fx_type(0,i) for i in range(6)],[0,1,2,3,255,255])
         self.assertEqual(c.fx_state_bytes(4),12);self.assertEqual(c.fx_workspace_bytes(4),0)
-        self.assertEqual(c.fx_instance_bytes(),208);self.assertEqual(c.fx_bytes(),13920) # was 64/12936: 8 params + engage input + model state per slot, 8-param pending preset
+        self.assertEqual(c.fx_instance_bytes(),208);self.assertEqual(c.fx_bytes(),13928) # includes recall-token field and native pointer alignment
         self.configure(0,[4]);self.assertEqual(c.fx_enabled(0,0),0)
         for p,initial in enumerate((4.,.5,.5)):
             self.assertEqual(c.fx_target(0,0,p),initial)

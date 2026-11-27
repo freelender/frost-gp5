@@ -201,6 +201,7 @@ it is different from CC, which changes a control or triggers an action.
 |---|---|
 | 01 | **0** |
 | 02 | **1** |
+| 03 | **2** |
 | 10 | **9** |
 | 20 | **19** |
 | 60 | **59** |
@@ -209,6 +210,10 @@ Some controller editors show program numbers as 1–128 while others show 0–12
 The table gives the actual number sent over MIDI. If your editor starts at 1,
 its displayed program 1 normally sends MIDI program 0. Empty preset positions
 and programs 60–127 are ignored; they do not select the next stored sound.
+
+While a custom IR is loading, a new Program Change queues the latest selected
+preset and cancels obsolete upload work at a safe boundary. Changed IRs still
+take time to load, and preset changes include a silent gap with no tail spillover.
 
 For navigation buttons, use **CC 87, value 127** for the next stored preset,
 or **CC 88, value 127** for the previous one. Navigation skips empty positions

@@ -1,10 +1,10 @@
 [
- {
-  "id": "frost",
-  "title": "Frost",
-  "version": "0.1.0-beta.1",
-  "file": "",
-  "sha256": "614c554ac9807af395a8c821e61919d5f4d472e66b7d1fcd38f502bc656a6c11",
-  "description": "Private beta. Select the firmware file supplied with your tester package."
- }
+  {
+    "id": "frost",
+    "title": "Frost",
+    "version": "0.1.0-beta.17",
+    "file": "",
+    "sha256": "",
+    "description": "Beta firmware is supplied as a separate download. Choose the Standard or experimental USB Audio/BLE image from the release package."
+  }
 ]

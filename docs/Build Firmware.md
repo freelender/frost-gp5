@@ -161,6 +161,16 @@ Review failures instead of ignoring memory overflows. Keep the stage's
 The playable image contains DSP, DSP-data and controller app sections; it
 does not replace user asset/preset storage.
 
+To verify the actual release file through the website flasher simulation:
+
+```sh
+FROST_TEST_FIRMWARE="$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin" \
+  PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p test_web_flasher.py -v
+```
+
+This checks file identity, corrupt-file rejection and transfer of every section
+into a simulated pedal. It does not access or flash a physical device.
+
 Check `firmware/version.h` for the canonical semantic version and uppercase
 display spelling. Custom builds have their own checksum, even if they retain
 the same version text. A checksum identifies bytes; it is not a signature.
@@ -276,9 +286,24 @@ block on IO or write flash in an audio callback. The shipping capture backend is
 not part of this product source tree.
 
 For release packaging, `tools/package_beta.py --help` describes local ZIP
-creation. It expects an accepted baseline and verifies unchanged DSP sections
-for a version/packaging-only release. Firmware stays separate from website
-hosting. A changed DSP build needs its own validation and accepted baseline.
+creation. The default branding mode expects an accepted baseline and verifies
+unchanged DSP sections. Use `--candidate --notes /external/RELEASE_NOTES.md`
+for a build with changed DSP code that still needs qualification; its manifest
+records the actual changed sections and marks hardware qualification pending.
+Use a baseline from the same Standard or USB Audio/BLE profile. The package
+includes all seven guides, their linked public images, notices and checksums.
+
+For example, after building a fresh external stage:
+
+```sh
+python tools/package_beta.py "$FROST_WORK/gp5-beta" \
+  --baseline "$FROST_WORK/previous-standard.bin" \
+  --out "$FROST_WORK/release-standard" --candidate \
+  --notes "$FROST_WORK/RELEASE_NOTES.md"
+```
+
+Firmware stays separate from website hosting. Packaging does not publish,
+deploy, flash, establish audible continuity or approve a stable release.
 
 ## 10. Leave a clean checkout
 

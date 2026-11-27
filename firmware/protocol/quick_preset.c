@@ -103,6 +103,12 @@ FROST_COLD static unsigned quick_preset_apply(FrostPresetTransfer *t,FrostSlotPr
     for(i=0;i<n;++i)t->quick_request[i]=q[i];t->quick_bytes=n;
     return FROST_SLOT_ACCEPTED;
 }
+/* The standard profile needs room in its base flash region. Full recall
+ * decoding runs under the negotiated silent envelope; short poll/prepare
+ * frames retain the separate RAM dispatcher. Keep media placement unchanged. */
+#ifndef FROST_USB_AUDIO
+FROST_XCODE
+#endif
 FROST_COLD void frost_quick_preset_command(FrostPresetTransfer *t,FrostSlotProtocol *s,FrostChain *chain,
     const uint8_t *q,unsigned n,uint8_t *reply,FrostQuickBuiltin builtin)
 {

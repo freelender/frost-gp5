@@ -15,9 +15,12 @@ Frost replaces the pedal's application firmware. Keep your sounds backed up
 and read the recovery steps below before installing.
 
 **Before you switch:** standard Frost beta images provide USB MIDI only.
-An optional source-build profile adds experimental USB audio and BLE MIDI;
-see [Build Firmware](Build%20Firmware.md). It needs physical qualification on
-Frost. BLE MIDI provides wireless control, not phone-audio streaming.
+The separate **USB Audio/BLE Experimental** candidate adds USB audio and BLE
+MIDI; the **Standard** candidate provides USB MIDI only. Both include the
+preset/IR transition changes. Choose by the filename and release notes.
+The experimental profile still needs long-session and DAW qualification.
+BLE MIDI provides wireless control, not phone-audio streaming.
+See [Build Firmware](Build%20Firmware.md) for source builds.
 
 ## 2. Back up your sounds
 
@@ -80,8 +83,13 @@ immediately repeating a completed flash.
 <p align="center"><img src="../assets/docs/pedal-settings-system.png" alt="GLOBAL SETTINGS → SYSTEM shows the installed firmware version" width="330"><br><sub>GLOBAL SETTINGS → SYSTEM shows the installed firmware version</sub></p>
 
 4. At low volume, select a preset and play through the normal audio output.
-   USB is used here for control and file transfer.
-5. Try a patch with IR enabled, then change Chain → Preset and Preset → Chain.
+   The Standard profile uses USB for control and file transfer.
+   With USB Audio/BLE Experimental, also test recording/playback and your
+   DIRECT MONITORING setting before relying on the computer audio path.
+5. Play while switching between two presets sharing an IR, then between
+   two using different IRs. Check for crackles, unexpected silence and slow
+   controls, first without computer monitoring, then with your intended DAW.
+6. Change Chain → Preset and Preset → Chain.
    Confirm audio resumes after saving the home-screen setting.
 
 First use with empty Frost storage supplies 20 editable factory presets.
