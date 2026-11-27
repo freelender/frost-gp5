@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=1.9.0">
-<link rel="stylesheet" href="rig.css?v=1.9.0">
+<link rel="stylesheet" href="style.css?v=1.9.1">
+<link rel="stylesheet" href="rig.css?v=1.9.1">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -47,12 +47,13 @@
       <select class="skinpick" id="skin" aria-label="Skin"><option value="frost">Skin · Frost</option><option value="vintage">Skin · Vintage</option><option value="noir">Skin · Noir</option></select>
       <div class="lang" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="pt" aria-pressed="false">PT</button></div>
       <div class="status" id="status" data-kind="off" role="status" aria-live="polite"><span class="dot"></span><span id="status-text">Not connected</span></div>
-      <button class="btn primary" id="connect">Connect GP-5</button>
+      <a class="btn primary" id="install-start" href="#firmware">Install Frost</a>
+      <button class="btn ghost" id="connect">Connect GP-5</button>
     </div>
   </header>
 
   <main class="container" id="content" tabindex="-1">
-    <div id="notice" class="banner bad" role="alert" hidden><div><strong>Something went wrong</strong><span id="notice-text"></span></div><button class="btn ghost small" id="notice-close">Dismiss</button></div>
+    <div id="notice" class="banner bad" role="alert" hidden><div><strong id="notice-title">Something went wrong</strong><span id="notice-text"></span><div class="actions" id="notice-firmware" hidden><a class="btn primary small" href="#firmware">Open Firmware</a></div></div><button class="btn ghost small" id="notice-close">Dismiss</button></div>
 
     <!-- Live editor -->
     <section id="view-live" class="view" aria-labelledby="h-live">
@@ -78,9 +79,14 @@
 
       <div id="live-empty" class="panel emptystate">
         <div class="emptyicon" aria-hidden="true">❄</div>
-        <h2>Connect your GP-5</h2>
-        <p>Plug the pedal in over USB, switch it on and press Connect. Needs Frost 31y18 or later and Chrome, Edge or Opera on a computer.</p>
-        <div class="actions center"><button class="btn primary" data-connect>Connect GP-5</button><button class="btn ghost" id="demo">Try the demo</button></div>
+        <h2 id="onboarding-title">Start by installing Frost</h2>
+        <p id="onboarding-intro">Using the original Valeton firmware? Install Frost on your GP-5 to unlock the live editor, amp models and preset tools. Start on the Firmware page; no editor connection is needed.</p>
+        <div class="actions center" id="onboarding-install"><a class="btn primary" href="#firmware">Install Frost first</a></div>
+        <p class="hint" id="onboarding-install-note">Review the installation steps and back up your sounds. Nothing is installed until you confirm.</p>
+        <div class="onboarding-existing" id="onboarding-existing">
+          <p>Frost is already on your pedal? Plug it in with a USB data cable and open this page in Chrome, Edge or Opera on a computer.</p>
+          <div class="actions center"><button class="btn ghost" data-connect>Already installed? Connect GP-5</button><button class="btn ghost" id="demo">Try the demo</button></div>
+        </div>
       </div>
 
       <div id="live-panel" class="rig" hidden>
@@ -224,6 +230,7 @@
     <!-- Firmware -->
     <section id="view-firmware" class="view" aria-labelledby="h-firmware" hidden>
       <div class="heading"><div><div class="eyebrow">Install &amp; recover</div><h1 id="h-firmware">Firmware.</h1><p>Install Frost, or go back to Valeton's firmware. Nothing is installed until you confirm.</p></div></div>
+      <div class="banner"><div><strong>Coming from Valeton stock firmware?</strong><span>Start here: plug in your powered GP-5 with a USB data cable, back up stock presets in Valeton's editor, then close that editor. Use Install Frost below, or choose your Frost .bin file. You do not need to press Connect GP-5 first; that button connects the live editor after Frost is installed.</span></div></div>
       <div class="banner warn"><div><strong>⚠ Keep the pedal connected and powered</strong><span>Installing replaces the pedal's firmware and takes about 90 seconds. The pedal enters update mode by itself. The factory loader is never overwritten, so an interrupted install can always be repeated.</span></div></div>
       <div class="grid2">
         <div class="panel pad">
@@ -292,6 +299,6 @@
   <div class="limithint">REMOVE AN EFFECT</div>
   <button class="btn small ghost" id="limit-close" type="button">OK</button>
 </div>
-<script type="module" src="app.js?v=1.9.0"></script>
+<script type="module" src="app.js?v=1.9.1"></script>
 </body>
 </html>

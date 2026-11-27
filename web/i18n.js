@@ -9,7 +9,7 @@
 // The tables translate interface text only. Names that belong to the user (presets, songs, parts,
 // models, cabinets) and the pedal's own words (effect and knob names, menu words such as PRESETS or SAVE)
 // are not in them, so they stay exactly as the pedal shows them.
-import { PT } from './i18n_pt.js?v=1.9.0';
+import { PT } from './i18n_pt.js?v=1.9.1';
 
 const TABLES = { pt: PT };
 const LANGS = ['en', 'pt'];
