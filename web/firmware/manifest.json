@@ -2,7 +2,7 @@
   {
     "id": "frost",
     "title": "Frost",
-    "version": "0.1.0-beta.17",
+    "version": "0.1.0",
     "file": "",
     "sha256": "",
     "description": "Frost with USB audio, USB MIDI, BLE MIDI and the latest preset/IR changes. USB audio/BLE remains experimental."

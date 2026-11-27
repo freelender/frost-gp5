@@ -14,7 +14,7 @@ Open [Frost Studio](https://freelender.github.io/frost-gp5/).
 Frost replaces the pedal's application firmware. Keep your sounds backed up
 and read the recovery steps below before installing.
 
-The release is one firmware image: **Frost_GP5_0.1.0-beta.17.bin**. It includes
+The release is one firmware image: **Frost_GP5_0.1.0.bin**. It includes
 all effect/preset/IR changes, USB audio, USB MIDI and BLE MIDI. USB audio/BLE
 still needs long-session and DAW qualification. Bluetooth provides wireless
 MIDI control; streaming music from a phone is not implemented.
@@ -55,7 +55,7 @@ not assume it matches the supplied image. A ZIP, `.nam`, WAV or backup is
 not a firmware file.
 
 Some website releases offer a bundled **Install Frost** button. If it is
-unavailable, choose the supplied local `.bin`; separate-file beta delivery
+unavailable, choose the supplied local `.bin`; separate-file firmware delivery
 does not require a firmware download on the site.
 
 ## 5. Install

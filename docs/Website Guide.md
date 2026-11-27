@@ -81,7 +81,7 @@ resource configuration it cannot accept; the previous block then remains.
 When it refuses an effect because the chain would overload the audio processor,
 the page shows the same **DSP LIMIT** popup as the pedal's screen (or **CHAIN
 TOO BIG** when the effects do not fit its effect memory). Remove an effect or
-choose a lighter one. The popup needs Frost 0.1.0-beta.12 or later.
+choose a lighter one. The popup is included in the initial Frost 0.1.0 preview.
 Six visible slots do not guarantee that every heavy chain fits the DSP budget.
 See the [Effects list](Effects%20list.md) for every effect and its controls,
 and the [User Guide](User%20Guide.md) for pedal-side position changes.
@@ -358,7 +358,7 @@ the previous stored copy is retained until the new data and header are verified.
 ## Publish and deploy this editor
 
 The maintainer's release and GitHub Pages steps are in
-[Build Firmware → Publish the beta and deploy GitHub Pages](Build%20Firmware.md#10-publish-the-beta-and-deploy-github-pages).
+[Build Firmware → Publish the initial preview and deploy GitHub Pages](Build%20Firmware.md#10-publish-the-initial-preview-and-deploy-github-pages).
 The manual Pages workflow can bundle the single verified release image by
 its GitHub tag, enabling **Install Frost**. Selecting a local `.bin` remains
 available. Website deployment does not update a connected pedal.

@@ -588,7 +588,7 @@ confirmation. Back up the current contents first. Restart after restoring
 global preferences. A Frost backup is separate from Valeton stock data and is
 not a firmware image.
 
-## 10. Troubleshooting and beta feedback
+## 10. Troubleshooting and preview feedback
 
 | Symptom | Check |
 |---|---|
@@ -606,11 +606,11 @@ not a firmware image.
 | The computer sees no GP-5 audio device | The release includes USB audio. Check the installed version, USB data cable and computer audio-device settings |
 | A phone cannot find the GP-5 over Bluetooth | Set SYSTEM → BLUETOOTH to ON and connect through a BLE MIDI client to Frost; ordinary Bluetooth audio pairing is not supported |
 
-This is beta firmware. Not every hardware setup and heavy chain has been
+This is the initial preview firmware. Not every hardware setup and heavy chain has been
 qualified. Report firmware version, OS/browser, guitar/pickups, audio
 routing, preset/chain/CAB, exact steps and whether a reboot changes the problem.
 Include a recording or backup when useful, and send it directly to the person
-who supplied your beta firmware.
+who supplied your preview firmware.
 
 ## 11. Effects
 

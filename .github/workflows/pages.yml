@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Published firmware tag, e.g. v0.1.0-beta.17 (blank: editor only)'
+        description: 'Published firmware tag, e.g. v0.1.0 (blank: editor only)'
         required: false
         default: ''
         type: string
@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: |
           if [ -n "$RELEASE_TAG" ]; then
-            [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || { echo 'Expected vX.Y.Z-beta.N'; exit 1; }
+            [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]] || { echo 'Expected vX.Y.Z or vX.Y.Z-beta.N'; exit 1; }
             version="${RELEASE_TAG#v}"
             image="Frost_GP5_${version}.bin"
             gh release download "$RELEASE_TAG" --repo "$GH_REPO" --pattern "$image" --pattern SHA256SUMS.txt --dir "$RUNNER_TEMP/frost-release"

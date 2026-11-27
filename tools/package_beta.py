@@ -1,4 +1,4 @@
-"""Prepare a local beta firmware/tester/website bundle. Never flashes or deploys."""
+"""Prepare a local firmware/documentation/website bundle. Never flashes or deploys."""
 import argparse,datetime,hashlib,json,re,shutil,sys,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -12,14 +12,14 @@ def package(stage,baseline,out,notes=None,candidate=False):
     if not info.get('media'):raise ValueError('Release firmware must include USB audio and BLE MIDI (--media-platform)')
     version=info['release_version']
     assert version==re.search(r'#define FROST_VERSION "([^"]+)"',(ROOT/'firmware/version.h').read_text(encoding='utf-8'))[1]
-    assert re.fullmatch(r'\d+\.\d+\.\d+-beta\.\d+',version)
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:-beta\.\d+)?',version)
     sys.path.insert(0,str(stage/'tools'));import gp5tool
     image=stage/'build/GP5_Frost_line_test.bin';data=image.read_bytes()
     parts=dict(gp5tool.inspect(data)[0]);old=dict(gp5tool.inspect(baseline.read_bytes())[0])
     assert set(parts)=={98,99,103}
     changed=sorted(k for k in set(parts)|set(old) if parts.get(k)!=old.get(k))
     dsp_identical=parts[99]==old.get(99) and parts[103]==old.get(103)
-    assert candidate or dsp_identical, 'Beta branding must preserve accepted DSP bytes; use --candidate for unqualified DSP changes'
+    assert candidate or dsp_identical, 'Release branding must preserve accepted DSP bytes; use --candidate for unqualified DSP changes'
     assert all(hashlib.sha256((ROOT/'tools'/n).read_bytes()).hexdigest()==v for n,v in info.get('staging_tools',{}).items()), 'Stage/tool mismatch'
     assert all(hashlib.sha256((ROOT/n).read_bytes()).hexdigest()==v for n,v in info['inputs'].items()), 'Stage/source mismatch'
     digest=hashlib.sha256(data).hexdigest();web_version=re.search(r"export const VERSION = '([^']+)'",(ROOT/'web/app.js').read_text(encoding='utf-8'))[1]

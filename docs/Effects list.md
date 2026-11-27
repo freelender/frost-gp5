@@ -182,7 +182,7 @@ website. With single-coil pickups, see [Single coils and humbuckers](User%20Guid
   before performance.
 - **OCTAVE:** the octave model is experimental. Single notes and simple chords
   track cleanly; wide six-string chords, especially an octave up, still sound
-  smeared. Treat it as beta behavior rather than an exact reproduction of a
+  smeared. Treat it as experimental behavior rather than an exact reproduction of a
   commercial pedal.
 - **Gates/suppressors:** start with a low threshold and raise it until idle
   noise is controlled, then verify soft notes and sustained notes are retained.

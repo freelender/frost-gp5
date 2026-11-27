@@ -118,14 +118,14 @@ This is the single distributed firmware configuration:
 python tools/prepare_gp5.py \
   --platform "$FROST_WORK/OpenGP5" \
   --media-platform "$FROST_WORK/OpenGP5Media" \
-  --stage "$FROST_WORK/gp5-beta" \
+  --stage "$FROST_WORK/gp5-release" \
   --audio-input adc --audio-output line-test \
   --control-scheduler --large-code --xflash --overlays \
   --reverb-int16 --dsp-usage --ir-link
-bash tools/build_gp5.sh "$FROST_WORK/gp5-beta" "$FROST_WORK/toolchains"
+bash tools/build_gp5.sh "$FROST_WORK/gp5-release" "$FROST_WORK/toolchains"
 ```
 
-Output: `$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin`.
+Output: `$FROST_WORK/gp5-release/build/GP5_Frost_line_test.bin`.
 Despite its development filename, this is the audio-capable profile.
 Use the full options shown above: the historical bare-default diagnostic
 configuration does not fit the current complete effect library in flash.
@@ -153,9 +153,9 @@ or flash the pedal.
 ## 7. Check and identify the output
 
 ```sh
-python "$FROST_WORK/gp5-beta/tools/gp5tool.py" check \
-  "$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin"
-sha256sum "$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin"
+python "$FROST_WORK/gp5-release/tools/gp5tool.py" check \
+  "$FROST_WORK/gp5-release/build/GP5_Frost_line_test.bin"
+sha256sum "$FROST_WORK/gp5-release/build/GP5_Frost_line_test.bin"
 ```
 
 The build script also checks the package and prints DSP/controller sizes.
@@ -167,7 +167,7 @@ does not replace user asset/preset storage.
 To verify the actual release file through the website flasher simulation:
 
 ```sh
-FROST_TEST_FIRMWARE="$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin" \
+FROST_TEST_FIRMWARE="$FROST_WORK/gp5-release/build/GP5_Frost_line_test.bin" \
   PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p test_web_flasher.py -v
 ```
 
@@ -239,8 +239,8 @@ the staged command-line tool also supports:
 
 ```sh
 python -m pip install mido python-rtmidi
-python "$FROST_WORK/gp5-beta/tools/gp5tool.py" flash \
-  "$FROST_WORK/gp5-beta/build/GP5_Frost_line_test.bin" \
+python "$FROST_WORK/gp5-release/tools/gp5tool.py" flash \
+  "$FROST_WORK/gp5-release/build/GP5_Frost_line_test.bin" \
   --sections dsp,dsp-data,app
 ```
 
@@ -291,7 +291,7 @@ includes all seven guides, their linked public images, notices and checksums.
 For example, after building a fresh external stage:
 
 ```sh
-python tools/package_beta.py "$FROST_WORK/gp5-beta" \
+python tools/package_beta.py "$FROST_WORK/gp5-release" \
   --baseline "$FROST_WORK/previous-release.bin" \
   --out "$FROST_WORK/release" --candidate \
   --notes "$FROST_WORK/RELEASE_NOTES.md"
@@ -300,20 +300,21 @@ python tools/package_beta.py "$FROST_WORK/gp5-beta" \
 Firmware stays separate from website hosting. Packaging does not publish,
 deploy, flash, establish audible continuity or approve a stable release.
 
-## 10. Publish the beta and deploy GitHub Pages
+## 10. Publish the initial preview and deploy GitHub Pages
 
-The release has one firmware file, `Frost_GP5_0.1.0-beta.17.bin`, containing
+The release has one firmware file, `Frost_GP5_0.1.0.bin`, containing
 USB audio, USB MIDI, BLE MIDI and all effect/preset/IR changes. The matching
 ZIP contains this same image plus the seven guides and public images.
-USB audio/BLE and audible preset-switching qualification remain beta limits;
+This is the initial preview release. USB audio/BLE and audible preset-switching
+qualification remain open;
 include the supplied release notes and mark the GitHub release as a prerelease.
 
 1. Commit the release preparation on `main`, review it, and push `main` to
    `origin`. Wait for **Actions → Host checks** to pass. Keep binaries,
    captures and compiler output outside the source repository.
 2. Open the repository's **Releases → Draft a new release**. Choose a new tag
-   **v0.1.0-beta.17**, targeting the release commit on `main`. Use the title
-   **Frost 0.1.0-beta.17**, paste the supplied `RELEASE_NOTES.md`, and select
+   **v0.1.0**, targeting the release commit on `main`. Use the title
+   **Frost 0.1.0**, paste the supplied `RELEASE_NOTES.md`, and select
    **Set as a pre-release**. Attach the `.bin`, matching `.zip`,
    `SHA256SUMS.txt` and `manifest.json` from the single release folder.
    Publish after reviewing the notes and remaining physical checks.
@@ -322,7 +323,7 @@ include the supplied release notes and mark the GitHub release as a prerelease.
    Pages availability for your account. Do not choose `/docs`: that folder
    contains Markdown guides, not the browser application.
 4. Open **Actions → Web tools (GitHub Pages) → Run workflow**. Choose branch
-   **main**, enter **v0.1.0-beta.17** in **release_tag**, and run it. The tag
+   **main**, enter **v0.1.0** in **release_tag**, and run it. The tag
    must match the firmware version on this branch. Approve the `github-pages`
    environment if your repository requires it.
 5. The workflow runs source/converter/pedal-file checks, downloads only the

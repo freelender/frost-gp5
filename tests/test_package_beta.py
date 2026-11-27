@@ -11,7 +11,7 @@ class PackageTests(unittest.TestCase):
         self.work=Path(self.tmp.name);self.root=self.work/'src';self.root.mkdir()
         def put(name,text):
             p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text,encoding='utf-8')
-        put('firmware/version.h','#define FROST_VERSION "0.1.0-beta.17"\n#define FROST_VERSION_DISPLAY "0.1.0-BETA.17"\n')
+        put('firmware/version.h','#define FROST_VERSION "0.1.0"\n#define FROST_VERSION_DISPLAY "0.1.0"\n')
         put('README.md','[Guide](docs/User%20Guide.md)');put('CONTRIBUTING.md','Contribution guide')
         for name in ('Installation Guide.MD','User Guide.md','Effects list.md','Website Guide.md','Build Firmware.md','Build effect.MD','Midi Command.md'):
             put('docs/'+name,'![Logo](../assets/branding/logo.svg)')
@@ -24,7 +24,7 @@ class PackageTests(unittest.TestCase):
         self.stage=self.work/'stage';(self.stage/'build').mkdir(parents=True)
         self.baseline=self.work/'baseline.bin';self.image=self.stage/'build/GP5_Frost_line_test.bin'
         self.before={98:'app0',99:'dsp0',103:'data0'};self.after={98:'app1',99:'dsp0',103:'data0'}
-        self.info=dict(release_version='0.1.0-beta.17',platform_commit='pinned',media={'commit':'media-pin'},
+        self.info=dict(release_version='0.1.0',platform_commit='pinned',media={'commit':'media-pin'},
             inputs={'firmware/version.h':hashlib.sha256((self.root/'firmware/version.h').read_bytes()).hexdigest()},
             staging_tools={'prepare_gp5.py':hashlib.sha256((self.root/'tools/prepare_gp5.py').read_bytes()).hexdigest()})
         self.notes=self.work/'notes.md';self.notes.write_text('Candidate; audio qualification pending.',encoding='utf-8')
@@ -50,7 +50,7 @@ class PackageTests(unittest.TestCase):
     def test_branding_manifest_reports_actual_sections(self):
         m=self.run_package();self.assertEqual(m['changed_sections'],[98]);self.assertTrue(m['dsp_byte_identical_to_baseline'])
     def test_docs_images_midi_notices_and_checksum_are_in_zip(self):
-        m=self.run_package(True);zpath=next(self.out.glob('Frost_GP5_0.1.0-beta.17.zip'))
+        m=self.run_package(True);zpath=next(self.out.glob('Frost_GP5_0.1.0.zip'))
         with zipfile.ZipFile(zpath) as z:
             self.assertIsNone(z.testzip())
             for name in ('README.md','docs/Midi Command.md','docs/User Guide.md','assets/branding/logo.svg','assets/docs/example.svg','LICENSE','THIRD_PARTY_NOTICES.md','RELEASE_NOTES.md'):

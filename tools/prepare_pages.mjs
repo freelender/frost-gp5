@@ -19,7 +19,7 @@ export async function preparePages({ out, firmware, checksums, version }) {
   if (exists) throw new Error('Output already exists; choose a fresh directory');
   let verified = null;
   if (firmware || checksums || version) {
-    if (!firmware || !checksums || !/^\d+\.\d+\.\d+-beta\.\d+$/.test(version || ''))
+    if (!firmware || !checksums || !/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(version || ''))
       throw new Error('--firmware, --checksums and --version must be supplied together');
     const name = `Frost_GP5_${version}.bin`;
     if (path.basename(firmware) !== name) throw new Error('Release filename must match the requested version');

@@ -42,7 +42,7 @@ class MidiTests(live_tests.LiveHostTests):
         for packet in ((11,0xb1,32,127),(27,0xb0,32,127),(12,0xb0,32,127),(11,0xb0,32,255),(11,0xb0,39,127)):
             self.c.ge_midi(*packet)
         self.settle();self.assertEqual(self.slot(0),before)
-        self.assertEqual(self.host([0x7e,0x1e]),b'\x7e\x1e\x01FROST_FW:0.1.0-beta.17\x00')
+        self.assertEqual(self.host([0x7e,0x1e]),b'\x7e\x1e\x01FROST_FW:0.1.0\x00')
     def test_scene_is_one_revision_and_replays_after_lost_reply(self):
         before=self.chain()[3]
         expected=[int(t!=255 and bool(21&(1<<s))) for s,t in enumerate(self.chain()[0])]
