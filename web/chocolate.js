@@ -163,9 +163,13 @@ export function switchFor(records, s, d1) {
 //   none | prev | next | tap | tuner {mode} | bypass {mode} | block {block, mode} | ctl (the preset's CTL effects) | scene {blocks}
 //   | param {block, knob, value, value2 (null: always value)} | preset {preset} | midi {type 0 PC / 1 CC, d1, d2}
 // mode: 'toggle' (the pedal's own state decides), 'on' or 'off'.
+// Pairs: footswitch n also carries the action of n and n+1 pressed together (A+B on A, B+C on B, C+D on C), sent
+// after its definition as CC 30 = b and CC 31 = c (left out when 0), then CC 32+kind = a. A footswitch that is part
+// of a pair (its own or its left neighbour's) reports its press as CC 38 = n instead of CC 28, so Frost waits 100 ms
+// for the neighbour. That makes at most 12 + 3 + 1 = 16 messages, the controller's limit for one list.
 export const GESTURES = ['tap', 'double', 'hold'];
 export const GESTURE_KINDS = ['none', 'prev', 'next', 'tap', 'tuner', 'bypass', 'block', 'ctl', 'scene', 'param', 'preset', 'midi'];
-const FSW_CHANNEL = 16, FSW_DEF = 16, FSW_PRESS = 28, FSW_RELEASE = 29;
+const FSW_CHANNEL = 16, FSW_DEF = 16, FSW_PRESS = 28, FSW_RELEASE = 29, FSW_PAIR_B = 30, FSW_PAIR_C = 31, FSW_PAIR = 32, FSW_JOIN = 38;
 const NONE = { kind: 'none' };
 export function actionBytes(x) {
   const sw = (cc, mode) => mode === 'toggle' ? [3, cc, 0, 0] : [1, cc, mode === 'on' ? 127 : 0, 0];
@@ -206,18 +210,32 @@ export function actionOf([kind, a, b, c]) {
   return { kind: 'midi', type: 1, d1: a, d2: b };
 }
 const fswCC = (cc, v) => ({ channel: FSW_CHANNEL, type: 1, d1: cc, d2: v & 127 });
-/** Footswitch n with actions {tap, double, hold} -> the record fields that make the controller report it to Frost. */
+/** Footswitch n with actions {tap, double, hold, pair (with n+1)} -> the record fields that make the controller report
+ * it to Frost. joins: a pair with the footswitch on the left uses this one too. */
 export function gestureRecord(n, g) {
-  const def = GESTURES.flatMap(k => actionBytes(g[k]));
-  return { mode: HOLD, a: [...def.map((v, i) => fswCC(FSW_DEF + i, v)), fswCC(FSW_PRESS, n)], b: [fswCC(FSW_RELEASE, n)] };
+  const a = GESTURES.flatMap(k => actionBytes(g[k])).map((v, i) => fswCC(FSW_DEF + i, v));
+  const [kind, pa, pb, pc] = actionBytes(g.pair);
+  if (kind) { if (pb) a.push(fswCC(FSW_PAIR_B, pb)); if (pc) a.push(fswCC(FSW_PAIR_C, pc)); a.push(fswCC(FSW_PAIR + kind, pa)); }
+  a.push(fswCC(kind || g.joins ? FSW_JOIN : FSW_PRESS, n));
+  return { mode: HOLD, a, b: [fswCC(FSW_RELEASE, n)] };
 }
-/** The record fields -> {n, tap, double, hold}, or null when the footswitch is not set up for gestures. */
+/** The record fields -> {n, tap, double, hold, pair, joins}, or null when the footswitch is not set up for gestures. */
 export function gesturesOf({ mode, a, b }) {
   const cc16 = m => m.channel === FSW_CHANNEL && m.type === 1;
-  if (mode !== HOLD || a.length !== 13 || b.length !== 1 || !a.every(cc16) || !cc16(b[0])) return null;
-  if (a.some((m, i) => m.d1 !== (i < 12 ? FSW_DEF + i : FSW_PRESS)) || b[0].d1 !== FSW_RELEASE || b[0].d2 !== a[12].d2) return null;
+  if (mode !== HOLD || a.length < 13 || b.length !== 1 || !a.every(cc16) || !cc16(b[0])) return null;
+  const last = a[a.length - 1];
+  if (a.slice(0, 12).some((m, i) => m.d1 !== FSW_DEF + i) || (last.d1 !== FSW_PRESS && last.d1 !== FSW_JOIN)) return null;
+  if (b[0].d1 !== FSW_RELEASE || b[0].d2 !== last.d2) return null;
+  const extra = a.slice(12, -1);
+  let pb = 0, pc = 0, pair = { ...NONE };
+  for (const [k, m] of extra.entries()) {
+    if (k === extra.length - 1 && m.d1 > FSW_PAIR && m.d1 <= FSW_PAIR + 5) pair = actionOf([m.d1 - FSW_PAIR, m.d2, pb, pc]);
+    else if (m.d1 === FSW_PAIR_B) pb = m.d2;
+    else if (m.d1 === FSW_PAIR_C) pc = m.d2;
+    else return null;
+  }
   const bytes = a.slice(0, 12).map(m => m.d2);
-  return { n: a[12].d2, tap: actionOf(bytes.slice(0, 4)), double: actionOf(bytes.slice(4, 8)), hold: actionOf(bytes.slice(8, 12)) };
+  return { n: last.d2, tap: actionOf(bytes.slice(0, 4)), double: actionOf(bytes.slice(4, 8)), hold: actionOf(bytes.slice(8, 12)), pair, joins: last.d1 === FSW_JOIN };
 }
 /** A ready-made function (recognize) as a tap action, so a footswitch keeps doing what it did when it gets gestures. */
 export function actionOfQuick(q) {

@@ -104,7 +104,22 @@ assert.deepEqual(gr.a.map(m => m.d1), [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 2
 assert.deepEqual(gr.a.slice(0, 12).map(m => m.d2), [1, 87, 127, 0, 1, 88, 127, 0, 3, 86, 0, 0]);
 assert.deepEqual([gr.a[12].d2, gr.b[0].d1, gr.b[0].d2], [2, 29, 2]);
 const stored = C.parseRecord(C.buildRecord(recA, gr));
-assert.deepEqual(C.gesturesOf(stored), { n: 2, ...G });
+assert.deepEqual(C.gesturesOf(stored), { n: 2, ...G, pair: { kind: 'none' }, joins: false });
+// Two footswitches together: the pair's action rides on the left one (CC 30 = b, CC 31 = c when not 0, CC 32+kind = a),
+// and every footswitch in a pair reports its press as CC 38, so Frost waits for its neighbour.
+const pa = C.gestureRecord(0, { ...G, pair: { kind: 'tuner', mode: 'toggle' } });
+assert.deepEqual(pa.a.slice(12).map(m => [m.d1, m.d2]), [[35, 86], [38, 0]]);
+const PARAM = { kind: 'param', block: 5, knob: 3, value: 90, value2: 10 };
+const pp = C.gestureRecord(1, { ...G, pair: PARAM, joins: true });
+assert.equal(pp.a.length, C.CHOC.MAX_MESSAGES, 'the longest footswitch is exactly the controller\'s limit');
+assert.deepEqual(pp.a.slice(12).map(m => [m.d1, m.d2]), [[30, 90], [31, 10], [36, 66], [38, 1]]);
+assert.deepEqual(C.gestureRecord(3, { ...G, joins: true }).a.slice(12).map(m => [m.d1, m.d2]), [[38, 3]]);   // the right one of C+D
+for (const r of [pa, pp]) { const back = C.parseRecord(C.buildRecord(recA, r)); assert.deepEqual(C.recordOfSetup(C.setupOfRecord(back)), back); }
+assert.deepEqual(C.gesturesOf(C.parseRecord(C.buildRecord(recA, pp))), { n: 1, ...G, pair: PARAM, joins: true });
+for (const x of actions) {
+  const r = C.gestureRecord(1, { ...G, pair: x, joins: true });
+  assert.ok(r.a.length <= C.CHOC.MAX_MESSAGES); assert.deepEqual(C.gesturesOf(r).pair, x, JSON.stringify(x));
+}
 assert.equal(C.gesturesOf(parsed), null, 'a setup of the controller itself is not a gesture footswitch');
 // Through the command lists the page edits, the gesture footswitch stays exactly the same.
 assert.deepEqual(C.recordOfSetup(C.setupOfRecord(stored)), stored);

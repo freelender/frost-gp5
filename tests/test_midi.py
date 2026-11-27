@@ -38,13 +38,21 @@ class MidiTests(live_tests.LiveHostTests):
         self.cc(7,0);self.assertEqual(self.c.ge_midi_volume(),0)
         self.cc(7,127);self.assertEqual(self.c.ge_midi_volume(),127)
     # External footswitch gestures (channel 16): what a Chocolate Plus set up by the Controller page sends.
-    def fsw_press(self,n,tap=None,double=None,hold=None,define=True):
-        """Like the controller: every press repeats the footswitch's definition (the last one given here)."""
-        defs=self.__dict__.setdefault('fsw_defs',{})
+    def fsw_press(self,n,tap=None,double=None,hold=None,define=True,pair=None,joins=None):
+        """Like the controller: every press repeats the footswitch's definition (the last one given here).
+        pair: the action of n and n+1 together; joins: n is in a pair (its own or the previous footswitch's)."""
+        defs=self.__dict__.setdefault('fsw_defs',{});pairs=self.__dict__.setdefault('fsw_pairs',{});joined=self.__dict__.setdefault('fsw_joins',{})
         if tap or double or hold:defs[n]=(*(tap or (0,0,0,0)),*(double or (0,0,0,0)),*(hold or (0,0,0,0)))
+        if pair is not None:pairs[n]=pair
+        if joins is not None:joined[n]=joins
+        kind,a,b,c=pairs.get(n,(0,0,0,0))
         if define:
             for i,v in enumerate(defs.get(n,(0,)*12)):self.c.ge_midi(11,0xbf,16+i,v)
-        self.c.ge_midi(11,0xbf,28,n)
+            if kind:
+                if b:self.c.ge_midi(11,0xbf,30,b)
+                if c:self.c.ge_midi(11,0xbf,31,c)
+                self.c.ge_midi(11,0xbf,32+kind,a)
+        self.c.ge_midi(11,0xbf,38 if kind or joined.get(n) else 28,n)
     def fsw_release(self,n):self.c.ge_midi(11,0xbf,29,n)
     def fsw_wait(self,ms):
         self.c.ge_advance(ms);self.c.ge_tick()
@@ -92,6 +100,42 @@ class MidiTests(live_tests.LiveHostTests):
         self.assertEqual([c.ge_enabled(i) for i in range(6)],before)
         c.ge_set_ctl_mask(0);self.fsw_press(0);self.fsw_release(0);self.settle(40)     # a preset without CTL effects: nothing
         self.assertEqual([c.ge_enabled(i) for i in range(6)],before)
+    # Two neighbours pressed together: the pair's action rides on the left footswitch (A+B on A).
+    def test_footswitch_pair_runs_instead_of_both(self):
+        c=self.c;TUNER=14;BYPASS=(3,90,0,0);VOL=(1,7,100,0);TUNER_TOGGLE=(3,86,0,0)
+        self.cc(7,0);bypass=c.ge_midi_bypass()
+        self.fsw_press(0,tap=BYPASS,hold=BYPASS,pair=TUNER_TOGGLE);self.fsw_wait(30)
+        self.fsw_press(1,tap=VOL,joins=True)                                            # B 30 ms after A
+        self.assertEqual(c.ge_midi_bypass(),bypass);self.assertEqual(c.ge_midi_volume(),0)   # neither tap
+        self.settle(20);self.assertEqual(c.ge_view(),TUNER)                             # but the pair: the tuner
+        self.fsw_wait(2500);self.fsw_release(1);self.fsw_release(0);self.fsw_wait(500)
+        self.assertEqual(c.ge_midi_bypass(),bypass);self.assertEqual(c.ge_midi_volume(),0)   # no hold, no tap on release
+        self.fsw_press(1);self.fsw_wait(60);self.fsw_press(0);self.settle(20)          # the other order: B first
+        self.assertNotEqual(c.ge_view(),TUNER)
+        self.fsw_release(0);self.fsw_release(1);self.fsw_wait(500)
+        self.assertEqual(c.ge_midi_bypass(),bypass);self.assertEqual(c.ge_midi_volume(),0)
+    def test_footswitch_in_a_pair_acts_alone_after_100_ms(self):
+        c=self.c;TUNER=14;BYPASS=(3,90,0,0);VOL=(1,7,100,0);TUNER_TOGGLE=(3,86,0,0)
+        self.cc(7,0)
+        self.fsw_press(1,tap=VOL,joins=True);self.fsw_wait(99);self.assertEqual(c.ge_midi_volume(),0)   # still waiting for A
+        self.fsw_wait(1);self.settle(2);self.assertEqual(c.ge_midi_volume(),100)       # alone: its own tap
+        bypass=c.ge_midi_bypass()
+        self.fsw_press(0,tap=BYPASS,hold=BYPASS,pair=TUNER_TOGGLE);self.settle(20)     # B already acted: no pair
+        self.assertNotEqual(c.ge_view(),TUNER)
+        self.fsw_release(0);self.fsw_release(1);self.assertEqual(c.ge_midi_bypass(),1-bypass)   # A's tap, on release (A has a hold)
+        self.cc(7,0);self.fsw_press(1);self.fsw_wait(40);self.fsw_release(1)          # a quick press acts on its release
+        self.assertEqual(c.ge_midi_volume(),100)
+        self.cc(7,0);self.fsw_press(0);self.fsw_wait(150);self.fsw_press(1)           # B 150 ms after A: no pair
+        self.assertEqual(c.ge_midi_volume(),0)                                          # B waits its own 100 ms
+        self.fsw_wait(100);self.settle(2);self.assertEqual(c.ge_midi_volume(),100)
+        self.settle(20);self.assertNotEqual(c.ge_view(),TUNER)
+        self.fsw_release(0);self.fsw_release(1)
+    def test_tap_tempo_in_a_pair_keeps_its_spacing(self):
+        c=self.c;TAP=(1,85,127,0)
+        self.fsw_press(3,tap=TAP,joins=True);self.fsw_wait(30);self.fsw_release(3)     # released before 100 ms
+        self.fsw_wait(70)                                                               # its tap: 100 ms after the press
+        self.fsw_wait(400);self.fsw_press(3);self.fsw_wait(100)                         # 500 ms later, held longer
+        self.assertEqual(c.ge_midi_tempo(),500);self.fsw_release(3)
     def test_footswitch_control_alternates_two_values(self):
         c=self.c;MIX=(4,32,127,0)
         self.fsw_press(0,tap=MIX);self.fsw_release(0);self.settle(40);first=self.slot(0)['values'][0]

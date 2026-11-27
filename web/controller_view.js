@@ -5,7 +5,11 @@
 // to the GP-5.
 import { CHOC, SWITCH_NAMES, SINGLE, ALTERNATE, HOLD, REPEAT, SHORT_LONG, KINDS, QUICK, QUICK_DEFAULTS, quickSetup, recognize, toMessage, setupOfRecord, recordOfSetup, parseRecord, buildRecord, describe, switchFor, recordAddress, pedalValue, choiceValue, ChocolateLink, SimulatedChocolate, GESTURE_KINDS, gestureRecord, gesturesOf, actionOfQuick, describeAction } from './chocolate.js?v=1.9.1';
 import { loadCatalog, formatValue } from './live.js?v=1.9.1';
+import { Tour } from './tour.js?v=1.9.1';
 
+// Pairs offered on this page (p: footswitches p and p+1 together). The Chocolate Plus keeps A+B and C+D for itself (its
+// E and F keys, which change its group) and sends nothing for them, so only B+C reaches Frost.
+const PAIRS = [1];
 const PORT = /FootCtrl|Chocolate/i, GP5 = /GP-5|Open FW|Frost|OpenGP5/i;
 const pad2 = i => String(i).padStart(2, '0');
 const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
@@ -41,6 +45,7 @@ export class ControllerView {
     this.link = null; this.access = null; this.input = null; this.demo = false; this.busy = false; this.catalog = null;
     this.records = null; this.saved = []; this.setups = []; this.custom = [false, false, false, false]; this.sel = 0;
     this.lit = [false, false, false, false]; this.toggled = [false, false, false, false];
+    this.picks = 0; this.writes = 0;                              // footswitches chosen and setups written: the tutorial watches them
     this.build(); this.render();
     loadCatalog().then(c => { this.catalog = c; this.render(); }).catch(() => {});
   }
@@ -51,6 +56,7 @@ export class ControllerView {
         <span class="ctlstate" data-role="state" role="status" aria-live="polite"></span>
         <label class="ctlbridge"><input type="checkbox" data-role="bridge" checked> Send presses to the GP-5</label>
         <span class="ctlgap"></span>
+        <button class="btn ghost small" type="button" data-role="tour">Tutorial</button>
         <button class="btn ghost small" type="button" data-role="find">Find controller</button>
         <button class="btn ghost small" type="button" data-role="demo">Demo</button>
         <button class="btn ghost small" type="button" data-role="reread">Read again</button>
@@ -60,6 +66,7 @@ export class ControllerView {
         <div class="ctlbody">
           <div class="ctlback" aria-hidden="true"><span>USB</span><span>USB HOST</span><span class="ctlswitch"><b>H</b> · <b>U</b></span></div>
           <div class="ctlrow" role="group" aria-label="Footswitches" data-role="row"></div>
+          <div class="ctlpairs" role="group" aria-label="Two footswitches together" data-role="pairs"></div>
           <div class="ctlname" data-role="name">Chocolate Plus</div>
         </div>
         <div class="ctllast" data-role="last" aria-live="polite"></div>
@@ -72,9 +79,17 @@ export class ControllerView {
       b.append(el('span', 'ctlled'), el('span', 'ctlletter', name));
       b.insertAdjacentHTML('beforeend', SWITCH_ART);
       b.append(el('span', 'ctlplate'), el('span', 'ctlsub'));
-      b.onclick = () => { this.sel = i; this.render(); };
+      b.onclick = () => { this.sel = i; this.picks++; this.render(); };
       row.append(b);
     });
+    // Two neighbours pressed together (this.sel 4 + p).
+    PAIRS.forEach(p => {
+      const b = el('button', 'ctlpair'); b.type = 'button'; b.dataset.pair = p;
+      b.append(el('span', 'ctlpairname', `${SWITCH_NAMES[p]}+${SWITCH_NAMES[p + 1]}`), el('span', 'ctlpairdo'));
+      b.onclick = () => { this.sel = 4 + p; this.picks++; this.render(); };
+      this.q('pairs').append(b);
+    });
+    this.q('tour').onclick = () => this.startTour();
     this.q('find').onclick = () => this.find();
     this.q('demo').onclick = () => this.startDemo();
     this.q('reread').onclick = () => this.read();
@@ -143,6 +158,7 @@ export class ControllerView {
       const wanted = this.setups.map(recordOfSetup);
       this.busy = false; await this.read();
       if (!same(this.saved, wanted)) throw new Error('The controller did not keep the new setup. Read it again and retry.');
+      this.writes++;
       this.hooks.toast?.(this.demo ? 'Saved in the simulated controller.' : 'Saved in the controller. It keeps this setup on the GP-5 too.', 'ok');
     } catch (e) { this.busy = false; this.say(e.message || String(e), 'bad'); this.hooks.toast?.('Writing to the controller failed.', 'bad'); }
   }
@@ -162,9 +178,9 @@ export class ControllerView {
     if (d[0] === 0xbf) {                                          // channel 16: a footswitch with Frost gestures
       const out = this.q('bridge').checked && !this.demo ? this.gp5() : null;
       if (out) { try { out.send(d); } catch { /* the pedal went away */ } }
-      if ((d[1] === 28 || d[1] === 29) && d[2] < 4) {
-        this.lit[d[2]] = d[1] === 28;
-        const who = `Footswitch ${SWITCH_NAMES[d[2]]} ${d[1] === 28 ? 'pressed' : 'released'}`;
+      if ((d[1] === 28 || d[1] === 29 || d[1] === 38) && d[2] < 4) {
+        this.lit[d[2]] = d[1] !== 29;
+        const who = `Footswitch ${SWITCH_NAMES[d[2]]} ${d[1] !== 29 ? 'pressed' : 'released'}`;
         this.q('last').textContent = out ? `${who}, passed to the GP-5` : who;
         this.render();
       }
@@ -198,6 +214,46 @@ export class ControllerView {
     else { sent = play(long && r.mode === SHORT_LONG ? r.b : r.a); this.flash(sw); }
     this.q('last').textContent = `Footswitch ${SWITCH_NAMES[sw]} sent ${sent.map(describe).join(', ') || 'nothing'}`;
     this.render();
+  }
+
+  // ---- the tutorial: each step lights the part of the page it talks about; the page keeps working underneath ----
+  startTour() {
+    this.tour?.close();
+    const at = sel => () => this.root.querySelector(sel);
+    const demo = { label: 'Open the demo', run: () => this.startDemo(), show: () => !this.records && !this.busy };
+    let picks = 0, before = '', writes = 0;
+    const footswitch = () => { if (this.sel >= 4) { this.sel -= 4; this.render(); } };   // these steps talk about one footswitch, not a pair
+    const steps = [
+      { target: at('.ctlbody'), title: 'The Chocolate Plus on Frost',
+        text: 'This tutorial shows how to give each footswitch of the controller up to three actions on the GP-5 and take it to the stage. You can use the page while it is open; Tutorial opens it again any time.' },
+      { target: at('[data-role="find"]'), title: 'Connect it', action: demo, done: () => !!this.records, auto: true,
+        text: 'Put the controller\'s switch on U and plug it into this computer by USB. Close CubeSuite, then choose Find controller. No controller at hand? Open the demo: it works the same and writes nothing.' },
+      { target: at('.ctlrow'), title: 'Choose a footswitch', action: demo, enter: () => { picks = this.picks; }, done: () => this.picks > picks, auto: true,
+        text: 'Click one of the four footswitches. Its plate shows the press; the line below shows the double press and the hold.' },
+      { target: at('.ctlgestures'), title: 'Three actions per footswitch', action: demo, enter: footswitch,
+        text: 'Press: a normal press. Double press: two presses within 0.4 s. Hold 2 s: keep it down for two seconds. Leave Nothing on a line you do not need.' },
+      { target: at('.ctlgesture[data-gesture="tap"]'), title: 'Choose an action', action: demo,
+        enter: () => { footswitch(); before = JSON.stringify(this.setups); }, done: () => JSON.stringify(this.setups) !== before,
+        text: 'Change the Press line. There are previous and next preset, tap tempo, tuner, bypass all, one effect on/off, the preset\'s CTL effects, a scene, a control of an effect with one or two values, loading a preset and any MIDI message. Effect and control names come from the preset playing on the GP-5.' },
+      { target: at('.ctlpanel .ctlnote'), title: 'When each action runs', action: demo, enter: footswitch,
+        text: 'A footswitch with only a press acts at once. With a double press, the pedal waits 0.4 s for a second press; with a hold, the press acts when you lift your foot. Tap tempo always acts on the press, so its double press stays off.' },
+      { target: at('.ctlpairs'), title: 'B and C together', action: demo,
+        text: 'Pressing B and C at the same time is one more action. Click B+C to choose what it does. Pressed alone, each footswitch keeps its own actions. A+B and C+D belong to the controller itself, which uses them to change its group.' },
+      { target: () => document.querySelector('nav a[data-view="live"], a[data-view="live"]'), title: 'CTL: a different job in each preset',
+        text: 'With CTL effects of the preset, the footswitch switches the effects each preset marks as CTL: the drive in one preset, the delay in another. To mark one, open the Editor, select the effect, turn on its CTL line and save the preset on the pedal.' },
+      { target: at('.ctlgesture[data-gesture="tap"] button'), title: 'Try it before writing', action: demo, enter: footswitch,
+        text: 'Try it plays the action on the GP-5 at once, while both are on this computer and Send presses to the GP-5 is on. Pressing the real footswitch also lights it here.' },
+      { target: at('[data-role="write"]'), title: 'Write to the controller', action: demo, enter: () => { writes = this.writes; }, done: () => this.writes > writes,
+        text: 'Changed footswitches are marked. Write to controller saves the setup in the Chocolate and reads it back to check it. Until then the controller keeps its old setup.' },
+      { target: at('.ctlback'), title: 'On stage',
+        text: 'Unplug it from the computer, plug its USB HOST port into the GP-5 and put the switch on H. The setup lives in the controller; the GP-5 needs Frost with footswitch gestures.' },
+      { target: at('.ctladvanced summary'), title: 'Other gear: Advanced', action: demo, enter: footswitch,
+        text: 'Advanced keeps the controller\'s own modes, for pedals without Frost gestures: alternate, press and release, short and long press, repeat while held, and lists of up to 16 MIDI messages.' },
+      { target: () => null, title: 'The GP-5 footswitch colour',
+        text: 'On the pedal, GLOBAL SETTINGS → DISPLAY → LED ON and LED OFF choose the colour of the GP-5\'s own footswitch with its effect on and off. The footswitch shows each colour while you choose it.' },
+    ];
+    this.tour = new Tour(steps, { onclose: () => { this.tour = null; } });
+    this.tour.start();
   }
 
   // ---- drawing ----
@@ -258,22 +314,32 @@ export class ControllerView {
       b.classList.toggle('lit', this.lit[i] || this.toggled[i]);
       b.classList.toggle('changed', on && !same(recordOfSetup(this.setups[i]), this.saved[i]));
     });
+    this.root.querySelectorAll('.ctlpair').forEach(b => {
+      const p = Number(b.dataset.pair);
+      const x = on ? this.gestures(p).pair : { kind: 'none' }, label = x.kind === 'none' ? '—' : this.actionLabel(x);
+      b.querySelector('.ctlpairdo').textContent = label;
+      b.setAttribute('aria-pressed', String(this.sel === 4 + p));
+      b.setAttribute('aria-label', `Footswitches ${SWITCH_NAMES[p]} and ${SWITCH_NAMES[p + 1]} together: ${label === '—' ? 'nothing' : label}`);
+      b.classList.toggle('set', x.kind !== 'none');
+      b.classList.toggle('lit', (this.lit[p] || this.toggled[p]) && (this.lit[p + 1] || this.toggled[p + 1]));
+    });
     this.root.classList.toggle('offline', !on);
     this.q('reread').disabled = !on || this.busy;
     this.q('write').disabled = !on || this.busy || !this.dirty;
     this.q('find').disabled = this.q('demo').disabled = this.busy;
-    this.q('legend').textContent = `Footswitch ${SWITCH_NAMES[this.sel]}`;
+    this.q('legend').textContent = this.sel < 4 ? `Footswitch ${SWITCH_NAMES[this.sel]}` : `Footswitches ${SWITCH_NAMES[this.sel - 4]}+${SWITCH_NAMES[this.sel - 3]} together`;
     this.q('panel').disabled = !on || this.busy;
     this.renderPanel();
   }
   renderPanel() {
     const body = this.q('body'), focus = document.activeElement && body.contains(document.activeElement) ? document.activeElement.dataset.key : null;
     body.textContent = '';
-    if (!this.records) { body.append(el('p', 'ctlnote', 'Find the controller (or open the demo) to set its footswitches.')); return; }
+    if (!this.records) { body.append(el('p', 'ctlnote', 'Find the controller (or open the demo) to set its footswitches. New here? Choose Tutorial.')); return; }
+    if (this.sel >= 4) { this.renderPair(this.sel - 4); if (focus) body.querySelector(`[data-key="${focus}"]`)?.focus(); return; }
     const i = this.sel, s = this.setups[i], g = this.gestures(i);
     // The three gestures, recognised by Frost: what most footswitches need.
     const rows = el('div', 'ctlgestures');
-    const setG = patch => { const next = { tap: g.tap, double: g.double, hold: g.hold, ...patch }; this.setups[i] = setupOfRecord(gestureRecord(i, next)); this.custom[i] = false; this.render(); };
+    const setG = patch => { const next = { tap: g.tap, double: g.double, hold: g.hold, pair: g.pair, joins: g.joins, ...patch }; this.setups[i] = setupOfRecord(gestureRecord(i, next)); this.custom[i] = false; this.relink(); this.render(); };
     const tapTempo = g.tap.kind === 'tap';
     for (const [k, label] of [['tap', 'Press'], ['double', 'Double press'], ['hold', 'Hold 2 s']]) {
       const row = el('div', 'ctlgesture'); row.dataset.gesture = k;
@@ -324,11 +390,45 @@ export class ControllerView {
     body.append(adv);
     if (focus) body.querySelector(`[data-key="${focus}"]`)?.focus();
   }
-  /** The three gestures of footswitch i: as stored, or (legacy) what its own setup does on a press. */
+  /** The gestures of footswitch i (and the pair with i+1): as stored, or (legacy) what its own setup does on a press. */
   gestures(i) {
     const s = this.setups[i], g = gesturesOf(recordOfSetup(s));
-    if (g) return { tap: g.tap, double: g.double, hold: g.hold, legacy: false };
-    return { tap: actionOfQuick(recognize(s)), double: { kind: 'none' }, hold: { kind: 'none' }, legacy: true };
+    if (g) return { tap: g.tap, double: g.double, hold: g.hold, pair: i < 3 ? g.pair : { kind: 'none' }, joins: g.joins, legacy: false };
+    return { tap: actionOfQuick(recognize(s)), double: { kind: 'none' }, hold: { kind: 'none' }, pair: { kind: 'none' }, joins: false, legacy: true };
+  }
+  /** After a change: every footswitch in a pair (its own with the next one, or the previous one's) reports its press
+   * as part of a pair, so Frost waits for its neighbour; one that is not stops waiting. A footswitch still on a setup
+   * of the controller itself gets gestures when a pair needs it, keeping what its press did. */
+  relink() {
+    const pairs = [0, 1, 2].map(p => this.gestures(p).pair.kind !== 'none');
+    for (let i = 0; i < 4; i++) {
+      const g = this.gestures(i), joins = !!(pairs[i] || pairs[i - 1]);
+      if (g.legacy ? !joins : g.joins === joins) continue;
+      this.setups[i] = setupOfRecord(gestureRecord(i, { ...g, joins })); this.custom[i] = false;
+    }
+  }
+  setPair(p, x) {
+    this.setups[p] = setupOfRecord(gestureRecord(p, { ...this.gestures(p), pair: x })); this.custom[p] = false;
+    this.relink(); this.render();
+  }
+  /** The panel of a pair: one action for footswitches p and p+1 pressed together. */
+  renderPair(p) {
+    const body = this.q('body'), x = this.gestures(p).pair, a = SWITCH_NAMES[p], b = SWITCH_NAMES[p + 1];
+    const rows = el('div', 'ctlgestures'), row = el('div', 'ctlgesture'); row.dataset.gesture = 'pair';
+    row.append(el('span', 'ctlgname', 'Together'), this.gestureRow(x, v => this.setPair(p, v), 'pair'), button('Try it', () => this.tryPair(p)));
+    rows.append(row); body.append(rows);
+    body.append(el('p', 'ctlnote', `Press ${a} and ${b} at the same time (within 0.1 s). Pressed alone, each keeps its own actions. A footswitch in a pair acts 0.1 s after its press, so its neighbour can still join it; a tap tempo keeps its spacing. Needs Frost with footswitch pairs.`));
+    if (this.gestures(p).legacy || this.gestures(p + 1).legacy) body.append(el('p', 'ctlnote', 'A pair gives both footswitches Frost gestures; their press keeps what it did.'));
+  }
+  /** Press footswitches p and p+1 together on the GP-5, as the controller would send it. */
+  tryPair(p) {
+    if (!this.records) return;
+    const out = this.q('bridge').checked && !this.demo ? this.gp5() : null, r = [p, p + 1].map(i => recordOfSetup(this.setups[i]));
+    const send = list => { for (const m of list) { try { out?.send(raw(m)); } catch { /* gone */ } } };
+    send(r[0].a); this.lit[p] = true; this.render();
+    setTimeout(() => { send(r[1].a); this.lit[p + 1] = true; this.render(); }, 30);
+    setTimeout(() => { send(r[0].b); send(r[1].b); this.lit[p] = this.lit[p + 1] = false; this.render(); }, 300);
+    this.q('last').textContent = `Footswitches ${SWITCH_NAMES[p]}+${SWITCH_NAMES[p + 1]} together → ${describeAction(this.gestures(p).pair)}` + (out ? '' : ' (not sent: no GP-5)');
   }
   actionLabel(x) {
     switch (x.kind) {

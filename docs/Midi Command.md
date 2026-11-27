@@ -416,6 +416,23 @@ hold it runs on release; with a double press, 0.4 s after release. A **tap tempo
 press (kind 1, CC 85) always runs on the press, so the tempo is exact; such a
 footswitch has no double press. Other channels than 1 and 16 are still ignored.
 
+### Two footswitches together
+
+Two neighbouring footswitches pressed together (n and n+1, the second within
+0.1 s of the first) run a fourth action instead of their own: A+B, B+C and C+D on a
+four-switch controller. Footswitch n carries that pair's action, after its twelve
+bytes and before its press: **CC 30 = value**, **CC 31 = value B** (each left out
+when 0), then **CC 32+kind = CC or program** (kind 1 to 5, as in the table above).
+A footswitch that belongs to a pair, its own or its left neighbour's, reports its
+press as **CC 38 = n** instead of CC 28. Frost then waits 0.1 s for the neighbour
+before running that footswitch's own press; a tap tempo still runs exactly 0.1 s
+after every press, so its spacing is kept. A footswitch then sends at most 16
+messages per press.
+
+On the M-VAVE Chocolate Plus the Controller page offers **B+C** only: the
+controller keeps A+B and C+D for itself (they change its group) and sends
+nothing for them.
+
 ## Reserved commands and limits
 
 Only the commands documented here have a performance function. Notes, pitch

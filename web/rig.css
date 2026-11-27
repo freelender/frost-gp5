@@ -191,6 +191,16 @@
 .ctlplate { min-width: 92%; text-align: center; font: 700 12px var(--head); letter-spacing: .05em; color: var(--ctl-plate-ink); background: var(--ctl-plate); border: 1px solid var(--ctl-edge); border-radius: 6px; padding: 5px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctlfs.changed .ctlplate { border-color: var(--warn); color: var(--warn); }
 .ctlsub { min-height: 14px; font-size: 11px; color: var(--ctl-ink); opacity: .8; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctlpairs { position: relative; height: 40px; margin-top: 10px; }
+.ctlpair { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; gap: 1px; min-width: 74px; max-width: 22%; padding: 4px 10px 5px; border-radius: 999px; background: var(--ctl-plate); border: 1px dashed var(--ctl-edge); color: var(--ctl-plate-ink); }
+.ctlpair[data-pair="0"] { left: 25%; } .ctlpair[data-pair="1"] { left: 50%; } .ctlpair[data-pair="2"] { left: 75%; }
+.ctlpair:hover { filter: brightness(1.25); }
+.ctlpair:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.ctlpair.set { border-style: solid; }
+.ctlpair[aria-pressed="true"] { border: 1px solid var(--blue); box-shadow: 0 0 0 1px var(--blue) inset; }
+.ctlpair.lit { box-shadow: 0 0 12px 2px var(--blue); }
+.ctlpairname { font: 700 11px var(--head); letter-spacing: .08em; }
+.ctlpairdo { font-size: 10px; opacity: .75; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctlname { position: absolute; bottom: 7px; right: 16px; font: 700 10px var(--head); letter-spacing: .12em; color: var(--ctl-ink); opacity: .6; text-transform: uppercase; }
 .ctl.offline .ctlbody { filter: saturate(.4) brightness(.8); }
 .ctllast { min-height: 18px; font: 600 12px var(--head); color: var(--muted); letter-spacing: .02em; }
@@ -206,7 +216,7 @@
 .ctlnote { margin: 10px 0 0; font-size: 11px; opacity: .75; }
 .ctlhelp { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); max-width: 980px; text-align: center; }
 .ctlpanel[disabled] { opacity: .55; }
-@media (max-width: 760px) { .ctlrow { gap: 6px; } .ctlbody { padding: 26px 10px 28px; } .ctlplate { font-size: 10px; } }
+@media (max-width: 760px) { .ctlrow { gap: 6px; } .ctlbody { padding: 26px 10px 28px; } .ctlplate { font-size: 10px; } .ctlpair { min-width: 54px; padding: 3px 6px; } .ctlpairdo { display: none; } .ctlpairs { height: 26px; } }
 /* Like the editor, the controller page fits the window on a computer: the drawing shrinks before anything scrolls. */
 #view-controller .heading { margin-bottom: 0; align-items: center; }
 #view-controller .heading h1 { font-size: clamp(24px, 2.4vw, 32px); margin: 0 0 2px; }
@@ -280,3 +290,25 @@
 .ctladvanced { margin-top: 8px; border-top: 1px solid var(--rig-line); padding-top: 8px; }
 .ctladvanced summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--face-ink); opacity: .85; }
 .ctladvanced[open] summary { margin-bottom: 8px; }
+
+/* ---- Guided tour (tour.js): the page dims around the element of the step; the card explains it ---- */
+.tour { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
+.tourhole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 200vmax #02060dbb; outline: 2px solid var(--blue); outline-offset: 0; transition: left .25s, top .25s, width .25s, height .25s; animation: tourpulse 1.8s ease-in-out infinite; }
+.tourhole.none { outline: none; animation: none; }
+@keyframes tourpulse { 50% { outline-color: var(--ice); outline-offset: 3px; } }
+.tourcard { position: fixed; pointer-events: auto; width: min(380px, calc(100vw - 24px)); padding: 14px 16px 12px; border-radius: 14px; border: 1px solid var(--stroke2); background: linear-gradient(180deg, var(--surface2), var(--surface)); color: var(--txt); box-shadow: var(--shadow); transition: left .25s, top .25s; }
+.tourcard.done { border-color: var(--ok); }
+.tourhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tourcount { font: 700 10px var(--head); letter-spacing: .1em; text-transform: uppercase; color: var(--blue); }
+.tourx { all: unset; cursor: pointer; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
+.tourx:hover, .tourx:focus-visible { background: #ffffff12; color: var(--txt); }
+.tourtitle { margin: 4px 0 6px; font: 700 16px/1.25 var(--head); }
+.tourtext { margin: 0; font-size: 13px; line-height: 1.5; color: #d5e4f3; }
+.tourtick { margin: 8px 0 0; font: 700 12px var(--head); color: var(--ok); }
+.tourbar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.tourgap { flex: 1; }
+.tourdots { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+.tourdots span { width: 6px; height: 6px; border-radius: 50%; background: var(--stroke2); }
+.tourdots span.past { background: var(--muted); }
+.tourdots span.on { background: var(--blue); width: 16px; border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { .tourhole, .tourcard { transition: none; animation: none; } }
