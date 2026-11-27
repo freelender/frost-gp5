@@ -10,6 +10,7 @@ import { simulatedPedal } from './sim.js?v=1.9.0';
 import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.0';
 import { startI18n } from './i18n.js?v=1.9.0';
 import { startSkins } from './skin.js?v=1.9.0';
+import { ControllerView } from './controller_view.js?v=1.9.0';
 
 export const VERSION = '1.9.0';
 const $ = id => document.getElementById(id);
@@ -85,7 +86,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER',firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
 let libraryKind = 'amps';
 function show(view, focus = false) {
   const route = libraryRoute(view); view = route.view;
@@ -134,6 +135,12 @@ const setlists = new SetlistView($('setlist-editor'), {
   confirm: (title, text, ok, opts) => ask(title, text, ok, opts), exclusive, error: message => notice(message), saved: () => toast('Songs and setlist saved. On the pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST.', 'ok'),
   removed: () => toast('Setlist removed from the pedal.', 'ok'),
   download: (text, name) => save(new TextEncoder().encode(text), name),
+});
+new ControllerView($('controller'), {
+  presets: () => state.presets,
+  chain: () => live.chainState,
+  gp5Out: () => state.mode === 'frost' ? state.pedal?.out : null,
+  toast: (text, kind) => toast(text, kind),
 });
 async function connect() {
   if (state.op || isBusy()) { toast('Wait until the running operation finishes.', 'bad'); return; }

@@ -47,7 +47,9 @@
 .savebar label { display: flex; align-items: center; gap: 6px; margin: 0; }
 .savebar .inputlabel { margin: 0; font-size: 11px; white-space: nowrap; }
 .savebar select, .savebar input { height: 32px; width: auto; }
-.savebar select { min-width: 120px; }
+.savebar select { min-width: 120px; max-width: 240px; }
+/* A long preset or effect name stays on one line, cut with an ellipsis, instead of wrapping out of the box. */
+.savebar select, .rig select, #controller select { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .savebar input { width: 140px; }
 .savebar .btn { height: 32px; padding: 0 14px; white-space: nowrap; }
 .savebar .savestate { font-size: 11px; color: var(--muted); max-width: 260px; line-height: 1.25; text-align: right; }
@@ -157,3 +159,124 @@
 .fx-dialog .fx-add { position: absolute; top: 6px; right: 8px; color: var(--effect-color); font-weight: 700; }
 .fx-dialog .fx-no-results { grid-column: 1 / -1; color: var(--muted); }
 .fx-pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; color: var(--muted); font-size: 12px; }
+
+/* ---- Controller page: the footswitch controller drawn as hardware (controller_view.js) ---- */
+:root, [data-skin="frost"] { --ctl-body1: #2b323b; --ctl-body2: #14181d; --ctl-edge: #5b6774; --ctl-metal1: #f4f7fa; --ctl-metal2: #9aa6b2; --ctl-metal3: #3d4650; --ctl-plate: #0b0f14; --ctl-plate-ink: #e9f1f8; --ctl-ink: #dfe7ef; --ctl-led-off: #1f2a35; }
+[data-skin="vintage"] { --ctl-body1: #6b4a2e; --ctl-body2: #3a2616; --ctl-edge: #c9a868; --ctl-metal1: #fff6e0; --ctl-metal2: #c6ab7b; --ctl-metal3: #5b4428; --ctl-plate: #efe2c1; --ctl-plate-ink: #4a2c12; --ctl-ink: #f6e7c8; --ctl-led-off: #3b2a1a; }
+[data-skin="noir"] { --ctl-body1: #1d1d1f; --ctl-body2: #0b0b0c; --ctl-edge: #cdbb8f; --ctl-metal1: #fff1b8; --ctl-metal2: #b98f3a; --ctl-metal3: #3d2c0e; --ctl-plate: #000; --ctl-plate-ink: #eadfc6; --ctl-ink: #eadfc6; --ctl-led-off: #2a2618; }
+.ctl { display: grid; gap: 12px; }
+.ctlbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ctlstate { font-size: 13px; color: var(--muted); }
+.ctlstate[data-kind="ok"] { color: var(--ok); }
+.ctlstate[data-kind="warn"] { color: var(--warn); }
+.ctlstate[data-kind="bad"] { color: var(--bad); }
+.ctlbridge { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--muted); }
+.ctlbridge input { width: auto; height: auto; }
+.ctlgap { flex: 1; }
+.ctlstage { border: 1px solid var(--rig-line); border-radius: 14px; background: radial-gradient(ellipse at 50% 60%, var(--rig-floor), var(--rig-bg) 72%); padding: 18px 18px 10px; display: grid; justify-items: center; gap: 8px; }
+.ctlbody { position: relative; width: min(100%, 860px); border-radius: 18px; padding: 22px 22px 24px; background: linear-gradient(180deg, var(--ctl-body1), var(--ctl-body2)); border: 2px solid var(--ctl-edge); box-shadow: 0 18px 30px #0008, inset 0 1px 0 #ffffff22, inset 0 -6px 12px #0006; }
+.ctlback { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+.ctlback span { font: 700 9px var(--head); letter-spacing: .08em; color: var(--ctl-plate-ink); background: var(--ctl-plate); border: 1px solid var(--ctl-edge); border-radius: 5px; padding: 3px 8px; }
+.ctlback .ctlswitch b { color: var(--ctl-plate-ink); }
+.ctlrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.ctlfs { all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 4px; padding: 6px 4px 8px; border-radius: 14px; border: 1px solid transparent; }
+.ctlfs:hover { background: #ffffff08; }
+.ctlfs:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.ctlfs[aria-pressed="true"] { border-color: var(--blue); background: #ffffff0d; box-shadow: 0 0 0 1px var(--blue) inset; }
+.ctlled { width: 14px; height: 14px; border-radius: 50%; background: var(--ctl-led-off); border: 1px solid #0008; box-shadow: inset 0 1px 2px #0009; transition: background .08s, box-shadow .08s; }
+.ctlfs.lit .ctlled { background: var(--blue); box-shadow: 0 0 10px 3px var(--blue), inset 0 0 3px #fff; }
+.ctlletter { font: 700 13px var(--head); color: var(--ctl-ink); opacity: .9; }
+.ctlfs .fsart { width: clamp(54px, min(8vw, 10vh), 104px); height: auto; filter: drop-shadow(0 6px 6px #0009); transition: transform .06s; }
+.ctlfs.lit .fsart { transform: scale(.96); }
+.ctlplate { min-width: 92%; text-align: center; font: 700 12px var(--head); letter-spacing: .05em; color: var(--ctl-plate-ink); background: var(--ctl-plate); border: 1px solid var(--ctl-edge); border-radius: 6px; padding: 5px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctlfs.changed .ctlplate { border-color: var(--warn); color: var(--warn); }
+.ctlsub { min-height: 14px; font-size: 11px; color: var(--ctl-ink); opacity: .8; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctlname { position: absolute; bottom: 7px; right: 16px; font: 700 10px var(--head); letter-spacing: .12em; color: var(--ctl-ink); opacity: .6; text-transform: uppercase; }
+.ctl.offline .ctlbody { filter: saturate(.4) brightness(.8); }
+.ctllast { min-height: 18px; font: 600 12px var(--head); color: var(--muted); letter-spacing: .02em; }
+.ctlpanel { margin: 0; border: 1px solid var(--rig-line); border-radius: 14px; background: linear-gradient(180deg, var(--face1), var(--face2)); color: var(--face-ink); padding: 12px 16px 10px; min-width: 0; }
+.ctlpanel legend { font: 700 12px var(--head); letter-spacing: .06em; color: var(--face-ink); background: var(--face1); border: 1px solid var(--rig-line); border-radius: 6px; padding: 2px 8px; text-transform: uppercase; }
+.ctlfields { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.ctlfields label { display: grid; gap: 4px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--face-ink); }
+.ctlfields select { width: auto; min-width: 150px; max-width: 280px; height: 34px; }
+.ctlfields .btn { height: 34px; }
+.ctlmsgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ctlmsg { font: 12px var(--mono, ui-monospace, monospace); background: var(--chip-bg); color: var(--chip-text); border: 1px solid var(--chip-line); border-radius: 8px; padding: 4px 8px; }
+.ctlmsg b { font-family: var(--head); margin-right: 4px; }
+.ctlnote { margin: 10px 0 0; font-size: 11px; opacity: .75; }
+.ctlhelp { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); max-width: 980px; text-align: center; }
+.ctlpanel[disabled] { opacity: .55; }
+@media (max-width: 760px) { .ctlrow { gap: 6px; } .ctlbody { padding: 26px 10px 28px; } .ctlplate { font-size: 10px; } }
+/* Like the editor, the controller page fits the window on a computer: the drawing shrinks before anything scrolls. */
+#view-controller .heading { margin-bottom: 0; align-items: center; }
+#view-controller .heading h1 { font-size: clamp(24px, 2.4vw, 32px); margin: 0 0 2px; }
+#view-controller .heading .eyebrow { margin-bottom: 4px; }
+#view-controller .heading p { font-size: 13px; line-height: 1.45; }
+@media (min-width: 761px) {
+  .main:has(#view-controller:not([hidden])) { height: 100dvh; }
+  .main:has(#view-controller:not([hidden])) .container { flex: 1; min-height: 0; max-width: none; padding: 12px 18px 14px; display: flex; flex-direction: column; }
+  .main:has(#view-controller:not([hidden])) .footer { padding-top: 8px; }
+  #view-controller:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  #view-controller:not([hidden]) .ctl { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+  #view-controller .ctlstage { min-height: 0; overflow: hidden; align-content: center; }
+  #view-controller .ctlfs .fsart { width: clamp(46px, min(8vw, 9vh), 100px); }
+}
+@media (min-width: 761px) and (max-height: 820px) {
+  #view-controller .ctlbody { padding: 18px 20px 20px; }
+  #view-controller .ctlstage { padding: 14px 16px 8px; gap: 6px; }
+  #view-controller .ctlhelp { font-size: 11px; line-height: 1.3; }
+  #view-controller .ctlpanel { padding: 8px 14px 8px; }
+  #view-controller .ctlmsgs { margin-top: 6px; }
+  #view-controller .ctlnote { margin-top: 6px; }
+}
+/* footswitch panel: ready-made functions and the two command lists */
+.ctllabel { display: block; }
+.ctlvalue { display: flex; align-items: center; gap: 8px; height: 34px; }
+.ctlvalue input[type="range"] { width: 150px; height: auto; accent-color: var(--blue); }
+.ctlvalue output { min-width: 64px; font: 700 12px var(--head); color: var(--face-ink); }
+.ctlscene { display: flex; flex-wrap: wrap; gap: 4px 12px; min-height: 34px; align-items: center; }
+.ctlscene label { display: flex !important; align-items: center; gap: 5px; font-weight: 600 !important; letter-spacing: 0 !important; white-space: nowrap; }
+.ctlscene input { width: auto; height: auto; accent-color: var(--blue); }
+.ctlcustom { margin-top: 10px; display: grid; gap: 8px; }
+.ctlcustom > label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; justify-self: start; }
+.ctlcustom select { width: auto; height: 32px; }
+.ctllists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-height: 34vh; overflow: auto; }
+.ctllist { display: grid; gap: 6px; align-content: start; border: 1px solid var(--rig-line); border-radius: 10px; padding: 8px; background: #0000001a; }
+.ctllisttitle { font: 700 11px var(--head); letter-spacing: .08em; text-transform: uppercase; }
+.ctllist > .btn { justify-self: start; }
+.ctlcmd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ctlcmd select { width: auto; min-width: 0; height: 30px; font-size: 12px; }
+.ctlcmd .ctlscene label { font-size: 11px; }
+.ctlnum { width: 62px !important; height: 30px; }
+.ctlmini { display: flex !important; align-items: center; gap: 4px; font-size: 11px; }
+.ctlhint { font-size: 11px; opacity: .75; }
+.ctlremove { margin-left: auto; padding: 0 9px; }
+@media (min-width: 761px) {
+  #view-controller .ctlstage { container-type: size; }
+  #view-controller .ctlfs .fsart { width: clamp(34px, min(8vw, 30cqh), 100px); }
+}
+@container (max-height: 300px) { .ctlhelp { display: none; } }
+@container (max-height: 200px) { .ctlsub, .ctlletter { display: none; } }
+@container (max-height: 240px) { .ctlbody { padding: 14px 16px 14px; } .ctlrow { gap: 10px; } .ctlfs { padding: 3px 4px 4px; gap: 2px; } .ctlplate { padding: 3px 6px; font-size: 11px; } }
+/* The drawing keeps its room; on wide screens the footswitch panel sits beside it, with the whole height for long lists. */
+@media (min-width: 761px) {
+  #view-controller:not([hidden]) .ctl { grid-template-rows: auto minmax(170px, 1fr) minmax(0, auto); }
+  #view-controller .ctlpanel { min-height: 0; overflow: auto; }
+}
+@media (min-width: 1280px) {
+  #view-controller:not([hidden]) .ctl { grid-template-columns: minmax(0, 1fr) minmax(400px, 36%); grid-template-rows: auto minmax(0, 1fr); }
+  #view-controller .ctlbar { grid-column: 1 / -1; }
+  #view-controller .ctlstage { grid-column: 1; grid-row: 2; }
+  #view-controller .ctlpanel { grid-column: 2; grid-row: 2; align-self: stretch; }
+  #view-controller .ctllists { grid-template-columns: 1fr; max-height: none; overflow: visible; }
+  #view-controller .ctlfields select { max-width: 100%; }
+}
+/* three gestures per footswitch (Frost recognises them) */
+.ctlgestures { display: grid; gap: 8px; }
+.ctlgesture { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--rig-line); border-radius: 10px; background: #0000001a; }
+.ctlgname { font: 700 12px var(--head); letter-spacing: .04em; text-transform: uppercase; color: var(--face-ink); }
+.ctlgesture .ctlcmd select { height: 30px; }
+.ctlgesture .ctlhint { grid-column: 2 / -1; }
+.ctladvanced { margin-top: 8px; border-top: 1px solid var(--rig-line); padding-top: 8px; }
+.ctladvanced summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--face-ink); opacity: .85; }
+.ctladvanced[open] summary { margin-bottom: 8px; }
