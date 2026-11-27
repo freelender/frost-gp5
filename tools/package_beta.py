@@ -9,6 +9,7 @@ def package(stage,baseline,out,notes=None,candidate=False):
         raise ValueError("Choose an output directory outside the source repository and its parents")
     if candidate and not notes:raise ValueError("Candidate packaging requires release notes with validation limits")
     info=json.loads((stage/'frost-input.json').read_text(encoding='utf-8'))
+    if not info.get('media'):raise ValueError('Release firmware must include USB audio and BLE MIDI (--media-platform)')
     version=info['release_version']
     assert version==re.search(r'#define FROST_VERSION "([^"]+)"',(ROOT/'firmware/version.h').read_text(encoding='utf-8'))[1]
     assert re.fullmatch(r'\d+\.\d+\.\d+-beta\.\d+',version)
@@ -24,8 +25,8 @@ def package(stage,baseline,out,notes=None,candidate=False):
     digest=hashlib.sha256(data).hexdigest();web_version=re.search(r"export const VERSION = '([^']+)'",(ROOT/'web/app.js').read_text(encoding='utf-8'))[1]
     assert not out.exists(), 'Choose a fresh output directory'
     testers=out/'testers';testers.mkdir(parents=True)
-    profile='USB_Audio_BLE_Experimental' if info.get('media') else 'Standard'
-    name='Frost_GP5_'+version+'_'+profile
+    profile='USB_Audio_BLE'
+    name='Frost_GP5_'+version
     (testers/(name+'.bin')).write_bytes(data)
     (testers/'SHA256SUMS.txt').write_text(digest+'  '+name+'.bin\n',encoding='utf-8',newline='\n')
     for filename in ('README.md','CONTRIBUTING.md'):shutil.copy2(ROOT/filename,testers/filename)
@@ -37,10 +38,6 @@ def package(stage,baseline,out,notes=None,candidate=False):
     site=out/'website';shutil.copytree(ROOT/'web',site)
     assert not any(site.rglob('*.bin'))
     assert all(not row.get('file') for row in json.loads((site/'firmware/manifest.json').read_text(encoding='utf-8')))
-    index=site/'index.html';html=index.read_text(encoding='utf-8')
-    if 'name="robots"' not in html:html=html.replace('<meta charset="utf-8">','<meta charset="utf-8">\n<meta name="robots" content="noindex, nofollow">')
-    index.write_text(html,encoding='utf-8',newline='\n')
-    (site/'_headers').write_text('/*\n  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n  Permissions-Policy: midi=(self)\n',encoding='utf-8',newline='\n')
     for filename in ('LICENSE','THIRD_PARTY_NOTICES.md'):shutil.copy2(ROOT/filename,site/filename)
     hashes=lambda folder:{p.relative_to(folder).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.rglob('*')) if p.is_file()}
     display=re.search(r'#define FROST_VERSION_DISPLAY "([^"]+)"',(ROOT/'firmware/version.h').read_text(encoding='utf-8'))[1]

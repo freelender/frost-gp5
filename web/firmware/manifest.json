@@ -5,6 +5,6 @@
     "version": "0.1.0-beta.17",
     "file": "",
     "sha256": "",
-    "description": "Beta firmware is supplied as a separate download. Choose the Standard or experimental USB Audio/BLE image from the release package."
+    "description": "Frost with USB audio, USB MIDI, BLE MIDI and the latest preset/IR changes. USB audio/BLE remains experimental."
   }
 ]

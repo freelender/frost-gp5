@@ -2,7 +2,7 @@
 
 # Website Guide
 
-[Frost Studio](https://frost.fretlexwins.workers.dev/) is the companion editor
+[Frost Studio](https://freelender.github.io/frost-gp5/) is the companion editor
 for the GP-5. It manages the pedal through USB-MIDI. The pedal can play its
 saved presets and setlist without a browser connected.
 
@@ -27,8 +27,8 @@ and read the pedal again. Hard reload with Ctrl+Shift+R after a website update.
 It is useful for exploring the interface, not for judging the sound or testing
 real hardware compatibility. Use the connection control to disconnect when
 finished. Listen through the GP-5's normal audio output; this editor is not a
-USB audio recorder. Standard Frost beta images carry USB MIDI only. The optional experimental
-USB audio/BLE MIDI release candidate is described in the [build guide](Build%20Firmware.md);
+USB audio recorder. The release firmware includes USB audio and BLE MIDI,
+as described in the [build guide](Build%20Firmware.md);
 recording and playback use a computer audio application. BLE MIDI does not
 stream phone audio.
 
@@ -353,3 +353,12 @@ Data is read back before committing the new
 file. If an upload still reports `program failed at 0x...` or `erase failed`,
 keep the full error and firmware version for a bug report. During replacement,
 the previous stored copy is retained until the new data and header are verified.
+
+
+## Publish and deploy this editor
+
+The maintainer's release and GitHub Pages steps are in
+[Build Firmware → Publish the beta and deploy GitHub Pages](Build%20Firmware.md#10-publish-the-beta-and-deploy-github-pages).
+The manual Pages workflow can bundle the single verified release image by
+its GitHub tag, enabling **Install Frost**. Selecting a local `.bin` remains
+available. Website deployment does not update a connected pedal.

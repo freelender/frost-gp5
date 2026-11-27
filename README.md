@@ -45,6 +45,10 @@ in GLOBAL SETTINGS → SYSTEM → VERSION; release notes come with each release.
 - **USB MIDI:** preset recall, every effect’s parameters and switches, expression,
   tap tempo, tuner, scene masks, global bypass and incoming MIDI Clock.
   See the [MIDI guide](docs/Midi%20Command.md) for mappings and USB host requirements.
+- **USB audio:** stereo 16-bit 44.1 kHz recording/playback and a saved Direct
+  Monitoring switch. DAW/backend compatibility remains under test.
+- **Bluetooth MIDI:** receive BLE MIDI with a saved Bluetooth on/off switch.
+  Phone/computer music streaming is not implemented.
 - **Browser tools:** live editing with named model/cabinet selectors, a shared
   **NAMs & IRs** library with import, rename and download, preset management
   and patch loading, backups and USB firmware installation.
@@ -56,12 +60,11 @@ still take time to load. Storage writes can briefly interrupt audio.
 The latest transition changes have passed focused device telemetry checks,
 but click-free switching and professional live use remain unqualified.
 
-Standard beta images carry USB MIDI only. An **experimental USB audio and
-Bluetooth MIDI profile** is supplied as a separate experimental release candidate
-and can also be built from source; see the [build guide](docs/Build%20Firmware.md).
+The release firmware includes **USB audio and Bluetooth MIDI** alongside all
+effect, preset and IR changes; see the [build guide](docs/Build%20Firmware.md).
 It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
 Short device checks cover USB recording/playback and BLE MIDI reception.
-The profile remains experimental; long-session stability and heavy-chain load
+USB audio/BLE remains experimental; long-session stability and heavy-chain load
 still need qualification. Bluetooth phone-audio streaming is not implemented.
 
 ## Getting started
@@ -71,7 +74,7 @@ still need qualification. Bluetooth phone-audio streaming is not implemented.
 2. Read the [User Guide](docs/User%20Guide.md) for controls, presets, tuning
    and performance workflows, and the [Effects list](docs/Effects%20list.md)
    for every effect and amp.
-3. Open [Frost Studio](https://frost.fretlexwins.workers.dev/) and follow the
+3. Open [Frost Studio](https://freelender.github.io/frost-gp5/) and follow the
    [Website Guide](docs/Website%20Guide.md) to connect and manage your pedal.
 
 <p align="center"><img src="assets/docs/website-live-editor.webp" alt="Frost Studio Editor with preset arrows, named NAM model selector and Replace effect button" width="760"><br><sub>Editor: preset selection, named captures and live controls (documentation demo with synthetic names)</sub></p>

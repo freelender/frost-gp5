@@ -66,4 +66,6 @@ changes the result. Share personal backups privately.
 Use firmware/version.h for release identity. Source preparation does not
 publish a release. Device writes and website deployment require separate
 explicit authorization. The Pages workflow is manual; source pushes do not
-automatically deploy the site.
+automatically deploy the site. The manual Pages workflow can bundle the single
+USB-audio/BLE release image from a published tag after verifying its identity
+and checksum. Follow the publication steps in [Build Firmware](docs/Build%20Firmware.md#10-publish-the-beta-and-deploy-github-pages).

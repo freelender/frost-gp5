@@ -68,6 +68,7 @@ node --version
 
 ```sh
 python tools/fetch_platform.py --destination "$FROST_WORK/OpenGP5"
+python tools/fetch_platform.py --component media --destination "$FROST_WORK/OpenGP5Media"
 ```
 
 The commit and repository URL come from `dependencies.lock.json`. Do not
@@ -107,14 +108,16 @@ Use a fresh archive destination for each run. Set `CC` to your compiler path
 if automatic discovery fails. On Windows, native Python can use Clang from
 Visual Studio's LLVM tools for these checks.
 
-## 6. Build the playable ADC/IR-link beta profile
+## 6. Build the release firmware with USB audio and BLE MIDI
 
 This profile uses the pedal input and enables audio output. It includes the
-controller IR link and factory preset initialization:
+controller IR link, factory preset initialization, USB audio and BLE MIDI.
+This is the single distributed firmware configuration:
 
 ```sh
 python tools/prepare_gp5.py \
   --platform "$FROST_WORK/OpenGP5" \
+  --media-platform "$FROST_WORK/OpenGP5Media" \
   --stage "$FROST_WORK/gp5-beta" \
   --audio-input adc --audio-output line-test \
   --control-scheduler --large-code --xflash --overlays \
@@ -175,21 +178,12 @@ Check `firmware/version.h` for the canonical semantic version and uppercase
 display spelling. Custom builds have their own checksum, even if they retain
 the same version text. A checksum identifies bytes; it is not a signature.
 
-### Optional USB audio and BLE MIDI integration
+### USB audio and BLE MIDI integration
 
-The separate **OpenGP5Media** source pin supplies OpenGP5 1.0's USB audio,
-resampler and BLE MIDI drivers. Frost's base platform remains pinned separately
-because its UART, storage and recovery adaptations depend on that version.
-Fetch the media source to a fresh external directory:
-
-```sh
-python tools/fetch_platform.py --component media --destination "$FROST_WORK/OpenGP5Media"
-```
-
-For a new build, add `--media-platform "$FROST_WORK/OpenGP5Media"` to the
-playable ADC command in section 6, keeping `--ir-link` and all its prerequisites.
-Use a new stage directory. The checked cabinet profile uses the section 6
-512-tap cabinet options. Build normally with `tools/build_gp5.sh`.
+The **OpenGP5Media** source pin supplies OpenGP5 1.0's USB audio, resampler
+and BLE MIDI drivers. Section 3 fetches both pins and section 6 includes
+`--media-platform` in the release build. Omitting that option creates a
+diagnostic MIDI-only build; it is not a release package.
 
 The two processors share **one** SPI transport: 167 Frost IR/control words
 plus 64 packed stereo USB frames (231 words total). The controller runs the
@@ -212,10 +206,10 @@ Both IR streams remain available. Bluetooth starts before USB attachment and
 uses the existing MIDI handler with separate USB/BLE SysEx parser storage.
 
 Short device checks have exercised USB recording/playback with a BLE MIDI
-connection and IR processing, and received MIDI messages over BLE. The profile
+connection and IR processing, and received MIDI messages over BLE. USB audio/BLE
 remains experimental: long-session audio continuity and heavy-chain headroom
 are not qualified. Host tests do not measure physical real-time load. It supports BLE MIDI, not
-Bluetooth audio streaming. It does not change the default build profile.
+Bluetooth audio streaming. The release command in section 6 enables both features.
 
 Native integration tests use `FROST_MEDIA_PLATFORM=/path/to/OpenGP5Media` in
 the environment; without the checkout those integration tests skip.
@@ -233,9 +227,9 @@ or `--direct on` changes volatile monitoring. Frost uses **7E 21** for this
 operation: upstream's **7E 19** is already Frost's live-slot query. The USB
 name stays **GP-5 Open FW** for existing Frost tools, with a new audio-profile
 serial so Windows re-reads the composite descriptors; BLE advertises **Frost**.
-Flash both processors and DSP-data together when moving between media and
-standard profiles. Their SPI frame lengths differ. No source build flashes
-anything by itself.
+When upgrading from an older MIDI-only build, install the complete image
+(DSP, DSP-data and controller app); their shared SPI frame length differs.
+No source build flashes anything by itself.
 
 ## 8. Install only when intended
 
@@ -268,7 +262,8 @@ python -m http.server 8080 --directory web
 
 Open `http://localhost:8080` in Chrome/Edge. Remote hosting needs HTTPS for
 browser device access. The Pages workflow is manually triggered; it publishes
-only `web/`, not firmware or private files.
+a staged copy of `web/` plus the verified release firmware selected by tag.
+It does not publish captures, compiler files or research output.
 
 | Code | Responsibility |
 |---|---|
@@ -290,22 +285,76 @@ creation. The default branding mode expects an accepted baseline and verifies
 unchanged DSP sections. Use `--candidate --notes /external/RELEASE_NOTES.md`
 for a build with changed DSP code that still needs qualification; its manifest
 records the actual changed sections and marks hardware qualification pending.
-Use a baseline from the same Standard or USB Audio/BLE profile. The package
+Use a baseline with USB audio/BLE enabled. Packaging rejects MIDI-only builds. The package
 includes all seven guides, their linked public images, notices and checksums.
 
 For example, after building a fresh external stage:
 
 ```sh
 python tools/package_beta.py "$FROST_WORK/gp5-beta" \
-  --baseline "$FROST_WORK/previous-standard.bin" \
-  --out "$FROST_WORK/release-standard" --candidate \
+  --baseline "$FROST_WORK/previous-release.bin" \
+  --out "$FROST_WORK/release" --candidate \
   --notes "$FROST_WORK/RELEASE_NOTES.md"
 ```
 
 Firmware stays separate from website hosting. Packaging does not publish,
 deploy, flash, establish audible continuity or approve a stable release.
 
-## 10. Leave a clean checkout
+## 10. Publish the beta and deploy GitHub Pages
+
+The release has one firmware file, `Frost_GP5_0.1.0-beta.17.bin`, containing
+USB audio, USB MIDI, BLE MIDI and all effect/preset/IR changes. The matching
+ZIP contains this same image plus the seven guides and public images.
+USB audio/BLE and audible preset-switching qualification remain beta limits;
+include the supplied release notes and mark the GitHub release as a prerelease.
+
+1. Commit the release preparation on `main`, review it, and push `main` to
+   `origin`. Wait for **Actions → Host checks** to pass. Keep binaries,
+   captures and compiler output outside the source repository.
+2. Open the repository's **Releases → Draft a new release**. Choose a new tag
+   **v0.1.0-beta.17**, targeting the release commit on `main`. Use the title
+   **Frost 0.1.0-beta.17**, paste the supplied `RELEASE_NOTES.md`, and select
+   **Set as a pre-release**. Attach the `.bin`, matching `.zip`,
+   `SHA256SUMS.txt` and `manifest.json` from the single release folder.
+   Publish after reviewing the notes and remaining physical checks.
+3. In **Settings → Pages → Build and deployment**, set **Source** to
+   **GitHub Actions**. For a public site, check the repository visibility and
+   Pages availability for your account. Do not choose `/docs`: that folder
+   contains Markdown guides, not the browser application.
+4. Open **Actions → Web tools (GitHub Pages) → Run workflow**. Choose branch
+   **main**, enter **v0.1.0-beta.17** in **release_tag**, and run it. The tag
+   must match the firmware version on this branch. Approve the `github-pages`
+   environment if your repository requires it.
+5. The workflow runs source/converter/pedal-file checks, downloads only the
+   named `.bin` and `SHA256SUMS.txt` from that release, verifies the firmware
+   identity/version/sections, CRC and SHA-256, and tests simulated transfer.
+   It stages a copy of `web/` with that verified image and a matching download
+   manifest. No firmware is committed into Git.
+6. Wait for the deployment job and open its **github-pages** environment URL.
+   For this repository the expected default URL is
+   [Frost Studio](https://freelender.github.io/frost-gp5/). Test the demo,
+   confirm **Firmware → Install Frost** shows the intended version, then
+   test USB connection and the intended explicitly authorized installation.
+   A successful Pages deployment does not qualify physical audio behavior.
+
+A blank **release_tag** deploys the editor without bundled firmware; users
+can still select a local `.bin`. A missing release asset, bad checksum or
+version mismatch fails the workflow before upload/deployment. Do not weaken
+the checks to force a deployment: correct the release/tag/assets and rerun.
+Later website-only updates can deploy against the same matching release tag.
+
+If **Run workflow** is missing, push the workflow file to the default branch
+and check that Actions are enabled. A `github-pages` approval can hold the job
+until an authorized reviewer approves it. For a 404, wait for the successful
+deployment and use its environment link; the project path `/frost-gp5/` is part
+of the URL. Cloudflare deployment is independent of GitHub Pages.
+
+GitHub documents [release creation](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+and [Pages with a custom workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+These steps guide an intended publication; local packaging never publishes
+or deploys automatically.
+
+## 11. Leave a clean checkout
 
 Keep logs, screenshots, compiler files, private assets and one-off scripts in
 `FROST_WORK`. Do not add development diaries or reports to docs/.

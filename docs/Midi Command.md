@@ -4,7 +4,7 @@
 
 Set your controller to **MIDI channel 1**.
 
-The optional experimental USB audio/BLE MIDI build also accepts these same
+The release firmware also accepts these same
 messages from a BLE MIDI client. It advertises as **Frost**. BLE MIDI is
 wireless control, not Bluetooth audio; firmware installation remains USB-only.
 See [Build Firmware](Build%20Firmware.md) for the profile and qualification status.
@@ -379,9 +379,8 @@ pedal to finish loading. It requires this firmware or newer. See the
    program as 1: check whether their numbering starts at 0 or 1.
 
 Frost is a USB MIDI **device**, not a USB host. DIN/TRS MIDI controllers need
-a host/bridge that routes USB MIDI to it. Standard images do not enable
-Bluetooth; the experimental media profile receives BLE MIDI from a connected
-client. Direct Bluetooth pairing with the Chocolate Plus has not been verified;
+a host/bridge that routes USB MIDI to it. Frost receives BLE MIDI from a
+connected client when SYSTEM → BLUETOOTH is ON. Direct Bluetooth pairing with the Chocolate Plus has not been verified;
 stock Valeton pairing/SysEx instructions do not establish Frost compatibility.
 USB MIDI receives cable 0, channel 1 only; BLE MIDI uses channel 1 too. Other
 channels are ignored.

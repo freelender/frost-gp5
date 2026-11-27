@@ -2,18 +2,17 @@
 
 # Frost for Valeton GP-5 — User Guide
 
-Website: [Frost GP-5 Studio](https://frost.fretlexwins.workers.dev/)
+Website: [Frost GP-5 Studio](https://freelender.github.io/frost-gp5/)
 
 Frost provides a six-slot signal chain, amp heads, converted capture models,
 cabinet IRs, editable presets, a tuner, and songs/setlist navigation. Once your
 sounds and setlist are saved, the pedal works without the website connected.
 
-Standard beta images carry USB MIDI only. An **experimental USB audio and
-Bluetooth MIDI profile** is supplied as a separate experimental release candidate
-and can also be built from source; see the [build guide](Build%20Firmware.md).
+The release firmware includes **USB audio and Bluetooth MIDI** alongside all
+effect, preset and IR changes; see the [build guide](Build%20Firmware.md).
 It adds stereo 16-bit recording/playback at 44.1 kHz and BLE MIDI control.
 Short device checks cover USB recording/playback and BLE MIDI reception.
-The profile remains experimental; long-session stability and heavy-chain load
+USB audio/BLE remains experimental; long-session stability and heavy-chain load
 still need qualification. Bluetooth phone-audio streaming is not implemented.
 
 ## 1. Get started
@@ -30,9 +29,9 @@ browser tabs using the device.
 
 **Try the demo** lets you explore the live editor without changing a pedal.
 
-### Experimental USB audio and BLE MIDI profile
+### USB audio and BLE MIDI
 
-This profile enumerates as **GP-5 Open FW** for USB audio and MIDI. Select
+Frost enumerates as **GP-5 Open FW** for USB audio and MIDI. Select
 44,100 Hz / 16-bit stereo in the computer's recording/playback application.
 The recording contains Frost's finished stereo effects output, before the
 listening volume. Computer playback is mixed into the pedal outputs after
@@ -540,7 +539,7 @@ and exits.
 | AUDIO | OUTPUT LEVEL | Scale overall output, 0–100% |
 | AUDIO | OUTPUT MODE | MONO sends the same signal to both outputs. STEREO lets stereo effects (PING) spread across the left and right outputs; everything else stays mono |
 | AUDIO | CAB OVERRIDE | ON bypasses IR blocks globally without changing presets |
-| AUDIO | DIRECT MONITORING | Experimental USB audio profile: ON (default) mixes the chain with USB playback; OFF hears USB playback alone. Recording is unchanged; without USB playback, direct sound remains audible |
+| AUDIO | DIRECT MONITORING | ON (default) mixes the chain with USB playback; OFF hears USB playback alone. Recording is unchanged; without USB playback, direct sound remains audible |
 | AUDIO → GLOBAL EQ | GLOBAL BASS / MIDDLE / TREBLE | Three-band output EQ, -12 to +12 dB; 0 dB is flat |
 | DISPLAY | HOME SCREEN | Choose CHAIN, PRESET, STOMP or SETLIST |
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
@@ -552,7 +551,7 @@ and exits.
 | TAP TEMPO | TEMPO LIGHT | With TAP TEMPO ON: ON flashes the footswitch light yellow on the beat of a tempo effect |
 | SYSTEM | FIRMWARE | FROST (read-only; first System row) |
 | SYSTEM | VERSION | The installed Frost version (read-only) |
-| SYSTEM | BLUETOOTH | Experimental media profile: ON (default) enables BLE MIDI; OFF stops advertising and disconnects clients. Saved globally |
+| SYSTEM | BLUETOOTH | ON (default) enables BLE MIDI; OFF stops advertising and disconnects clients. Saved globally |
 | SYSTEM | RESET SETTINGS | Reset global preferences while retaining stored sounds and songs |
 | SYSTEM | FACTORY RESET | Erase user presets, models, cabinets, songs and settings after confirmation |
 
@@ -604,8 +603,8 @@ not a firmware image.
 | Overload or repeated cuts | Select a lighter preset; report the exact chain and reproduction steps |
 | CHAIN TOO BIG | The chosen effects do not fit together; replace one of the larger effects (see section 3) |
 | DSP LIMIT | The chain would overload the audio processor; replace a heavy effect (see section 3) |
-| The computer sees no GP-5 audio device | Standard beta images carry MIDI only. The experimental media profile adds USB audio; check that the intended profile was installed |
-| A phone cannot find the GP-5 over Bluetooth | Standard beta images have Bluetooth off. The experimental media profile advertises Frost to BLE MIDI clients; it is not a Bluetooth audio device |
+| The computer sees no GP-5 audio device | The release includes USB audio. Check the installed version, USB data cable and computer audio-device settings |
+| A phone cannot find the GP-5 over Bluetooth | Set SYSTEM → BLUETOOTH to ON and connect through a BLE MIDI client to Frost; ordinary Bluetooth audio pairing is not supported |
 
 This is beta firmware. Not every hardware setup and heavy chain has been
 qualified. Report firmware version, OS/browser, guitar/pickups, audio

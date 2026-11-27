@@ -1,8 +1,13 @@
 name: Web tools (GitHub Pages)
-# Publishes web/ (AMP model converter + pedal model manager) after the host
-# checks pass. Only web/ is published: no firmware images, captures or build output.
+# Manual deployment: stage web/ and optionally bundle a verified Release asset.
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Published firmware tag, e.g. v0.1.0-beta.17 (blank: editor only)'
+        required: false
+        default: ''
+        type: string
 permissions:
   contents: read
   pages: write
@@ -23,10 +28,14 @@ jobs:
           node-version: '22'
       - name: Native compiler prerequisites
         run: sudo apt-get update && sudo apt-get install -y clang
-      - name: Converter and pedal-file checks
+      - name: Source and documentation checks
+        run: python tools/check_repository.py --require-empty-build
+      - name: Converter, release and pedal-file checks
         env:
           CC: clang
-        run: python -m unittest tests.test_fcm_converter tests.test_web_pedal tests.test_fcm tests.test_fcm_files tests.test_web_store tests.test_ir_files -v
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: tests
+        run: python -m unittest test_fcm_converter test_web_pedal test_fcm test_fcm_files test_web_store test_ir_files test_package_beta test_pages -v
   deploy:
     needs: check
     runs-on: ubuntu-latest
@@ -35,9 +44,32 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/setup-python@v5
         with:
-          path: web
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Stage editor and selected firmware
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || { echo 'Expected vX.Y.Z-beta.N'; exit 1; }
+            version="${RELEASE_TAG#v}"
+            image="Frost_GP5_${version}.bin"
+            gh release download "$RELEASE_TAG" --repo "$GH_REPO" --pattern "$image" --pattern SHA256SUMS.txt --dir "$RUNNER_TEMP/frost-release"
+            node tools/prepare_pages.mjs --out "$RUNNER_TEMP/frost-pages" --firmware "$RUNNER_TEMP/frost-release/$image" --checksums "$RUNNER_TEMP/frost-release/SHA256SUMS.txt" --version "$version"
+            FROST_TEST_FIRMWARE="$RUNNER_TEMP/frost-release/$image" PYTHONPATH=tests PYTHONDONTWRITEBYTECODE=1 python -m unittest test_web_flasher test_pages -v
+          else
+            node tools/prepare_pages.mjs --out "$RUNNER_TEMP/frost-pages"
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/frost-pages
       - id: deployment
         uses: actions/deploy-pages@v4

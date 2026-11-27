@@ -24,7 +24,7 @@ class PackageTests(unittest.TestCase):
         self.stage=self.work/'stage';(self.stage/'build').mkdir(parents=True)
         self.baseline=self.work/'baseline.bin';self.image=self.stage/'build/GP5_Frost_line_test.bin'
         self.before={98:'app0',99:'dsp0',103:'data0'};self.after={98:'app1',99:'dsp0',103:'data0'}
-        self.info=dict(release_version='0.1.0-beta.17',platform_commit='pinned',media=None,
+        self.info=dict(release_version='0.1.0-beta.17',platform_commit='pinned',media={'commit':'media-pin'},
             inputs={'firmware/version.h':hashlib.sha256((self.root/'firmware/version.h').read_bytes()).hexdigest()},
             staging_tools={'prepare_gp5.py':hashlib.sha256((self.root/'tools/prepare_gp5.py').read_bytes()).hexdigest()})
         self.notes=self.work/'notes.md';self.notes.write_text('Candidate; audio qualification pending.',encoding='utf-8')
@@ -46,11 +46,11 @@ class PackageTests(unittest.TestCase):
         self.after[99]='new DSP';m=self.run_package(True)
         self.assertEqual(m['changed_sections'],[98,99]);self.assertFalse(m['dsp_byte_identical_to_baseline'])
         self.assertEqual(m['qualification'],'candidate-pending-hardware-qualification')
-        self.assertFalse(m['published']);self.assertFalse(m['flashed']);self.assertEqual(m['profile'],'Standard')
+        self.assertFalse(m['published']);self.assertFalse(m['flashed']);self.assertEqual(m['profile'],'USB_Audio_BLE')
     def test_branding_manifest_reports_actual_sections(self):
         m=self.run_package();self.assertEqual(m['changed_sections'],[98]);self.assertTrue(m['dsp_byte_identical_to_baseline'])
     def test_docs_images_midi_notices_and_checksum_are_in_zip(self):
-        m=self.run_package(True);zpath=next(self.out.glob('*Standard.zip'))
+        m=self.run_package(True);zpath=next(self.out.glob('Frost_GP5_0.1.0-beta.17.zip'))
         with zipfile.ZipFile(zpath) as z:
             self.assertIsNone(z.testzip())
             for name in ('README.md','docs/Midi Command.md','docs/User Guide.md','assets/branding/logo.svg','assets/docs/example.svg','LICENSE','THIRD_PARTY_NOTICES.md','RELEASE_NOTES.md'):
@@ -58,10 +58,10 @@ class PackageTests(unittest.TestCase):
             firmware=next(n for n in z.namelist() if n.endswith('.bin'))
             digest=hashlib.sha256(z.read(firmware)).hexdigest()
             self.assertEqual(digest,m['firmware_sha256']);self.assertEqual(z.read('SHA256SUMS.txt').decode(),digest+'  '+firmware+'\n')
-    def test_media_profile_has_distinct_name(self):
-        self.info['media']={'commit':'media-pin'};m=self.run_package(True)
-        self.assertEqual(m['profile'],'USB_Audio_BLE_Experimental')
-        self.assertTrue(list(self.out.glob('*USB_Audio_BLE_Experimental.zip')))
+    def test_release_rejects_a_build_without_usb_audio_and_ble(self):
+        self.info['media']=None
+        with self.assertRaisesRegex(ValueError,'must include USB audio and BLE MIDI'):self.run_package(True)
+        self.assertFalse(self.out.exists())
     def test_source_and_staging_tool_changes_reject_package(self):
         for kind in ('inputs','staging_tools'):
             with self.subTest(kind=kind):
