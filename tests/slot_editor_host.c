@@ -117,6 +117,7 @@ API void ge_busy_reads(unsigned n){busy_reads=n;}
 API unsigned ge_tap_mode(void){return tap_mode;}
 API unsigned ge_now(void){return now;}
 API unsigned ge_led(void){return fw_active();}
+API unsigned ge_led_choice(unsigned off){return off?globals.led_off:globals.led_on;}
 API void ge_tap_note(unsigned n){globals.tap_note=n;}
 API void ge_tempo_light(unsigned n){globals.tempo_light=n;}
 API void ge_tap_tempo(unsigned n){globals.tap_tempo=n;}
@@ -297,6 +298,7 @@ API unsigned ge_settings_pos(void){return settings_pos;}
 API unsigned ge_settings_count(void){return settings_count(settings_menu);}
 
 API unsigned ge_ctl_mask(void){ctl_sync();return ctl_mask;}
+API void ge_set_ctl_mask(unsigned m){unsigned i;ctl_mask=m&63u;for(i=0;i<6u;++i)ctl_types[i]=editor.types[i];}
 API unsigned ge_ctl_mode(void){return globals.footswitch_ctl;}
 
 API const char *ge_firmware_name(void){static char s[24];settings_value(SET_FIRMWARE,s);return s;}

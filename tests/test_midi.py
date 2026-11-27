@@ -37,6 +37,67 @@ class MidiTests(live_tests.LiveHostTests):
         self.settle();self.assertEqual(self.slot(0)['values'][0],100)
         self.cc(7,0);self.assertEqual(self.c.ge_midi_volume(),0)
         self.cc(7,127);self.assertEqual(self.c.ge_midi_volume(),127)
+    # External footswitch gestures (channel 16): what a Chocolate Plus set up by the Controller page sends.
+    def fsw_press(self,n,tap=None,double=None,hold=None,define=True):
+        """Like the controller: every press repeats the footswitch's definition (the last one given here)."""
+        defs=self.__dict__.setdefault('fsw_defs',{})
+        if tap or double or hold:defs[n]=(*(tap or (0,0,0,0)),*(double or (0,0,0,0)),*(hold or (0,0,0,0)))
+        if define:
+            for i,v in enumerate(defs.get(n,(0,)*12)):self.c.ge_midi(11,0xbf,16+i,v)
+        self.c.ge_midi(11,0xbf,28,n)
+    def fsw_release(self,n):self.c.ge_midi(11,0xbf,29,n)
+    def fsw_wait(self,ms):
+        self.c.ge_advance(ms);self.c.ge_tick()
+    def test_footswitch_tap_runs_on_the_press_without_double_or_hold(self):
+        c=self.c;BYPASS=(3,90,0,0)
+        self.assertEqual(c.ge_midi_bypass(),0)
+        self.fsw_press(0,tap=BYPASS);self.assertEqual(c.ge_midi_bypass(),1)        # toggled at once
+        self.fsw_release(0);self.fsw_wait(500);self.assertEqual(c.ge_midi_bypass(),1)
+        self.fsw_press(0,define=False);self.fsw_release(0);self.assertEqual(c.ge_midi_bypass(),0)   # the setup is kept
+        self.fsw_press(5,define=False);self.fsw_release(5);self.fsw_wait(3000);self.assertEqual(c.ge_midi_bypass(),0)   # never set up: nothing
+    def test_footswitch_double_press_and_late_second_press(self):
+        c=self.c;BYPASS=(3,90,0,0);BLOCK1=(3,20,0,0)
+        before=c.ge_enabled(0)
+        self.fsw_press(1,tap=BYPASS,double=BLOCK1);self.fsw_release(1)
+        self.assertEqual(c.ge_midi_bypass(),0)                                         # waits for a possible second press
+        self.fsw_wait(401);self.assertEqual(c.ge_midi_bypass(),1);self.assertEqual(c.ge_enabled(0),before)
+        self.fsw_press(1);self.fsw_release(1);c.ge_advance(380)                        # a second press within 400 ms
+        self.fsw_press(1);self.settle(20);self.assertEqual(c.ge_enabled(0),1-before)   # double press: the effect (once the pedal is idle)
+        self.fsw_release(1);self.fsw_wait(500);self.assertEqual(c.ge_midi_bypass(),1)  # and no tap with it
+        self.fsw_press(1);self.fsw_release(1);c.ge_advance(500)
+        self.fsw_press(1);self.assertEqual(c.ge_midi_bypass(),0)                       # too late (over 400 ms): two taps
+        self.fsw_release(1);self.fsw_wait(401);self.assertEqual(c.ge_midi_bypass(),1);self.settle(20);self.assertEqual(c.ge_enabled(0),1-before)
+    def test_footswitch_hold_two_seconds_and_a_short_press(self):
+        c=self.c;TUNER=14;BYPASS=(3,90,0,0);TUNER_TOGGLE=(3,86,0,0)
+        self.fsw_press(2,tap=BYPASS,hold=TUNER_TOGGLE);self.fsw_wait(1500)
+        self.assertNotEqual(c.ge_view(),TUNER);self.assertEqual(c.ge_midi_bypass(),0)
+        self.fsw_wait(500);self.settle(20);self.assertEqual(c.ge_view(),TUNER)         # 2 s held: the tuner opens
+        self.fsw_release(2);self.fsw_wait(100);self.assertEqual(c.ge_midi_bypass(),0)  # no tap on that release
+        self.fsw_press(2);self.fsw_wait(2000);self.fsw_release(2);self.settle(20);self.assertNotEqual(c.ge_view(),TUNER)   # toggled back
+        self.fsw_press(2);self.fsw_wait(300);self.fsw_release(2);self.assertEqual(c.ge_midi_bypass(),1)    # a short press is the tap
+    def test_footswitch_tap_tempo_is_timed_on_the_press(self):
+        c=self.c;TAP=(1,85,127,0);BYPASS=(3,90,0,0)
+        self.fsw_press(3,tap=TAP,double=BYPASS,hold=BYPASS);c.ge_advance(150);self.fsw_release(3)
+        c.ge_advance(350);self.fsw_press(3);self.assertEqual(c.ge_midi_tempo(),500)     # 500 ms between the presses, however long each was held
+        self.fsw_release(3);self.fsw_wait(400);self.assertEqual(c.ge_midi_bypass(),0)  # no double press on a tap tempo footswitch
+        self.fsw_press(3);self.fsw_wait(2000);self.assertEqual(c.ge_midi_bypass(),1)    # the hold still works
+        self.fsw_release(3)
+    def test_footswitch_switches_the_preset_ctl_effects(self):
+        c=self.c;CTL=(5,0,0,0)
+        before=[c.ge_enabled(i) for i in range(6)]
+        c.ge_set_ctl_mask(0b000011)                                                    # this preset's CTL: slots 0 and 1
+        self.fsw_press(0,tap=CTL);self.fsw_release(0);self.settle(40)
+        self.assertEqual([c.ge_enabled(i) for i in range(6)],[v^(i in (0,1)) for i,v in enumerate(before)])
+        self.fsw_press(0);self.fsw_release(0);self.settle(40)
+        self.assertEqual([c.ge_enabled(i) for i in range(6)],before)
+        c.ge_set_ctl_mask(0);self.fsw_press(0);self.fsw_release(0);self.settle(40)     # a preset without CTL effects: nothing
+        self.assertEqual([c.ge_enabled(i) for i in range(6)],before)
+    def test_footswitch_control_alternates_two_values(self):
+        c=self.c;MIX=(4,32,127,0)
+        self.fsw_press(0,tap=MIX);self.fsw_release(0);self.settle(40);first=self.slot(0)['values'][0]
+        self.fsw_press(0);self.fsw_release(0);self.settle(40);second=self.slot(0)['values'][0]
+        self.fsw_press(0);self.fsw_release(0);self.settle(40)
+        self.assertNotEqual(first,second);self.assertEqual(self.slot(0)['values'][0],first)
     def test_bad_channels_packets_and_unsupported_parameters_are_ignored(self):
         before=self.slot(0)
         for packet in ((11,0xb1,32,127),(27,0xb0,32,127),(12,0xb0,32,127),(11,0xb0,32,255),(11,0xb0,39,127)):

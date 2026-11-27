@@ -382,11 +382,39 @@ Frost is a USB MIDI **device**, not a USB host. DIN/TRS MIDI controllers need
 a host/bridge that routes USB MIDI to it. Frost receives BLE MIDI from a
 connected client when SYSTEM → BLUETOOTH is ON. Direct Bluetooth pairing with the Chocolate Plus has not been verified;
 stock Valeton pairing/SysEx instructions do not establish Frost compatibility.
-USB MIDI receives cable 0, channel 1 only; BLE MIDI uses channel 1 too. Other
-channels are ignored.
+USB MIDI receives cable 0, channel 1; BLE MIDI uses channel 1 too. Channel 16
+carries [footswitch gestures](#footswitch-gestures-press-double-press-and-hold).
+Other channels are ignored.
 There is no MIDI learn, channel menu, outgoing MIDI clock or parameter feedback
 in this version. Do not route the GP-5's own outgoing control messages back
 to its input; that can create feedback.
+
+## Footswitch gestures: press, double press and hold
+
+A controller can give each footswitch three actions: a **press**, a **double press**
+(a second press within 0.4 s) and a **hold** (2 s). The website's **Controller** page
+sets this up on an M-VAVE Chocolate Plus; any controller that can send several
+messages per press can do the same. Frost recognises the gestures, so they work
+on stage with the controller plugged straight into the GP-5.
+
+The controller sends on **MIDI channel 16**: when a footswitch goes down, the twelve
+bytes that describe its actions as CC 16 to 27, then **CC 28 = n** (footswitch
+number 0 to 15); when it comes up, **CC 29 = n**. Nothing is stored in the pedal.
+The twelve bytes are three actions (press, double press, hold) of four bytes each:
+
+| Kind (first byte) | Then | Runs |
+|---|---|---|
+| 0 | — | nothing |
+| 1 | CC, value | that CC on channel 1 |
+| 2 | program | that program change (preset) |
+| 3 | CC | a switch the pedal toggles from its own state: 86 tuner, 90 bypass all, 20 to 25 the effect at that chain position |
+| 4 | CC, value A, value B | that CC with A and B in turn |
+| 5 | — | the current preset's CTL effects, each switched the other way (as the GP-5's own footswitch in FOOTSWITCH CTL) |
+
+A press runs at once when the footswitch has no double press and no hold. With a
+hold it runs on release; with a double press, 0.4 s after release. A **tap tempo**
+press (kind 1, CC 85) always runs on the press, so the tempo is exact; such a
+footswitch has no double press. Other channels than 1 and 16 are still ignored.
 
 ## Reserved commands and limits
 

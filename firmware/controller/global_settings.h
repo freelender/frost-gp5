@@ -40,7 +40,12 @@ typedef struct {
     unsigned tap_target;             /* 0 (default) = a tap sets the selected effect, 1 = every tempo effect in the chain */
     unsigned direct_monitor;         /* 1 (default) = hear the chain alongside USB playback */
     unsigned bluetooth;              /* 1 (default) = BLE MIDI enabled */
+    unsigned led_on;                 /* footswitch LED colour of an effect that is on: FROST_LED_ON_* (0 = mint, as before) */
+    unsigned led_off;                /* ... and of an effect that is off: FROST_LED_OFF_* (0 = dim red, as before) */
 } FrostGlobals;
+/* DISPLAY -> LED ON / LED OFF choices (slot_editor.h led_colour). EFFECT follows the selected effect's category colour. */
+enum { FROST_LED_ON_MINT, FROST_LED_ON_GREEN, FROST_LED_ON_BLUE, FROST_LED_ON_ICE, FROST_LED_ON_PURPLE, FROST_LED_ON_PINK, FROST_LED_ON_RED, FROST_LED_ON_ORANGE, FROST_LED_ON_YELLOW, FROST_LED_ON_WHITE, FROST_LED_ON_EFFECT, FROST_LED_ON_CHOICES };
+enum { FROST_LED_OFF_DIM_RED, FROST_LED_OFF_DARK, FROST_LED_OFF_DIM_BLUE, FROST_LED_OFF_DIM_WHITE, FROST_LED_OFF_DIM_EFFECT, FROST_LED_OFF_CHOICES };
 static FrostGlobals globals;
 /* Performance controls are volatile: MIDI never saves global preferences. */
 static unsigned midi_bypass;
@@ -53,11 +58,11 @@ static unsigned tap_target_now(void){return midi_tap_target<=1u?midi_tap_target:
 static unsigned global_output_flags(void){return globals.out_mode | (midi_bypass?FROST_GLOBAL_BYPASS:0u);}
 void gp5_backlight_duty(unsigned percent);
 static void globals_defaults(FrostGlobals *g)
-{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;g->tap_target=0;g->footswitch_ctl=0;g->direct_monitor=1;g->bluetooth=1;}
+{g->eq_db[0]=g->eq_db[1]=g->eq_db[2]=0;g->in_gain_db=0;g->out_level=100;g->out_mode=0;g->cab_override=0;g->brightness=100;g->home=HOME_CHAIN;g->last_preset=255;g->tuner_ref=440;g->setlist_hold=1;g->factory_state=0;g->tap_note=0;g->tempo_light=1;g->tap_tempo=0;g->tap_target=0;g->footswitch_ctl=0;g->direct_monitor=1;g->bluetooth=1;g->led_on=FROST_LED_ON_MINT;g->led_off=FROST_LED_OFF_DIM_RED;}
 static int globals_valid(const FrostGlobals *g)
 {return g->eq_db[0]>=-12 && g->eq_db[0]<=12 && g->eq_db[1]>=-12 && g->eq_db[1]<=12 && g->eq_db[2]>=-12 && g->eq_db[2]<=12 && g->in_gain_db>=-20 && g->in_gain_db<=20 && g->out_level<=100 && g->out_mode<=1 && g->cab_override<=1 &&
-        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=425u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u && g->tap_target<=1u && g->footswitch_ctl<=1u && g->direct_monitor<=1u && g->bluetooth<=1u;}
-/* record: 'FG' 1 0 | in_gain(i8) out_level out_mode cab brightness home last_preset 0 | 0... | crc32 @60 */
+        g->brightness<=100 && g->brightness%10u==0 && g->home<HOMES && g->setlist_hold<=1u && (g->last_preset<FROST_PRESETS || g->last_preset==255) && g->tuner_ref>=425u && g->tuner_ref<=450u && g->tap_note<=2u && g->tempo_light<=1u && g->tap_tempo<=1u && g->tap_target<=1u && g->footswitch_ctl<=1u && g->direct_monitor<=1u && g->bluetooth<=1u && g->led_on<FROST_LED_ON_CHOICES && g->led_off<FROST_LED_OFF_CHOICES;}
+/* record: 'FG' 1 0 | in_gain(i8) out_level out_mode cab brightness home last_preset 0 | ... | led_on+1 @24 led_off+1 @25 | 0... | crc32 @60 */
 static void globals_load(void)
 {
     char name[8];uint32_t d;FrostGlobals g;
@@ -79,6 +84,8 @@ static void globals_load(void)
     g.footswitch_ctl=FROST_FILE_AT(d)[21];
     g.direct_monitor=FROST_FILE_AT(d)[22]?FROST_FILE_AT(d)[22]-1u:1u; /* older record = on */
     g.bluetooth=FROST_FILE_AT(d)[23]?FROST_FILE_AT(d)[23]-1u:1u; /* older record = on */
+    g.led_on=FROST_FILE_AT(d)[24]?FROST_FILE_AT(d)[24]-1u:FROST_LED_ON_MINT;      /* older record = mint */
+    g.led_off=FROST_FILE_AT(d)[25]?FROST_FILE_AT(d)[25]-1u:FROST_LED_OFF_DIM_RED; /* older record = dim red */
     if(globals_valid(&g))globals=g;
 }
 /* 1 = written (or nothing to do). */
@@ -100,6 +107,7 @@ static int globals_save(uint32_t now)
     store_buf[21]=(uint8_t)globals.footswitch_ctl;
     store_buf[22]=(uint8_t)(globals.direct_monitor+1u);
     store_buf[23]=(uint8_t)(globals.bluetooth+1u);
+    store_buf[24]=(uint8_t)(globals.led_on+1u);store_buf[25]=(uint8_t)(globals.led_off+1u);
     frost_wire_put32(store_buf+60,store_crc_ram(store_buf,60));
     store_group_name(name,'g','l','b',0);
     return store_write_group(FROST_GLB_FIRM,name,bytes);

@@ -56,9 +56,15 @@ static unsigned foot_down,foot_long,foot_toggled,tuner_ref_dirty,tuner_ref_unloc
 static uint32_t foot_down_ms;
 static unsigned tuner_home;                      /* the home view to return to */
 /* Stage 2b: global settings menu, home screens, long press (docs/User%20Guide.md). */
-enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_VERSION, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_FOOTSWITCH, SET_FIRMWARE, SET_DIRECT_MONITOR, SET_BLUETOOTH, SET_ROWS };
+enum { SET_IN_GAIN, SET_OUT_LEVEL, SET_OUT_MODE, SET_CAB, SET_BRIGHT, SET_HOME, SET_SETLIST_HOLD, SET_VERSION, SET_RESET, SET_FACTORY, SET_EQ_BASS, SET_EQ_MIDDLE, SET_EQ_TREBLE, SET_TAP_NOTE, SET_TEMPO_LIGHT, SET_TAP_TEMPO, SET_TAP_TARGET, SET_BACK, SET_FOOTSWITCH, SET_FIRMWARE, SET_DIRECT_MONITOR, SET_BLUETOOTH, SET_LED_ON, SET_LED_OFF, SET_ROWS };
 #define FROST_LONG_PRESS_MS 700u
 #define FROST_HOME_RETURN_MS 15000u
+/* DISPLAY -> LED ON / LED OFF (global_settings.h FROST_LED_*): names on screen and colours (0..32 per channel).
+ * MINT and DIM RED are the platform's own on/bypass light; EFFECT uses the category colour of the selected effect. */
+static const char *const led_on_names[FROST_LED_ON_CHOICES]={"MINT","GREEN","BLUE","ICE","PURPLE","PINK","RED","ORANGE","YELLOW","WHITE","EFFECT"};
+static const uint32_t led_on_rgb[FROST_LED_ON_CHOICES]={1u,GP5_LED(0,32,0),GP5_LED(0,6,32),GP5_LED(6,22,32),GP5_LED(18,0,32),GP5_LED(32,3,16),GP5_LED(32,0,0),GP5_LED(32,9,0),GP5_LED(32,26,0),GP5_LED(28,32,32),0u};
+static const char *const led_off_names[FROST_LED_OFF_CHOICES]={"DIM RED","DARK","DIM BLUE","DIM WHITE","DIM EFFECT"};
+static const uint32_t led_off_rgb[FROST_LED_OFF_CHOICES]={0u,GP5_LED(0,0,0),GP5_LED(0,1,5),GP5_LED(2,2,2),0u};
 /* 32k: Global settings is a menu tree. Entries are SET_* rows (leaves),
  * SET_BACK (one level up; saves and leaves at the top) or a submenu. The
  * highlighted leaf stays in settings_row, so editing is unchanged. */
@@ -71,7 +77,7 @@ static const uint8_t settings_menus[SM_MENUS][7]={
 #else
     {SET_IN_GAIN,SET_OUT_LEVEL,SET_OUT_MODE,SET_CAB,SE_EQ,SET_BACK,255},
 #endif
-    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_FOOTSWITCH,SET_BACK,255,255},
+    {SET_HOME,SET_BRIGHT,SET_SETLIST_HOLD,SET_FOOTSWITCH,SET_LED_ON,SET_LED_OFF,SET_BACK},
 #ifdef FROST_USB_AUDIO
     {SET_FIRMWARE,SET_VERSION,SET_BLUETOOTH,SET_RESET,SET_FACTORY,SET_BACK,255},
 #else
@@ -323,6 +329,8 @@ static void settings_value(unsigned row,char out[24])
     case SET_TAP_TEMPO:{const char *t=tap_tempo_on()?"ON":"OFF";while(*t)*q++=*t++;*q=0;break;}
     case SET_FOOTSWITCH:{const char *t=globals.footswitch_ctl?"CTL":"SELECTED";while(*t)*q++=*t++;*q=0;break;}
     case SET_TAP_TARGET:{const char *t=tap_target_now()?"GLOBAL":"SELECTED";while(*t)*q++=*t++;*q=0;break;}
+    case SET_LED_ON:{const char *t=led_on_names[globals.led_on];while(*t)*q++=*t++;*q=0;break;}
+    case SET_LED_OFF:{const char *t=led_off_names[globals.led_off];while(*t)*q++=*t++;*q=0;break;}
     default:*q=0;
     }
 }
@@ -333,7 +341,7 @@ static void settings_select(unsigned menu,unsigned pos)
 {settings_menu=menu;settings_pos=pos;settings_row=settings_entry()<SET_ROWS?settings_entry():SET_BACK;}
 static void render_stage2b(const char *message)
 {
-    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","VERSION","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK","FOOTSWITCH","FIRMWARE","DIRECT MONITORING","BLUETOOTH"};
+    static const char *const labels[SET_ROWS]={"INPUT GAIN","OUTPUT LEVEL","OUTPUT MODE","CAB OVERRIDE","BRIGHTNESS","HOME SCREEN","SETLIST HOLD","VERSION","RESET SETTINGS","FACTORY RESET","GLOBAL BASS","GLOBAL MIDDLE","GLOBAL TREBLE","TAP NOTE","TEMPO LIGHT","TAP TEMPO","TAP TARGET","BACK","FOOTSWITCH","FIRMWARE","DIRECT MONITORING","BLUETOOTH","LED ON","LED OFF"};
     static const char *const menus[]={"AUDIO","DISPLAY","SYSTEM","GLOBAL EQ","TAP TEMPO"};
     static const char *const titles[SM_MENUS]={"GLOBAL SETTINGS","AUDIO","DISPLAY","SYSTEM","AUDIO / GLOBAL EQ","TAP TEMPO"};
     unsigned i;char value[24];
@@ -624,18 +632,30 @@ return 0;
  * (TEMPO LIGHT), on a Frost-blue base while TAP mode is open. */
 #define FROST_LED_YELLOW GP5_LED(32,26,0)
 #define FROST_LED_BLUE GP5_LED(5,20,32)
+/* The light of an effect that is on / off, in the colours chosen in DISPLAY -> LED ON / LED OFF. While one of
+ * those two values is being changed, the footswitch shows it, whatever the effect is doing. */
+static unsigned led_colour(unsigned on)
+{
+    unsigned long rgb;unsigned k;
+    if(view==SETTINGS_VALUE && settings_row==SET_LED_ON)on=1;
+    else if(view==SETTINGS_VALUE && settings_row==SET_LED_OFF)on=0;
+    if(on && globals.led_on!=FROST_LED_ON_EFFECT)return (unsigned)led_on_rgb[globals.led_on];
+    if(!on && globals.led_off!=FROST_LED_OFF_DIM_EFFECT)return (unsigned)led_off_rgb[globals.led_off];
+    rgb=frost_category_rgb[frost_type_category(editor.types[selected])];k=on?32u:4u;
+    return (unsigned)GP5_LED(((rgb>>16)&255u)*k/255u,((rgb>>8)&255u)*k/255u,(rgb&255u)*k/255u);
+}
 unsigned fw_active(void)
 {
     unsigned on=editor.desired_enabled[selected],slot=tap_mode?tap_slot:selected,beat;uint32_t now;
     if(globals.footswitch_ctl && (view==CHAIN || view==STOMP)){unsigned i;on=0;
-        for(i=0;i<6u;++i)if((ctl_mask&(1u<<i)) && editor.types[i]!=FROST_EMPTY && editor.desired_enabled[i])on=1;return on;}
-    if(!tap_tempo_on())return on;                          /* 32u: TAP TEMPO OFF = the usual light */
-    if(!globals.tempo_light || !(tap_mode || (on && (view==CHAIN || view==STOMP))))return tap_mode?FROST_LED_BLUE:on;
+        for(i=0;i<6u;++i)if((ctl_mask&(1u<<i)) && editor.types[i]!=FROST_EMPTY && editor.desired_enabled[i])on=1;return led_colour(on);}
+    if(!tap_tempo_on())return led_colour(on);                          /* 32u: TAP TEMPO OFF = the usual light */
+    if(!globals.tempo_light || !(tap_mode || (on && (view==CHAIN || view==STOMP))))return tap_mode?FROST_LED_BLUE:led_colour(on);
     beat=tap_mode && !tap_count?0u:tap_flash_beat(slot);
-    if(!beat)return tap_mode?FROST_LED_BLUE:on;
+    if(!beat)return tap_mode?FROST_LED_BLUE:led_colour(on);
     now=gp5_ms();
     if((uint32_t)(now-tap_phase[slot])%beat<FROST_TAP_FLASH_MS)return FROST_LED_YELLOW;
-    return tap_mode?FROST_LED_BLUE:on;
+    return tap_mode?FROST_LED_BLUE:led_colour(on);
 }
 int fw_take(uint32_t *id,uint32_t *value){(void)id;(void)value;return 0;}
 void fw_retry(uint32_t id){(void)id;}
@@ -1076,6 +1096,8 @@ static void settings_turn(int d)
     case SET_TAP_TEMPO:globals.tap_tempo=(unsigned)(((int)tap_tempo_on()+d%2+2)%2);midi_tap_tempo=255u;if(!globals.tap_tempo)tap_mode=0;break;
     case SET_FOOTSWITCH:globals.footswitch_ctl=(unsigned)(((int)globals.footswitch_ctl+d%2+2)%2);tap_mode=0;break;
     case SET_TAP_TARGET:globals.tap_target=(unsigned)(((int)tap_target_now()+d%2+2)%2);midi_tap_target=255u;break;
+    case SET_LED_ON:globals.led_on=(unsigned)(((int)globals.led_on+d%FROST_LED_ON_CHOICES+FROST_LED_ON_CHOICES)%FROST_LED_ON_CHOICES);break;
+    case SET_LED_OFF:globals.led_off=(unsigned)(((int)globals.led_off+d%FROST_LED_OFF_CHOICES+FROST_LED_OFF_CHOICES)%FROST_LED_OFF_CHOICES);break;
     default:return;
     }
     settings_dirty=1;
