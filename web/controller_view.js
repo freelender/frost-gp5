@@ -3,8 +3,8 @@
 // any effect, presets, raw MIDI), write it into the controller (it keeps the setup when plugged straight into the GP-5
 // by its USB HOST port), watch each press light its switch and, while both are on this computer, pass the presses on
 // to the GP-5.
-import { CHOC, SWITCH_NAMES, SINGLE, ALTERNATE, HOLD, REPEAT, SHORT_LONG, KINDS, QUICK, QUICK_DEFAULTS, quickSetup, recognize, toMessage, setupOfRecord, recordOfSetup, parseRecord, buildRecord, describe, switchFor, recordAddress, pedalValue, choiceValue, ChocolateLink, SimulatedChocolate, GESTURE_KINDS, gestureRecord, gesturesOf, actionOfQuick, describeAction } from './chocolate.js?v=1.9.0';
-import { loadCatalog, formatValue } from './live.js?v=1.9.0';
+import { CHOC, SWITCH_NAMES, SINGLE, ALTERNATE, HOLD, REPEAT, SHORT_LONG, KINDS, QUICK, QUICK_DEFAULTS, quickSetup, recognize, toMessage, setupOfRecord, recordOfSetup, parseRecord, buildRecord, describe, switchFor, recordAddress, pedalValue, choiceValue, ChocolateLink, SimulatedChocolate, GESTURE_KINDS, gestureRecord, gesturesOf, actionOfQuick, describeAction } from './chocolate.js?v=1.9.1';
+import { loadCatalog, formatValue } from './live.js?v=1.9.1';
 
 const PORT = /FootCtrl|Chocolate/i, GP5 = /GP-5|Open FW|Frost|OpenGP5/i;
 const pad2 = i => String(i).padStart(2, '0');

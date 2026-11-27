@@ -2,7 +2,7 @@
 // 7E 20 save in slot_editor.h): the pedal's
 // editor does the work, so the pedal screen, SAVE and the DSP stay in sync.
 // effects.json is generated from the firmware catalog (tools/export_effects.py).
-import { gearKind, gearChip, gearSvg, cabSvg, knobSvg, toggleSvg, GEAR_SHAPE } from './gear.js?v=1.9.0';
+import { gearKind, gearChip, gearSvg, cabSvg, knobSvg, toggleSvg, GEAR_SHAPE } from './gear.js?v=1.9.1';
 const EMPTY = 255;
 let catalog = null;
 export async function loadCatalog() {

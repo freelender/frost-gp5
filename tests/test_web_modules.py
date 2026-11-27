@@ -7,6 +7,14 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class WebModuleTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('node'),'Node.js needed')
+    def test_read_only_frost_detection(self):
+        subprocess.run(['node',str(ROOT/'tests/js/onboarding.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
+
+    @unittest.skipUnless(shutil.which('node'),'Node.js needed')
+    def test_stock_firmware_connection_guidance(self):
+        subprocess.run(['node',str(ROOT/'tests/js/connection_guidance.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
+
+    @unittest.skipUnless(shutil.which('node'),'Node.js needed')
     def test_combined_model_library(self):
         subprocess.run(['node',str(ROOT/'tests/js/model_library.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
 
