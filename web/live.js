@@ -2,6 +2,7 @@
 // 7E 20 save in slot_editor.h): the pedal's
 // editor does the work, so the pedal screen, SAVE and the DSP stay in sync.
 // effects.json is generated from the firmware catalog (tools/export_effects.py).
+import { gearKind, gearChip, gearSvg, cabSvg, knobSvg, toggleSvg, GEAR_SHAPE } from './gear.js?v=1.9.0';
 const EMPTY = 255;
 let catalog = null;
 export async function loadCatalog() {
@@ -92,7 +93,6 @@ export function formatValue(p, v) {
   return x.toFixed(digits) + (p.unit ? ' ' + p.unit.toLowerCase().replace('db', 'dB').replace('hz', 'Hz').replace('ms', 'ms') : '');
 }
 
-const ICONS = ['◈', '▲', '◷', '✧', '≋', '▦', '▤', '▥', '↕'];   // by catalog category
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 /**
@@ -105,10 +105,35 @@ export class LiveView {
   constructor(strip, inspector, ui) {
     Object.assign(this, { strip, inspector, ui, live: null, timer: null, busy: false, paused: false, misses: 0, selected: null, inspType: null, pending: new Map() });
     strip.addEventListener('keydown', e => this.key(e));
-    this.fxCategory = -1;
+    this.fxCategory = -1; this.fxPage = 0;
     this.fxSearch = document.getElementById('fx-search');
     this.fxResults = document.getElementById('fx-results');
-    this.fxSearch.addEventListener('input', () => this.renderLibrary());
+    this.fxSearch.addEventListener('input', () => { this.fxPage = 0; this.renderLibrary(); });
+    // The library is a dialog over the rig, shown a page at a time (no scrolling list).
+    this.fxDialog = document.getElementById('fx-dialog');
+    const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+    on('fx-close', () => this.closeLibrary());
+    on('fx-prev', () => { this.fxPage--; this.renderLibrary(); });
+    on('fx-next', () => { this.fxPage++; this.renderLibrary(); });
+    // The chain is sized to the space it has: every block fits, whatever the window.
+    if (typeof ResizeObserver === 'function' && strip.parentElement) new ResizeObserver(() => { this.layoutChain(); if (this.fxDialog?.open) this.renderLibrary(); }).observe(strip.parentElement);
+  }
+  openLibrary() {
+    if (!this.fxDialog) { this.fxSearch.focus(); return; }
+    if (!this.fxDialog.open) this.fxDialog.showModal();
+    this.fxPage = 0; this.renderLibrary(); this.fxSearch.focus();
+  }
+  closeLibrary() { if (this.fxDialog?.open) this.fxDialog.close(); }
+  /** Block sizes from the room in the stage: pedals, wide amp heads and cabinets keep their proportions. */
+  layoutChain() {
+    const strip = this.strip, row = strip.parentElement, blocks = [...strip.children];
+    if (!row || !blocks.length || !row.getBoundingClientRect) return;
+    const ends = [...row.querySelectorAll('.chainend')].reduce((w, e) => w + e.getBoundingClientRect().width, 0);
+    const W = row.clientWidth - ends - 64, H = row.clientHeight, gap = 0.16;
+    const units = blocks.reduce((t, b) => { const [a, h] = GEAR_SHAPE[b.dataset.kind] || GEAR_SHAPE.pedal; return t + a * h; }, 0) + gap * (blocks.length - 1);
+    const U = Math.max(48, Math.min(H * 0.66, W / units));
+    strip.style.setProperty('--gap', `${Math.round(gap * U)}px`);
+    for (const b of blocks) { const [a, h] = GEAR_SHAPE[b.dataset.kind] || GEAR_SHAPE.pedal; b.style.width = `${Math.round(a * h * U)}px`; b.style.height = `${Math.round(h * U)}px`; }
   }
   get attached() { return !!this.live; }
   async attach(ask) {
@@ -155,24 +180,20 @@ export class LiveView {
     this.ui.state(c.editable ? 'Live: changes apply immediately.' : 'The pedal is busy (a menu or transfer). Editing resumes when it is idle.');
     if (!c.order.includes(this.selected)) this.selected = c.order[0];
     this.strip.textContent = '';
+    const nth = {};                                    // blocks so far per category, for the tags (OD 1, OD 2, ...)
     c.order.forEach((s, pos) => {
-      const type = c.types[s], eff = catalog.effects[type], empty = !eff, on = !!c.enabled[s];
+      const type = c.types[s], eff = catalog.effects[type], empty = !eff, on = !!c.enabled[s], kind = gearKind(type, eff);
       const b = el('button', 'block' + (empty ? ' empty' : on ? '' : ' off') + (s === this.selected ? ' active' : ''));
-      b.type = 'button'; b.dataset.slot = s; b.setAttribute('aria-pressed', s === this.selected);
+      b.type = 'button'; b.dataset.slot = s; b.dataset.kind = kind; b.setAttribute('aria-pressed', s === this.selected);
       if (!empty) b.style.setProperty('--effect-color', catalog.colors[eff.category]);
       b.setAttribute('aria-label', `Block ${pos + 1}: ${empty ? 'empty' : `${eff.name}, ${on ? 'on' : 'off'}`}`);
-      const num = el('div', 'num'); num.append(el('i'), `${String(pos + 1).padStart(2, '0')} · ${empty ? 'EMPTY' : on ? 'ON' : 'OFF'}`);
-      b.append(num, el('div', 'icon', empty ? '＋' : ICONS[eff.category] || '◈'), el('div', 'name', empty ? 'Empty slot' : eff.name),
-        el('div', 'cat', empty ? 'ADD AN EFFECT' : catalog.categories[eff.category]));
-      if (!empty) {
-        const knobs = el('div', 'pedal-knobs'); knobs.setAttribute('aria-hidden','true');
-        for (let i=0;i<Math.min(3,eff.params.length);i++) knobs.append(el('i'));
-        b.insertBefore(knobs,b.children[1]);
-        const foot=el('div','pedal-foot'); foot.setAttribute('aria-hidden','true'); b.append(foot);
-      }
+      if (!empty) nth[eff.category] = (nth[eff.category] || 0) + 1;
+      const art = el('span', 'gear-art'); art.innerHTML = gearSvg(type, eff, empty ? '' : catalog.colors[eff.category], on);
+      b.append(el('span', 'gear-halo'), el('span', 'gear-chip', empty ? `${pos + 1}` : gearChip(type, eff, nth[eff.category])), art,
+        el('span', 'gear-name', empty ? 'Empty slot' : eff.name));
       b.onclick = async () => {
         await this.select(s);
-        if (matchMedia('(max-width: 760px)').matches) this.inspector.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (empty && c.editable) this.openLibrary();
       };
       // Drag a block onto another position to reorder the chain (7E 1F).
       b.draggable = c.editable;
@@ -197,6 +218,7 @@ export class LiveView {
       };
       this.strip.appendChild(b);
     });
+    this.layoutChain();
     this.renderLibrary();
     await this.renderInspector();
   }
@@ -248,7 +270,7 @@ export class LiveView {
     const filters=document.getElementById('fx-filters');
     if (!filters.children.length) ['All',...catalog.categories].forEach((name,i)=>{
       const b=el('button','fx-filter',name);b.type='button';b.dataset.category=i-1;
-      b.onclick=()=>{this.fxCategory=i-1;this.renderLibrary();};filters.append(b);
+      b.onclick=()=>{this.fxCategory=i-1;this.fxPage=0;this.renderLibrary();};filters.append(b);
     });
     for(const b of filters.children)b.setAttribute('aria-pressed',Number(b.dataset.category)===this.fxCategory);
     const q=this.fxSearch.value.trim().toLowerCase();
@@ -261,15 +283,29 @@ export class LiveView {
       b.draggable=c.editable;
       b.ondragstart=ev=>{this.dragEffect=t;this.dragging=null;b.classList.add('dragging');ev.dataTransfer.effectAllowed='copy';ev.dataTransfer.setData('text/plain',e.name);};
       b.ondragend=()=>this.clearDrag();
-      const art=el('span','fx-mini',ICONS[e.category]||'◈');art.setAttribute('aria-hidden','true');
+      const art=el('span','fx-mini');art.setAttribute('aria-hidden','true');art.innerHTML=gearSvg(t,e,catalog.colors[e.category],true);
       const info=el('span','fx-info');info.append(el('strong','',e.name),el('small','',catalog.categories[e.category]));
       b.append(art,info,el('span','fx-add',t===current?'✓':'+'));
       b.setAttribute('aria-label',`${e.name}, ${t===current?'currently loaded':'load into slot '+(pos+1)}`);
       b.title=t===current?'Loaded in the selected block':'Click to load into the selected block, or drag onto any block';
-      b.onclick=()=>{if(t!==current&&this.selected===s)this.loadInto(s,t);};
+      b.onclick=()=>{if(t!==current&&this.selected===s){this.closeLibrary();this.loadInto(s,t);}};
       this.fxResults.append(b);
     }
     if(!ids.length)this.fxResults.append(el('p','fx-no-results','No matching effects. Try another search or category.'));
+    this.paginate();
+  }
+  /** Show the cards a page at a time: as many as fit in the dialog, with ◀ ▶ instead of a scrolling list. */
+  paginate() {
+    const box=this.fxResults,cards=[...box.querySelectorAll?.('.fx-card')||[]],page=document.getElementById('fx-page');
+    const prev=document.getElementById('fx-prev'),next=document.getElementById('fx-next');
+    for(const c of cards)c.hidden=false;
+    if(!page||!this.fxDialog?.open||!cards.length||!box.clientWidth){if(page)page.textContent='';return;}
+    const r=cards[0].getBoundingClientRect(),st=getComputedStyle(box),gx=parseFloat(st.columnGap)||0,gy=parseFloat(st.rowGap)||0;
+    const cols=Math.max(1,Math.floor((box.clientWidth+gx)/(r.width+gx))),rows=Math.max(1,Math.floor((box.clientHeight+gy)/(r.height+gy)));
+    const per=cols*rows,pages=Math.max(1,Math.ceil(cards.length/per));
+    this.fxPage=Math.max(0,Math.min(this.fxPage,pages-1));
+    cards.forEach((c,i)=>{c.hidden=Math.floor(i/per)!==this.fxPage;});
+    page.textContent=`${this.fxPage+1} / ${pages}`;prev.disabled=this.fxPage===0;next.disabled=this.fxPage>=pages-1;
   }
 
   async renderInspector() {
@@ -277,14 +313,19 @@ export class LiveView {
     if (s !== this.selected) return;
     this.inspector.textContent = '';
     if (!d) { this.inspType = null; this.switchEl = null; this.inspector.appendChild(el('p', 'noparams', 'Could not read this block from the pedal.')); return; }
-    const c = this.chainState, eff = catalog.effects[d.type], pos = c.order.indexOf(s);
+    const c = this.chainState, eff = catalog.effects[d.type], pos = c.order.indexOf(s), kind = gearKind(d.type, eff);
     this.inspType = d.type;
-    const head = el('div', 'inspectorhead'), title = el('div');
-    title.append(el('div', 'eyebrow', `Block ${pos + 1}${eff ? ' · ' + catalog.categories[eff.category] : ''}`), el('h2', '', eff ? eff.name : 'Empty slot'));
-    head.appendChild(title);
+    // The band (power, name, actions), a Type row, then the device's own panel of controls.
+    this.inspector.style.setProperty('--effect-color', eff ? catalog.colors[eff.category] : '#56606b');
+    const head = el('div', 'inspectorhead'), title = el('div', 'bandtitle');
+    title.append(el('h2', '', eff ? eff.name : 'Empty slot'), el('div', 'eyebrow', `Block ${pos + 1}${eff ? ' · ' + catalog.categories[eff.category] : ''}`));
     const box = el('fieldset', 'pedalface' + (eff ? '' : ' emptyface') + (eff && !d.enabled ? ' bypassed' : '')); box.disabled = !c.editable;
+    box.dataset.kind = kind;
     if (eff) box.style.setProperty('--effect-color', catalog.colors[eff.category]);
     this.switchEl = null;
+    const browse = el('button', 'btn primary small browse-effects', eff ? 'Replace effect' : 'Add Effect');
+    browse.type = 'button'; browse.disabled = !c.editable; browse.onclick = () => this.openLibrary();
+    if (!eff) { const side = el('div', 'headbtns'); side.append(browse); head.append(title, side); }
     if (eff) {
       const sw = el('button', 'switch'); sw.type = 'button'; sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', d.enabled);
       sw.setAttribute('aria-label', `${eff.name} on`); sw.title = 'Switch this block on or off'; sw.disabled = !c.editable;
@@ -300,17 +341,28 @@ export class LiveView {
       left.setAttribute('aria-label', `Move ${eff.name} earlier`); right.setAttribute('aria-label', `Move ${eff.name} later`);
       left.disabled = !c.editable || pos === 0; right.disabled = !c.editable || pos === 5;
       left.onclick = () => this.moveTo(s, pos - 1); right.onclick = () => this.moveTo(s, pos + 1);
-      const side = el('div', 'headbtns'); side.append(left, right, rm, sw);
-      this.switchEl = sw; head.appendChild(side);
+      const side = el('div', 'headbtns'); side.append(left, right, rm, browse);
+      this.switchEl = sw; head.append(sw, title, side);
     }
-    this.inspector.append(head, box);
-
-    const actions=el('div','effect-actions'), browse=el('button','btn ghost browse-effects',eff?'Replace effect':'Add Effect');
-    browse.type='button'; browse.onclick=()=>{this.fxSearch.scrollIntoView({block:'nearest'});this.fxSearch.focus();};
-    actions.append(browse);box.append(actions);
-    if (!eff) { box.appendChild(el('p', 'noparams', 'Choose an effect to fill this block. A new block starts switched off.')); return; }
+    // Type: the other models of the same category, to swap in place.
+    const info = el('div', 'typerow');
+    if (eff) {
+      const pick = el('label', 'typepick'), sel = el('select');
+      sel.disabled = !c.editable;
+      for (const t of catalog.picker[eff.category] || []) if (catalog.effects[t] && t !== EMPTY) sel.add(new Option(catalog.effects[t].name, t));
+      sel.value = d.type; sel.onchange = () => this.loadInto(s, Number(sel.value));
+      pick.append(el('span', 'inputlabel', 'Type'), sel);
+      info.append(pick, el('span', 'typeinfo', catalog.categories[eff.category]));
+    } else info.append(el('span', 'typeinfo', 'Choose an effect to fill this block. A new block starts switched off.'));
+    this.inspector.append(head, info, box);
+    if (!eff) return;
+    const ident = el('div', 'faceid');
+    ident.append(el('b', '', kind === 'cab' ? 'CABINET' : eff.name.split(' ').slice(0, 2).join(' ')),
+      el('small', '', kind === 'amp' ? 'AMP HEAD' : kind === 'capture' ? 'NAM CAPTURE' : kind === 'cab' ? 'IMPULSE RESPONSE' : catalog.categories[eff.category]));
+    box.append(ident);
     if (!eff.params.length) box.appendChild(el('p', 'noparams', 'This effect has no settings.'));
     if(d.type===3){
+      const art=el('span','faceart');art.setAttribute('aria-hidden','true');art.innerHTML=cabSvg(d.enabled);box.append(art);
       const cab=await this.live.cab(s);if(s!==this.selected)return;
       if(cab)box.appendChild(this.cabField(s,cab));
       else box.appendChild(el('p','noparams','Cabinet selection requires the IR-control firmware update.'));
@@ -368,6 +420,21 @@ export class LiveView {
   field(s, i, p, v) {
     const id = `p-${s}-${i}`, label = el('label', 'knoblabel', p.name);
     label.htmlFor = id;
+    if (p.labels && p.labels.length === 2) {
+      // A two-way choice is a bat-lever toggle over the same <select> (value, keyboard and 'sync' stay on it).
+      const row = el('div', 'field togglefield'), inp = el('select', 'togglevalue'), tog = el('button', 'toggle');
+      p.labels.forEach((l, k) => inp.add(new Option(l, p.min + k)));
+      inp.id = id; inp.value = v; inp.dataset.p = i; tog.type = 'button';
+      const show = () => {
+        const up = Number(inp.value) !== p.min;
+        tog.innerHTML = toggleSvg(up); tog.setAttribute('aria-pressed', up);
+        tog.setAttribute('aria-label', `${p.name}: ${p.labels[Number(inp.value) - p.min]}`);
+      };
+      tog.onclick = () => { inp.value = Number(inp.value) === p.min ? p.min + 1 : p.min; show(); this.queue(s, i, Number(inp.value)); };
+      inp.addEventListener('change', () => { show(); this.queue(s, i, Number(inp.value)); });
+      inp.addEventListener('sync', show); show();
+      row.append(el('span', 'togglelabel', p.labels[1]), tog, el('span', 'togglelabel', p.labels[0]), inp, label); return row;
+    }
     if (p.labels) {
       const row = el('div', 'field choicefield'), inp = el('select'), wrap = el('div', 'choicepill');
       p.labels.forEach((l, k) => inp.add(new Option(l, p.min + k)));
@@ -379,13 +446,15 @@ export class LiveView {
     const row = el('div', 'field knobfield'), out = el('output', 'knobvalue'), inp = el('input', 'knobinput');
     inp.type = 'range'; inp.min = p.min; inp.max = p.max; inp.step = p.step; inp.id = id; inp.value = v; inp.dataset.p = i;
     out.htmlFor = id;
-    const knob = el('div', 'knob'), cap = el('div', 'knobcap');
-    knob.append(cap); knob.title = `${p.name}: drag up or down, or scroll (Shift: fine). Double-click: default.`;
+    const knob = el('div', 'knob');
+    knob.innerHTML = knobSvg(); knob.title = `${p.name}: drag up or down, or scroll (Shift: fine). Double-click: default.`;
+    const pointer = knob.querySelector?.('.knob-pointer');
     const span = p.max - p.min || 1;
     const show = () => {
-      const x = Number(inp.value), t = formatValue(p, x);
+      const x = Number(inp.value), t = formatValue(p, x), pct = (x - p.min) / span;
       out.textContent = t; inp.setAttribute('aria-valuetext', t);
-      knob.style.setProperty('--pct', ((x - p.min) / span).toFixed(4));
+      knob.style.setProperty('--pct', pct.toFixed(4));
+      pointer?.setAttribute('transform', `rotate(${(-135 + 270 * pct).toFixed(1)} 60 60)`);
     };
     const set = x => {
       const before = inp.value; inp.value = Math.min(p.max, Math.max(p.min, x));

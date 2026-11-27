@@ -44,7 +44,9 @@ NAMs & IRs combines captures and cabinets in one library; use its
 The **EN | PT** switch beside the status chooses the interface language
 (English or Brazilian Portuguese). It starts in your browser's language and is
 remembered in this browser. Effect and knob names, the pedal's menu words and
-the names you store stay as the pedal shows them.
+the names you store stay as the pedal shows them. The **Skin** picker beside it
+changes the look of the Editor's drawn gear and panels: **Frost** (the default),
+**Vintage** or **Noir**. It only changes the website, never the pedal.
 
 ## Editor
 
