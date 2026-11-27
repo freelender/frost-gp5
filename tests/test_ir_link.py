@@ -176,6 +176,16 @@ class RequiredRemoteTests(unittest.TestCase):
         c.ln_set(0,1,0);y=self.run_blocks(x[64*1500:])
         self.assertGreater(max(map(abs,y[-64*100:])),.01)
 
+    def test_silent_commit_block_starts_exchange_before_route_commit(self):
+        c=self.setup();self.run_blocks([],blocks=700);c.ln_commit_alone(1)
+        types=(ct.c_uint*6)(3,1,255,255,255,255);self.assertEqual(c.ln_route(types),1)
+        for _ in range(20):
+            if c.ln_transition()==3:break
+            self.run_blocks([],blocks=1)
+        self.assertEqual(c.ln_transition(),3)
+        self.assertEqual(c.ln_begin_without_ir(0),1)
+        self.assertEqual(c.ln_end_without_ir(),0)
+
     def test_upload_scratch_never_changes_mirrored_coefficients(self):
         c=self.setup();self.run_blocks([],blocks=700);version=c.ln_stat(6)
         c.ln_upload_busy(1)
