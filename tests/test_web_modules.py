@@ -19,6 +19,10 @@ class WebModuleTests(unittest.TestCase):
         subprocess.run(['node',str(ROOT/'tests/js/storage_retries.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
 
     @unittest.skipUnless(shutil.which('node'),'Node.js needed')
+    def test_interface_language_tables(self):
+        subprocess.run(['node',str(ROOT/'tests/js/i18n.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
+
+    @unittest.skipUnless(shutil.which('node'),'Node.js needed')
     def test_versioned_module_graph_and_storage_contract(self):
         subprocess.run(['node',str(ROOT/'tests/js/web_modules.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
 

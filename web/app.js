@@ -8,6 +8,7 @@ import { initFirmware, isBusy } from './firmware.js?v=1.9.0';
 import { SetlistView } from './setlist_view.js?v=1.9.0';
 import { simulatedPedal } from './sim.js?v=1.9.0';
 import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.0';
+import { startI18n } from './i18n.js?v=1.9.0';
 
 export const VERSION = '1.9.0';
 const $ = id => document.getElementById(id);
@@ -19,6 +20,7 @@ const state = {
   record: null, nam: null, worker: null, cab: null, dirty: false, train: null,
 };
 $('version').textContent = VERSION;
+startI18n();
 
 // ---------- feedback: status, toasts, banner, dialog ----------
 function status(kind, text) { $('status').dataset.kind = kind; $('status-text').textContent = text; }

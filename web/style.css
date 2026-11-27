@@ -201,6 +201,36 @@ select {
   align-items: center;
   gap: 12px;
 }
+/* Interface language (i18n.js): a small EN | PT switch beside the status. */
+.lang {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--stroke2);
+  border-radius: 30px;
+  overflow: hidden;
+}
+.lang button {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lang button[aria-pressed="true"] {
+  color: #8acdf0;
+  background: #163149;
+}
+.lang button:focus-visible {
+  outline: 2px solid #8acdf0;
+  outline-offset: -2px;
+}
+@media (max-width: 760px) {
+  .topright { flex-wrap: wrap; gap: 8px; }
+}
 .container {
   width: 100%;
   max-width: 1400px;
