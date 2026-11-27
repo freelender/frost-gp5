@@ -136,6 +136,19 @@ class MidiTests(live_tests.LiveHostTests):
         self.fsw_wait(70)                                                               # its tap: 100 ms after the press
         self.fsw_wait(400);self.fsw_press(3);self.fsw_wait(100)                         # 500 ms later, held longer
         self.assertEqual(c.ge_midi_tempo(),500);self.fsw_release(3)
+    def test_led_colours_from_the_website(self):
+        """CC 40/41 on channel 16 (the Controller page's colour picker): shown at once, saved 1.5 s after the last change."""
+        c=self.c;LED=lambda r,g,b:0x01000000|r|(g<<8)|(b<<16)
+        c.ge_midi(11,0xbf,40,6);c.ge_midi(11,0xbf,41,1)                                # RED when on, DARK when off
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(6,1))
+        self.assertIn(c.ge_led(),(LED(32,0,0),LED(0,0,0)))                              # the footswitch shows it at once
+        c.ge_midi(11,0xbf,40,11);c.ge_midi(11,0xbf,41,5)                              # out of range: ignored
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(6,1))
+        self.settle(50);c.ge_reboot();self.settle()                                    # 1 s later: not saved yet
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(0,0))
+        c.ge_midi(11,0xbf,40,2);self.settle(40);c.ge_midi(11,0xbf,41,3);self.settle(100)   # BLUE, then DIM WHITE; 2 s later
+        c.ge_reboot();self.settle()
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(2,3))                # saved with the global settings
     def test_footswitch_control_alternates_two_values(self):
         c=self.c;MIX=(4,32,127,0)
         self.fsw_press(0,tap=MIX);self.fsw_release(0);self.settle(40);first=self.slot(0)['values'][0]

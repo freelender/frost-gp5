@@ -23,6 +23,11 @@ const NEW_COMMAND = { prev: { on: true }, next: { on: true }, tap: { on: true },
 // What each behaviour is called, and the names of its two lists (null: the controller does not use that list).
 const MODES = { [ALTERNATE]: ['Alternate: 1st press, 2nd press', '1st press', '2nd press'], [HOLD]: ['Press and release', 'On press', 'On release'],
   [SHORT_LONG]: ['Short press, long press', 'Short press', 'Long press'], [SINGLE]: ['The same at every press', 'Each press', null], [REPEAT]: ['Repeats while held', 'While held (repeats)', null] };
+// The GP-5 footswitch light (GLOBAL SETTINGS -> DISPLAY -> LED ON / LED OFF), in the pedal's order, drawn as the pedal shows
+// the colours (firmware/controller/slot_editor.h); null: the selected effect's category colour. Sent as CC 40 / 41 on channel 16.
+// The names are the pedal's own menu words, so they are not translated.
+const LED_ON = [['MINT', '#3cf0b4'], ['GREEN', '#00ff00'], ['BLUE', '#0030ff'], ['ICE', '#30b0ff'], ['PURPLE', '#9000ff'], ['PINK', '#ff1880'], ['RED', '#ff0000'], ['ORANGE', '#ff4800'], ['YELLOW', '#ffd000'], ['WHITE', '#e0ffff'], ['EFFECT', null]];
+const LED_OFF = [['DIM RED', '#5c0a0a'], ['DARK', '#05070a'], ['DIM BLUE', '#0a1838'], ['DIM WHITE', '#3a3a3a'], ['DIM EFFECT', null]];
 const SWITCH_ART = '<svg class="fsart" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47" fill="url(#ctl-nut)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--ctl-edge)" stroke-width="1.5" stroke-dasharray="3 4"/><circle cx="50" cy="50" r="33" fill="url(#ctl-ring)"/><circle cx="50" cy="50" r="25" fill="url(#ctl-cap)"/><ellipse cx="43" cy="40" rx="11" ry="6" fill="#ffffff30"/></svg>';
 const DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
   + '<radialGradient id="ctl-nut" cx="40%" cy="35%"><stop offset="0" stop-color="var(--ctl-metal1)"/><stop offset="1" stop-color="var(--ctl-metal3)"/></radialGradient>'
@@ -46,7 +51,8 @@ export class ControllerView {
     this.records = null; this.saved = []; this.setups = []; this.custom = [false, false, false, false]; this.sel = 0;
     this.lit = [false, false, false, false]; this.toggled = [false, false, false, false];
     this.picks = 0; this.writes = 0;                              // footswitches chosen and setups written: the tutorial watches them
-    this.build(); this.render();
+    this.led = null; this.ledReading = false; this.glowNote = '';   // the GP-5 footswitch light, as read from the pedal
+    this.build(); this.render(); this.glowStatus();
     loadCatalog().then(c => { this.catalog = c; this.render(); }).catch(() => {});
   }
   q(role) { return this.root.querySelector(`[data-role="${role}"]`); }
@@ -70,6 +76,12 @@ export class ControllerView {
           <div class="ctlname" data-role="name">Chocolate Plus</div>
         </div>
         <div class="ctllast" data-role="last" aria-live="polite"></div>
+        <div class="ctlglow" data-role="glow">
+          <span class="ctlglowtitle">GP-5 footswitch light</span>
+          <span class="ctlglowrow"><span class="ctlglowlabel">Effect on</span><span class="ctlswatches" role="radiogroup" aria-label="GP-5 footswitch light with the effect on" data-role="ledon"></span></span>
+          <span class="ctlglowrow"><span class="ctlglowlabel">Effect off</span><span class="ctlswatches" role="radiogroup" aria-label="GP-5 footswitch light with the effect off" data-role="ledoff"></span></span>
+          <span class="ctlglownote" data-role="glownote" aria-live="polite"></span>
+        </div>
         <p class="ctlhelp"><span>To set it up: plug the Chocolate Plus into this computer by USB with its switch on U, choose Find controller, set each footswitch and choose Write to controller.</span> <span>On stage: the setup stays in the controller. Plug its USB HOST port into the GP-5 and put its switch on H.</span> <span>Close the maker's editor (CubeSuite) while this page talks to the controller.</span></p>
       </div>
       <fieldset class="ctlpanel" data-role="panel"><legend data-role="legend"></legend><div data-role="body"></div></fieldset>`;
@@ -89,6 +101,14 @@ export class ControllerView {
       b.onclick = () => { this.sel = 4 + p; this.picks++; this.render(); };
       this.q('pairs').append(b);
     });
+    for (const [key, list] of [['on', LED_ON], ['off', LED_OFF]]) list.forEach(([name, colour], v) => {
+      const b = el('button', 'ctlswatch' + (colour ? '' : ' effect') + (key === 'off' && !colour ? ' dim' : '')); b.type = 'button';
+      b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name); b.title = name;
+      if (colour) b.style.setProperty('--c', colour);
+      b.onclick = () => this.setGlow(key, v);
+      this.q(key === 'on' ? 'ledon' : 'ledoff').append(b);
+    });
+    addEventListener('frost:status', () => this.glowStatus());
     this.q('tour').onclick = () => this.startTour();
     this.q('find').onclick = () => this.find();
     this.q('demo').onclick = () => this.startDemo();
@@ -216,6 +236,30 @@ export class ControllerView {
     this.render();
   }
 
+  // ---- the GP-5 footswitch light: read from the pedal once connected, changed live (CC 40 / 41 on channel 16) ----
+  async glowStatus() {
+    if (!this.hooks.gp5Out?.()) { this.led = null; this.glowNote = ''; this.renderGlow(); return; }
+    if (this.led || this.ledReading || !this.hooks.ledColours) { this.renderGlow(); return; }
+    this.ledReading = true; this.renderGlow();
+    try { this.led = await this.hooks.ledColours(); } catch { this.led = null; } finally { this.ledReading = false; }
+    this.renderGlow();
+  }
+  setGlow(key, v) {
+    const out = this.gp5(); if (!out) return;
+    try { out.send([0xbf, key === 'on' ? 40 : 41, v]); } catch { return; }
+    this.led = { on: 0, off: 0, ...this.led, [key]: v };
+    this.glowNote = 'Shown on the GP-5 at once and kept by the pedal. Needs Frost with footswitch gestures.';
+    this.renderGlow();
+  }
+  renderGlow() {
+    const out = this.gp5();
+    for (const [key, role] of [['on', 'ledon'], ['off', 'ledoff']]) this.q(role).querySelectorAll('.ctlswatch').forEach((b, v) => {
+      b.disabled = !out; b.setAttribute('aria-checked', String(this.led?.[key] === v));
+    });
+    this.q('glownote').textContent = !out ? 'Connect the GP-5 (Connect GP-5) to change its footswitch light.'
+      : this.ledReading ? 'Reading the GP-5…' : this.glowNote || 'The colour of the GP-5\'s own footswitch with the selected effect on and off.';
+  }
+
   // ---- the tutorial: each step lights the part of the page it talks about; the page keeps working underneath ----
   startTour() {
     this.tour?.close();
@@ -249,8 +293,8 @@ export class ControllerView {
         text: 'Unplug it from the computer, plug its USB HOST port into the GP-5 and put the switch on H. The setup lives in the controller; the GP-5 needs Frost with footswitch gestures.' },
       { target: at('.ctladvanced summary'), title: 'Other gear: Advanced', action: demo, enter: footswitch,
         text: 'Advanced keeps the controller\'s own modes, for pedals without Frost gestures: alternate, press and release, short and long press, repeat while held, and lists of up to 16 MIDI messages.' },
-      { target: () => null, title: 'The GP-5 footswitch colour',
-        text: 'On the pedal, GLOBAL SETTINGS → DISPLAY → LED ON and LED OFF choose the colour of the GP-5\'s own footswitch with its effect on and off. The footswitch shows each colour while you choose it.' },
+      { target: at('.ctlglow'), title: 'The GP-5 footswitch colour',
+        text: 'Here you choose the colour of the GP-5\'s own footswitch with its effect on and off: it changes at once and the pedal keeps it. The same choice is on the pedal, in GLOBAL SETTINGS → DISPLAY → LED ON and LED OFF.' },
     ];
     this.tour = new Tour(steps, { onclose: () => { this.tour = null; } });
     this.tour.start();

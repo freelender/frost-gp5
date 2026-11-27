@@ -30,6 +30,7 @@ startSkins();
 // ---------- feedback: status, toasts, banner, dialog ----------
 function status(kind, text) { $('status').dataset.kind = kind; $('status-text').textContent = text; }
 function showStatus() {
+  dispatchEvent(new Event('frost:status'));   // pages that follow the connection (the Controller's light picker)
   if (state.op) return status('busy', state.op === 'firmware' ? 'Installing firmware…' : state.op + '…');
   if (state.mode === 'connecting') return status('busy', 'Connecting…');
   if (state.mode === 'frost') return status('ok', 'Connected · Frost');
@@ -149,6 +150,13 @@ new ControllerView($('controller'), {
   chain: () => live.chainState,
   gp5Out: () => state.mode === 'frost' ? state.pedal?.out : null,
   toast: (text, kind) => toast(text, kind),
+  // The GP-5 footswitch light, as GLOBAL SETTINGS -> DISPLAY stores it (bytes 24/25 of glb-0: choice + 1, 0 = default).
+  ledColours: async () => {
+    if (state.mode !== 'frost' || !state.store) return null;
+    let group = null;
+    const ok = await exclusive('Reading the footswitch light', async () => { group = await state.store.readGroup('glb', 0); }, async () => {});
+    return ok ? { on: group?.[24] ? group[24] - 1 : 0, off: group?.[25] ? group[25] - 1 : 0 } : null;
+  },
 });
 async function connect() {
   if (state.checking || state.mode === 'connecting') return;

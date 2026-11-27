@@ -433,6 +433,14 @@ On the M-VAVE Chocolate Plus the Controller page offers **B+C** only: the
 controller keeps A+B and C+D for itself (they change its group) and sends
 nothing for them.
 
+### Footswitch light colours
+
+Also on channel 16, **CC 40 = LED ON colour** (0 to 10) and **CC 41 = LED OFF
+colour** (0 to 4), in the order of GLOBAL SETTINGS → DISPLAY → LED ON / LED OFF
+(0 is mint and dim red, the defaults). The footswitch shows the colour at once;
+Frost saves it with the global settings 1.5 s after the last change. The website's
+Controller page uses them for its colour picker.
+
 ## Reserved commands and limits
 
 Only the commands documented here have a performance function. Notes, pitch

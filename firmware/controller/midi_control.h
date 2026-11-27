@@ -88,9 +88,10 @@ typedef struct { uint8_t def[16],have,down,done,tapped,pending,alt,later,joins,w
 static FrostFsw fsw[FROST_FSW];
 static uint8_t fsw_def[16];
 static unsigned fsw_got;                           /* bit i: definition byte i received since the last press (bit 12: the pair) */
+static unsigned led_dirty;static uint32_t led_changed_ms;   /* LED colours from the website, not saved yet */
 void fw_midi_event(const uint8_t *packet);
 static void fsw_reset(void)
-{unsigned n,i;for(n=0;n<FROST_FSW;++n){for(i=0;i<16u;++i)fsw[n].def[i]=0;fsw[n].have=fsw[n].down=fsw[n].done=fsw[n].tapped=fsw[n].pending=fsw[n].alt=fsw[n].later=fsw[n].joins=fsw[n].wait=0;fsw[n].down_ms=fsw[n].up_ms=0;}for(i=0;i<16u;++i)fsw_def[i]=0;fsw_got=0;}
+{unsigned n,i;for(n=0;n<FROST_FSW;++n){for(i=0;i<16u;++i)fsw[n].def[i]=0;fsw[n].have=fsw[n].down=fsw[n].done=fsw[n].tapped=fsw[n].pending=fsw[n].alt=fsw[n].later=fsw[n].joins=fsw[n].wait=0;fsw[n].down_ms=fsw[n].up_ms=0;}for(i=0;i<16u;++i)fsw_def[i]=0;fsw_got=0;led_dirty=0;}
 static unsigned fsw_has(const FrostFsw *s,unsigned g){return s->def[4u*g]!=0u && s->def[4u*g]<=5u;}
 static unsigned fsw_tap_tempo(const FrostFsw *s){return s->def[0]==1u && s->def[1]==85u;}
 /* CCs that edit the chain or the view: like PARA, they wait while the pedal is busy (a preset load, a settings
@@ -183,8 +184,23 @@ static void fsw_service(uint32_t now)
         if(s->pending && now-s->up_ms>FROST_FSW_DOUBLE_MS){s->pending=0;fsw_fire(s,0);}
     }
 }
+/* The website's colour picker, also on channel 16: CC 40 = LED ON colour (0..10), CC 41 = LED OFF colour (0..4), in the
+ * order of GLOBAL SETTINGS -> DISPLAY. The footswitch shows it at once; the global settings are saved 1.5 s after the
+ * last change, so trying colours does not write the storage at every click. */
+#define FROST_LED_SAVE_MS 1500u
+static void led_service(uint32_t now)
+{
+    if(!led_dirty || !boot_load_done || !fw_editor_ready() || (uint32_t)(now-led_changed_ms)<FROST_LED_SAVE_MS)return;
+    if(globals_save(now))led_dirty=0;else led_changed_ms=now;   /* storage busy (a host write): try again later */
+}
 static void fsw_midi(unsigned cc,unsigned value,uint32_t now)
 {
+    if(cc==40u || cc==41u){
+        if(cc==40u && value<FROST_LED_ON_CHOICES)globals.led_on=value;
+        else if(cc==41u && value<FROST_LED_OFF_CHOICES)globals.led_off=value;
+        else return;
+        led_dirty=1;led_changed_ms=now;++generation;return;
+    }
     if(cc>=16u && cc<=27u){fsw_def[cc-16u]=(uint8_t)value;fsw_got|=1u<<(cc-16u);return;}
     if(cc==30u || cc==31u){fsw_def[cc-16u]=(uint8_t)value;return;}               /* the pair's b and c */
     if(cc>=33u && cc<=37u){fsw_def[12]=(uint8_t)(cc-32u);fsw_def[13]=(uint8_t)value;fsw_got|=0x1000u;return;}
@@ -193,7 +209,7 @@ static void fsw_midi(unsigned cc,unsigned value,uint32_t now)
 }
 static void midi_service(void)
 {
-    fsw_service(gp5_ms());
+    fsw_service(gp5_ms());led_service(gp5_ms());
     /* Finish a short CLEAR/restore handshake instead of the obsolete upload.
      * The one-slot mailbox remains latest-wins while cancellation runs. */
     if(midi_preset<FROST_PRESETS && midi_preset!=current_preset && !preset_client.state &&
