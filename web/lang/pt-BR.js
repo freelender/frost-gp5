@@ -370,6 +370,8 @@ export default {
     'Setlist name': 'Nome do setlist',
     'Missing song': 'Música ausente',
     'Missing preset': 'Preset ausente',
+    'saved on the pedal': 'salvo no pedal',
+    'playing now': 'tocando agora',
     'Add songs from the library, then arrange them in performance order. A song may appear more than once.': 'Adicione músicas da biblioteca e coloque na ordem do show. Uma música pode aparecer mais de uma vez.',
     'Connect the pedal to save or remove its setlist.': 'Conecte o pedal para salvar ou remover o setlist dele.',
     'On the pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST. Tap the footswitch for the next part. DISPLAY → SETLIST HOLD chooses Previous part or Tuner. Turn PARA to select a song; press PARA to edit the sound. The first and last parts stop at the ends of the setlist.': 'No pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST. Toque o footswitch para a próxima parte. DISPLAY → SETLIST HOLD escolhe entre a parte anterior ou o afinador. Gire o PARA para escolher uma música; aperte o PARA para editar o som. A primeira e a última parte param nas pontas do setlist.',
