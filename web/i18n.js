@@ -1,4 +1,5 @@
-// Frost web: interface language (English source, Portuguese translation).
+// Frost web: interface language. English is the default and the source text; the other languages live in
+// lang/ (one file each, listed in lang/index.js) and are loaded only when chosen.
 //
 // The page and its scripts keep writing English: English stays the source text everywhere. When another
 // language is chosen, this module swaps each piece of English the page shows (text nodes, and the
@@ -8,12 +9,13 @@
 //
 // The tables translate interface text only. Names that belong to the user (presets, songs, parts,
 // models, cabinets) and the pedal's own words (effect and knob names, menu words such as PRESETS or SAVE)
-// are not in them, so they stay exactly as the pedal shows them.
-import { PT } from './i18n_pt.js?v=1.9.1';
+// are not in them. Elements that show a user's name are marked with data-i18n-skip (see keepName), so a
+// song called "Intro" or "Clean" is never translated either.
+import { LANGUAGES } from './lang/index.js?v=1.9.1';
 
-const TABLES = { pt: PT };
-const LANGS = ['en', 'pt'];
+const LANGS = LANGUAGES.map(l => l.code);
 const KEY = 'frost.lang';
+const tables = new Map();          // language code -> its loaded table
 const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
 const SKIP = 'script, style, textarea, code, pre, [contenteditable], [data-i18n-skip]';
 
@@ -110,33 +112,69 @@ function restore(root) {
   }
 }
 
+
 let titleSource = '';
 function apply() {
-  document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
+  document.documentElement.lang = lang;
   if (lang === 'en') { current = () => null; restore(document.body); if (titleSource) document.title = titleSource; }
-  else { current = makeTranslator(TABLES[lang]); titleSource ||= document.title; document.title = translate(titleSource) ?? titleSource; walk(document.body); }
-  for (const b of document.querySelectorAll('[data-lang]')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  else { current = makeTranslator(tables.get(lang)); titleSource ||= document.title; document.title = translate(titleSource) ?? titleSource; walk(document.body); }
+  for (const s of document.querySelectorAll('select[data-lang-select]')) s.value = lang;
 }
 
-/** The language in use: 'en' or 'pt'. */
+async function load(code) {
+  if (code === 'en' || tables.has(code)) return;
+  const entry = LANGUAGES.find(l => l.code === code);
+  tables.set(code, (await entry.load()).default);
+}
+
+/** The languages this page offers: [{ code, name }], English first. */
+export const languages = () => LANGUAGES.map(({ code, name }) => ({ code, name }));
+
+/** The language in use: a code from lang/index.js ('en', 'pt-BR', ...). */
 export const currentLanguage = () => lang;
 
-/** Choose the interface language; it is remembered in this browser. */
-export function setLanguage(next) {
+/** Choose the interface language; it is remembered in this browser. Resolves once the page shows it. */
+let asked = null;
+export async function setLanguage(next) {
   if (!LANGS.includes(next) || next === lang) return;
-  if (next !== 'en' && lang !== 'en') { lang = 'en'; current = () => null; restore(document.body); }
+  asked = next;
+  await load(next);
+  if (asked !== next) return;                       // another language was chosen meanwhile
+  if (lang !== 'en') { lang = 'en'; current = () => null; restore(document.body); }
   lang = next;
   try { localStorage.setItem(KEY, next); } catch {}
   apply();
 }
 
-/** Start once, after the page is in place: the saved choice, else the browser's language. */
-export function startI18n() {
+/** Mark an element that shows a name the user chose (a song, a preset...), or unmark it when it shows
+ *  interface text again, such as "No preset". Marked elements are never translated. */
+export function keepName(el, own = true) {
+  if (own) el.dataset.i18nSkip = ''; else delete el.dataset.i18nSkip;
+  return el;
+}
+
+// The saved choice (older pages saved 'pt'), else the first of the browser's languages this page has.
+function initial() {
   let saved = null;
   try { saved = localStorage.getItem(KEY); } catch {}
-  const browser = (navigator.languages || [navigator.language || 'en']).some(l => /^pt\b/i.test(l)) ? 'pt' : 'en';
-  lang = LANGS.includes(saved) ? saved : browser;
-  for (const b of document.querySelectorAll('[data-lang]')) b.addEventListener('click', () => setLanguage(b.dataset.lang));
+  if (saved === 'pt') saved = 'pt-BR';
+  if (LANGS.includes(saved)) return saved;
+  for (const want of navigator.languages || [navigator.language || 'en']) {
+    const exact = LANGS.find(c => c.toLowerCase() === String(want).toLowerCase());
+    const base = LANGS.find(c => c.split('-')[0] === String(want).split('-')[0].toLowerCase());
+    if (exact || base) return exact || base;
+  }
+  return 'en';
+}
+
+/** Start once, after the page is in place. Fills every select[data-lang-select] with the languages, each
+ *  named in its own language (never translated). */
+export async function startI18n() {
+  for (const s of document.querySelectorAll('select[data-lang-select]')) {
+    s.replaceChildren(...LANGUAGES.map(({ code, name }) => { const o = document.createElement('option'); o.value = code; o.lang = code; o.textContent = name; o.dataset.i18nSkip = ''; return o; }));
+    s.value = 'en';
+    s.addEventListener('change', () => setLanguage(s.value));
+  }
   // Messages the browser shows by itself (form validation) go through here too.
   const setValidity = HTMLInputElement.prototype.setCustomValidity;
   HTMLInputElement.prototype.setCustomValidity = function (message) { return setValidity.call(this, message ? translate(message) ?? message : message); };
@@ -148,6 +186,6 @@ export function startI18n() {
       else for (const n of m.addedNodes) walk(n);
     }
   }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
-  if (lang !== 'en') apply();
-  else for (const b of document.querySelectorAll('[data-lang]')) b.setAttribute('aria-pressed', String(b.dataset.lang === 'en'));
+  const first = initial();
+  if (first !== 'en') { try { await setLanguage(first); } catch { /* the table could not load: stay in English */ } }
 }
