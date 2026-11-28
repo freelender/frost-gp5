@@ -416,6 +416,12 @@ hold it runs on release; with a double press, 0.4 s after release. A **tap tempo
 press (kind 1, CC 85) always runs on the press, so the tempo is exact; such a
 footswitch has no double press. Other channels than 1 and 16 are still ignored.
 
+A press that edits the chain or the view (the effect switches, tuner, CTL and
+effect controls) waits while the pedal is busy, for example during a preset load,
+and runs once it is idle. A switch (kinds 3 to 5) keeps its parity: pressed twice
+while busy it leaves the effect as it was, three times it switches it once. A fixed
+value (kind 1) runs once however often it was pressed.
+
 ### Two footswitches together
 
 Two neighbouring footswitches pressed together (n and n+1, the second within

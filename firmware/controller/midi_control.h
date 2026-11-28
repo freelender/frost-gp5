@@ -109,7 +109,9 @@ static void fsw_fire(FrostFsw *s,unsigned g)       /* g: 0 tap, 1 double, 2 hold
 {
     const uint8_t *d=s->def+4u*g;unsigned kind=d[0],a=d[1],b=d[2],c=d[3],v;uint8_t p[4];
     if(!fsw_has(s,g) || a>127u)return;
-    if(fsw_waits(kind,a) && !midi_editable()){s->later|=(uint8_t)(1u<<g);return;}
+    /* Busy: run it later. A switch (kinds 3..5) keeps its parity, so pressing it twice during a preset load leaves
+     * the effect as it was instead of switching it once; a fixed value (kind 1) runs once. */
+    if(fsw_waits(kind,a) && !midi_editable()){if(kind>=3u)s->later^=(uint8_t)(1u<<g);else s->later|=(uint8_t)(1u<<g);return;}
     if(kind==5u){fsw_ctl();return;}
     if(kind==2u){p[0]=0x0cu;p[1]=0xc0u;p[2]=(uint8_t)a;p[3]=0;fw_midi_event(p);return;}
     if(kind==3u){

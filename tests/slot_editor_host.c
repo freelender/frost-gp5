@@ -104,6 +104,8 @@ API unsigned ge_midi_bypass(void){return midi_bypass;}
 API unsigned ge_midi_volume(void){return midi_volume;}
 API unsigned ge_midi_tempo(void){return midi_tempo;}
 API unsigned ge_midi_pending(void){return midi_preset;}
+API int ge_midi_editable(void){return midi_editable();}
+API void ge_host_wrote_flash(void){files_host_written=1;files_host_write_ms=now;}   /* as after a USB file write: busy for the store guard */
 API unsigned ge_dsp_global_flags(void){return frost_global_mode;}
 API float ge_bypass_sample(unsigned on,float dry,float wet){float d[64],w[64];unsigned i;frost_global_mode=on?2u:0u;for(i=0;i<64u;++i){d[i]=dry;w[i]=wet;}frost_bypass_blend(d,w);return w[63];}
 API unsigned ge_editable(void){return editor_editable(&editor);}

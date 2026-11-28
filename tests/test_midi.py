@@ -90,6 +90,21 @@ class MidiTests(live_tests.LiveHostTests):
         self.fsw_release(3);self.fsw_wait(400);self.assertEqual(c.ge_midi_bypass(),0)  # no double press on a tap tempo footswitch
         self.fsw_press(3);self.fsw_wait(2000);self.assertEqual(c.ge_midi_bypass(),1)    # the hold still works
         self.fsw_release(3)
+    def test_footswitch_switch_pressed_while_busy_keeps_its_parity(self):
+        """Presses that wait for a busy pedal: a switch pressed twice cancels out, three times switches once;
+        a fixed value runs once (each run when the pedal is idle again)."""
+        c=self.c;BLOCK1=(3,20,0,0);OFF1=(1,20,0,0)
+        self.settle(20);self.fsw_press(0,tap=BLOCK1);self.fsw_release(0);self.settle(40)
+        for presses in (2,3,1,4):
+            start=c.ge_enabled(0)
+            c.ge_host_wrote_flash();self.assertEqual(c.ge_midi_editable(),0)
+            for _ in range(presses):self.fsw_press(0);self.fsw_release(0)
+            self.settle(5);self.assertEqual(c.ge_enabled(0),start)                     # nothing while busy
+            self.fsw_wait(2001);self.settle(40);self.assertEqual(c.ge_midi_editable(),1)
+            self.assertEqual(c.ge_enabled(0),start^(presses&1),presses)
+        c.ge_host_wrote_flash()
+        for _ in range(2):self.fsw_press(0,tap=OFF1);self.fsw_release(0)
+        self.fsw_wait(2001);self.settle(40);self.assertEqual(c.ge_enabled(0),0)
     def test_footswitch_switches_the_preset_ctl_effects(self):
         c=self.c;CTL=(5,0,0,0)
         before=[c.ge_enabled(i) for i in range(6)]
