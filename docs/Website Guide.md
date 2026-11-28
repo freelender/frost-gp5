@@ -392,8 +392,10 @@ choose a nickname and this browser makes its own signing key; the server gives
 each nickname to the first key that uses it. Save your key to a file to keep the
 same name on another computer.
 
-- **Share** a preset, a MODEL or a CAB from its row on the Presets or NAMs & IRs
-  page, or the mix of a looper section from the Looper's Audio tab.
+- **Share** the preset playing now with the button beside its name in the Editor,
+  a preset, a MODEL or a CAB from its row on the Presets or NAMs & IRs page, or
+  pick one under **Or straight from the GP-5** in the publish form. The mix of a
+  looper section is shared from the Looper's Audio tab.
 - **Record over it** opens someone's loop on track 1 of the Looper, with its
   tempo; share your mix and it becomes a reply to that loop.
 - **Use on the GP-5** imports a shared preset, model or cabinet like a file.

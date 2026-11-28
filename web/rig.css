@@ -487,3 +487,8 @@
 .cmmore { display: flex; justify-content: center; }
 .lpjam { font-size: 13px; font-weight: 700; color: var(--blue); }
 @media (max-width: 760px) { .cmform { grid-template-columns: 1fr; } .cmlist { grid-template-columns: 1fr; } }
+/* Share: beside the preset name in the Editor, and "straight from the GP-5" in the publish form */
+.editor-heading .presetnav > .btn.presetshare { width: auto; padding: 0 14px; }
+.cmfrom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+.cmfrom[hidden] { display: none; }
+.cmfrom select { min-width: 260px; max-width: 100%; }

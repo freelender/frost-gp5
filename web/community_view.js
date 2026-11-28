@@ -56,6 +56,7 @@ export class CommunityView {
       <div class="cmme" data-role="me"></div>
       <form class="ctlpanel cmpublish" data-role="publish" hidden novalidate><legend>Share with the community</legend>
         <div class="cmfile"><button class="btn ghost small" type="button" data-role="pick">Choose a file</button><span class="cmfacts" data-role="fileName"></span></div>
+        <label class="cmfrom" data-role="fromRow" hidden><span class="ctllabel">Or straight from the GP-5</span><select data-role="from"></select></label>
         <p class="ctlnote" data-role="fileHint">A preset (.frostpreset, from Presets → Download), an amp model (.nam or .fcm) or a cabinet (.wav). Loops are shared from the Looper page.</p>
         <p class="ctlnote" data-role="replyNote" hidden></p>
         <div class="cmform">
@@ -69,13 +70,14 @@ export class CommunityView {
         <input type="file" hidden data-role="file" accept=".frostpreset,.fcm,.nam,.wav">
       </form>
       <div class="cmtabs" role="tablist" aria-label="Community" data-role="tabs"></div>
-      <div class="cmtools"><input type="search" data-role="search" placeholder="Search by title, nickname or style" aria-label="Search the community"><button class="btn primary small" type="button" data-role="share">Share a file</button></div>
+      <div class="cmtools"><input type="search" data-role="search" placeholder="Search by title, nickname or style" aria-label="Search the community"><button class="btn primary small" type="button" data-role="share">Share</button></div>
       <p class="cmnotice" data-role="notice" hidden></p>
       <div class="cmlist" data-role="list"></div>
       <div class="cmmore"><button class="btn ghost small" type="button" data-role="more" hidden>Show more</button></div>
       <input type="file" hidden data-role="keyFile" accept=".json,application/json">`;
     this.q('share').onclick = () => this.openPublish();
     this.q('pick').onclick = () => this.q('file').click();
+    this.q('from').onchange = e => { const share = this.fromItems?.[e.target.value]; e.target.value = ''; share?.(); };
     this.q('file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) this.takeFile(f); };
     this.q('cancel').onclick = () => this.closePublish();
     this.q('publish').onsubmit = e => { e.preventDefault(); this.submit(); };
@@ -300,7 +302,20 @@ export class CommunityView {
   openPublish() {
     this.pending = null; this.resetForm();
     this.q('publish').hidden = false; this.q('title').focus();
+    this.fillFromPedal();
     this.warnNoNick();
+  }
+  /** The presets, MODELs and CABs on the connected GP-5, to share one without downloading a file first. */
+  fillFromPedal() {
+    const groups = this.hooks.pedalItems?.() || [], s = this.q('from');
+    this.fromItems = [];
+    s.replaceChildren(new Option('Choose a preset, MODEL or CAB…', ''));
+    for (const [label, items] of groups) {
+      const g = document.createElement('optgroup'); g.label = label;
+      for (const [text, share, mine] of items) { const o = new Option(text, String(this.fromItems.length)); if (mine) o.dataset.i18nSkip = ''; this.fromItems.push(share); g.append(o); }
+      s.append(g);
+    }
+    this.q('fromRow').hidden = !this.fromItems.length;
   }
   /** Warn only when this browser really has no signature (the page may still be reading it). */
   async warnNoNick() { if (!(await C.identity())) this.toast('Choose a nickname first.', 'bad'); }
@@ -328,7 +343,7 @@ export class CommunityView {
     this.shown();
     this.resetForm();
     this.pending = { kind: 'loop', blob, name: 'loop.wav', meta: { bpm: meta.bpm, beats: meta.beats, bars: meta.bars, replyTo: meta.replyTo || undefined } };
-    this.q('pick').hidden = true; this.q('fileHint').hidden = true; this.q('keyRow').hidden = false;
+    this.q('pick').hidden = true; this.q('fileHint').hidden = true; this.q('keyRow').hidden = false; this.q('fromRow').hidden = true;
     this.q('fileName').replaceChildren(...['Loop', `${meta.seconds} s`, meta.bpm && `${meta.bpm} BPM`, SIGNATURES[meta.beats]].filter(Boolean).map(t => el('span', '', t)));
     if (meta.replyTo) { this.q('replyNote').hidden = false; this.q('replyNote').textContent = `A reply to "${meta.replyTitle}" by ${meta.replyNick}.`; }
     this.q('title').value = meta.title || '';
