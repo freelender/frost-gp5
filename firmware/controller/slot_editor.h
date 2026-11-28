@@ -90,6 +90,12 @@ static unsigned settings_submenu(unsigned entry){return entry==SE_EQ?SM_EQ:entry
 static unsigned settings_menu_entry(unsigned menu){return menu==SM_EQ?SE_EQ:menu==SM_TAP?SE_TAP:SE_AUDIO+menu-SM_AUDIO;}
 static unsigned settings_menu,settings_pos;
 static unsigned factory_stage,settings_row,settings_dirty,settings_confirm,para_down,para_long,current_preset,last_preset_dirty,boot_load_done;
+/* The website's looper (CC 42 on channel 16, midi_control.h): while the page keeps sending it, the footswitch light
+ * shows the looper instead of the effect. 0 off, 1 loop mode (nothing recording), 2 recording, 3 overdubbing,
+ * 4 playing, 5 waiting for the bar (flashes), 6 drum mode. CC 43 = loop position (0..127), CC 44 = track + 4 * section;
+ * while the state is on, the screen shows the looper over the usual view (render_loop). */
+static unsigned loop_state,loop_pos,loop_info;static uint32_t loop_state_ms;
+#define FROST_LOOP_KEEP_MS 2500u                 /* the page repeats the state every second; silence = looper gone */
 static uint32_t para_down_ms,last_input_ms;
 static uint16_t recall_old_cabs[6];
 static unsigned recall_pending,recall_previous;
@@ -446,8 +452,25 @@ static void render_stage2b(const char *message)
         text(5,72,message?message:(globals.footswitch_ctl?"PARA: FX  FOOT: CTL":"PARA: FX  FOOT: BYPASS"),INK);
     }
 }
+/* The website's looper on the screen: the mode, the state in large letters, the loop's progress, track and section. */
+static unsigned loop_shown(void){return loop_state && (uint32_t)(gp5_ms()-loop_state_ms)<FROST_LOOP_KEEP_MS;}
+static void render_loop(void)
+{
+    static const char *const word[7]={"","READY","REC","DUB","PLAY","COUNT","DRUMS"};
+    uint16_t c=loop_state==2?COLOR(255,48,60):loop_state==3?COLOR(255,150,30):loop_state==4?COLOR(50,230,110):
+               loop_state==5?COLOR(240,240,240):loop_state==6?COLOR(180,80,255):COLOR(70,150,255);
+    char line[24],*q=line;unsigned w=144u*(loop_pos>127u?127u:loop_pos)/127u;
+    rect(0,0,160,80,BG);
+    text_center(4,loop_state==6?"DRUM MODE":"LOOP MODE",INK,1);
+    text_center(17,word[loop_state<7u?loop_state:0u],c,3);
+    rect(8,47,144,8,COLOR(36,40,52));if(w)rect(8,47,(int)w,8,c);
+    {const char *t="TRACK ";while(*t)*q++=*t++;}q=number(q,(loop_info&3u)+1u);
+    {const char *t="  SECTION ";while(*t)*q++=*t++;}*q++=(char)('A'+((loop_info>>2)%3u));*q=0;
+    text_center(64,line,INK,1);
+}
 static void render_popup(void)
 {
+    if(loop_shown()){render_loop();return;}
     const char *title=popup_kind==1?"CHAIN TOO BIG":"DSP LIMIT",*hint="REMOVE AN EFFECT";
     if(tap_mode){
         char line[24],*q=line;
@@ -644,9 +667,16 @@ static unsigned led_colour(unsigned on)
     rgb=frost_category_rgb[frost_type_category(editor.types[selected])];k=on?32u:4u;
     return (unsigned)GP5_LED(((rgb>>16)&255u)*k/255u,((rgb>>8)&255u)*k/255u,(rgb&255u)*k/255u);
 }
+static unsigned loop_light(uint32_t now)
+{
+    static const uint32_t rgb[7]={0u,GP5_LED(0,10,32),GP5_LED(32,0,0),GP5_LED(32,14,0),GP5_LED(0,32,0),GP5_LED(24,24,24),GP5_LED(18,0,32)};
+    if(loop_state==5u && (now/250u)&1u)return GP5_LED(0,0,0);
+    return (unsigned)rgb[loop_state];
+}
 unsigned fw_active(void)
 {
     unsigned on=editor.desired_enabled[selected],slot=tap_mode?tap_slot:selected,beat;uint32_t now;
+    if(loop_state){now=gp5_ms();if((uint32_t)(now-loop_state_ms)<FROST_LOOP_KEEP_MS)return loop_light(now);loop_state=0;}
     if(globals.footswitch_ctl && (view==CHAIN || view==STOMP)){unsigned i;on=0;
         for(i=0;i<6u;++i)if((ctl_mask&(1u<<i)) && editor.types[i]!=FROST_EMPTY && editor.desired_enabled[i])on=1;return led_colour(on);}
     if(!tap_tempo_on())return led_colour(on);                          /* 32u: TAP TEMPO OFF = the usual light */

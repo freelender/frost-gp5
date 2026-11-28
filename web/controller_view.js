@@ -197,12 +197,15 @@ export class ControllerView {
   pressed(d) {
     if (!this.records) return;
     if (d[0] === 0xbf) {                                          // channel 16: a footswitch with Frost gestures
-      const out = this.q('bridge').checked && !this.demo ? this.gp5() : null;
+      const cc = d[1], n = d[2], loop = this.hooks.loop, inLoop = loop?.mode() === 'loop';
+      const press = cc === 28 || cc === 38, foot = (press || cc === 29) && n < 4;
+      const out = !inLoop && this.q('bridge').checked && !this.demo ? this.gp5() : null;   // Loop mode: the looper has them
       if (out) { try { out.send(d); } catch { /* the pedal went away */ } }
-      if ((d[1] === 28 || d[1] === 29 || d[1] === 38) && d[2] < 4) {
-        this.lit[d[2]] = d[1] !== 29;
-        const who = `Footswitch ${SWITCH_NAMES[d[2]]} ${d[1] !== 29 ? 'pressed' : 'released'}`;
-        this.q('last').textContent = out ? `${who}, passed to the GP-5` : who;
+      if (foot) {
+        this.lit[n] = press;
+        const who = `Footswitch ${SWITCH_NAMES[n]} ${press ? 'pressed' : 'released'}`;
+        this.q('last').textContent = inLoop ? `${who}, played on the looper` : out ? `${who}, passed to the GP-5` : who;
+        if (loop) this.loopFoot(cc, n, inLoop);
         this.render();
       }
       return;
@@ -221,6 +224,20 @@ export class ControllerView {
     const who = sw >= 0 ? `Footswitch ${SWITCH_NAMES[sw]} sent ${what}` : `The controller sent ${what}`;
     this.q('last').textContent = out ? `${who}, passed to the GP-5` : who;
     this.render();
+  }
+  /** B+C pressed together (both presses within 0.1 s) switch between Effects and Loop mode. In Loop mode every press goes
+   * to the looper instead of the GP-5; B and C first wait those 0.1 s for each other. */
+  loopFoot(cc, n, inLoop) {
+    const loop = this.hooks.loop, now = performance.now(), w = this.pairWait;
+    if (cc === 38 && (n === 1 || n === 2)) {
+      if (w && w.n === 3 - n && now - w.t <= 100) { clearTimeout(w.timer); this.pairWait = null; loop.toggle(); return; }
+      if (w?.timer) { clearTimeout(w.timer); loop.press(w.n); }
+      this.pairWait = { n, t: now, timer: inLoop ? setTimeout(() => { this.pairWait = null; loop.press(n); }, 100) : null };
+      return;
+    }
+    if (!inLoop) return;
+    if (cc === 29 && w?.n === n && w.timer) { clearTimeout(w.timer); this.pairWait = null; loop.press(n); }
+    if (cc === 28 || cc === 38) loop.press(n); else if (cc === 29) loop.release(n);
   }
   gp5() { return this.hooks.gp5Out?.() || (this.access ? [...this.access.outputs.values()].find(p => GP5.test(p.name)) : null); }
   /** What pressing the selected footswitch would send (as the setup on this page stands), also to the GP-5.

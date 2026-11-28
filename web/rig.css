@@ -329,3 +329,113 @@
 .tourdots span.past { background: var(--muted); }
 .tourdots span.on { background: var(--blue); width: 16px; border-radius: 3px; }
 @media (prefers-reduced-motion: reduce) { .tourhole, .tourcard { transition: none; animation: none; } }
+
+/* ---- Looper page (looper_view.js): four tracks as rings, the mode as a big lit badge ---- */
+.lp { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.lpbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lpmode { all: unset; cursor: pointer; font: 800 15px var(--head); letter-spacing: .18em; padding: 8px 18px; border-radius: 10px; border: 2px solid var(--stroke2); color: var(--muted); background: #0006; }
+.lpmode[data-mode="loop"] { color: #fff; border-color: #ff3b5c; background: #ff3b5c22; box-shadow: 0 0 18px #ff3b5c55; }
+.lpmode:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.lpstatus { font-size: 13px; color: var(--muted); }
+.lpstage { border: 1px solid var(--rig-line); border-radius: 14px; background: radial-gradient(ellipse at 50% 60%, var(--rig-floor), var(--rig-bg) 72%); padding: 16px; display: grid; gap: 14px; }
+.lpmaster { display: flex; align-items: center; gap: 12px; font: 700 13px var(--head); color: var(--ctl-ink, var(--txt)); }
+.lpbeat { flex: 1; height: 6px; border-radius: 3px; background: #ffffff14; overflow: hidden; }
+.lpbeat > div { height: 100%; width: 0; background: var(--blue); }
+.lptracks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lptrack { display: grid; justify-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; border: 1px solid var(--rig-line); background: #0004; cursor: pointer; --c: #5b6774; }
+.lptrack.sel { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue) inset; }
+.lptrack[data-state="rec"] { --c: #ff3b3b; } .lptrack[data-state="dub"] { --c: #ff9a1f; } .lptrack[data-state="play"] { --c: #39e07a; } .lptrack[data-state="stop"] { --c: #8fa5c0; }
+.lpring { width: min(100%, 120px); height: auto; }
+.lpringbg { fill: #0008; stroke: #ffffff18; stroke-width: 7; }
+.lpringfg { fill: none; stroke: var(--c); stroke-width: 7; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.lptrack[data-state="rec"] .lpringbg { stroke: #ff3b3b66; animation: lppulse 1s ease-in-out infinite; }
+@keyframes lppulse { 50% { stroke: #ff3b3bcc; } }
+.lpnum { fill: var(--txt); font: 800 22px var(--head); text-anchor: middle; }
+.lplayers { fill: var(--muted); font: 600 9px var(--head); text-anchor: middle; }
+.lptstate { font: 700 11px var(--head); letter-spacing: .06em; text-transform: uppercase; color: var(--c); text-align: center; }
+.lptrack.muted .lpring { opacity: .35; }
+.lpmeter { width: 80%; height: 4px; border-radius: 2px; background: #ffffff12; overflow: hidden; }
+.lpmeter > div { height: 100%; width: 0; background: var(--c); }
+.lpbtns { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.lpbtns .btn { padding: 0 8px; height: 26px; font-size: 11px; }
+.lpbtns .lprec { background: #ff3b3b; border-color: #ff3b3b; color: #fff; }
+.lpall { display: flex; gap: 8px; justify-content: center; }
+.lpside { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.lptabs { display: none; }
+.lpaudio label { display: grid; gap: 4px; margin: 0 0 8px; font-size: 11px; font-weight: 700; }
+.lpaudio select { height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lpoffset { display: flex; align-items: center; gap: 8px; }
+.lpoffset input { flex: 1; accent-color: var(--blue); height: auto; }
+.lpoffset output { min-width: 54px; font: 700 12px var(--head); }
+.lpcount { min-width: 46px; text-align: center; font: 900 30px/1 var(--head); color: #fff; background: #ff3b3b; border-radius: 10px; padding: 4px 10px; box-shadow: 0 0 18px #ff3b3b88; }
+.lptrack[data-state="count"] { --c: #ffffff; }
+.lptrack[data-state="count"] .lpringbg { stroke: #ffffff55; animation: lppulse 0.5s ease-in-out infinite; }
+.lptemporow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-bottom: 8px; }
+.lptemporow label { display: grid; gap: 4px; margin: 0; font-size: 11px; font-weight: 700; }
+.lptemporow input[type="number"] { width: 72px; height: 32px; }
+.lptemporow select { height: 32px; width: auto; }
+.lptempo .btn { height: 32px; }
+.lpcheck { display: flex !important; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 12px; font-weight: 600; }
+.lpcheck input { width: auto; height: auto; accent-color: var(--blue); }
+.lptempo > label:not(.lpcheck) { display: grid; gap: 4px; font-size: 11px; font-weight: 700; }
+.lptempo input[type="range"] { accent-color: var(--blue); height: auto; }
+.lpmap { width: 100%; border-collapse: collapse; font-size: 12px; }
+.lpmap th, .lpmap td { padding: 5px 6px; border-bottom: 1px solid #ffffff12; text-align: left; vertical-align: top; }
+.lpmap tr:first-child th { font: 700 10px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lpmap tr > th:first-child { font: 800 13px var(--head); width: 22px; }
+.lp.lploop .lpstage { border-color: #ff3b5c88; }
+@media (max-width: 900px) { .lptracks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* On a computer the looper fits the window, like the editor: tracks on the left, one settings tab on the right. */
+#view-looper .heading { margin-bottom: 0; align-items: center; }
+#view-looper .heading h1 { font-size: clamp(24px, 2.4vw, 32px); margin: 0 0 2px; }
+#view-looper .heading .eyebrow { margin-bottom: 4px; }
+#view-looper .heading p { font-size: 13px; line-height: 1.45; }
+@media (min-width: 901px) {
+  .main:has(#view-looper:not([hidden])) { height: 100dvh; }
+  .main:has(#view-looper:not([hidden])) .container { flex: 1; min-height: 0; max-width: none; padding: 12px 18px 14px; display: flex; flex-direction: column; }
+  .main:has(#view-looper:not([hidden])) .footer { padding-top: 8px; }
+  #view-looper:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  #view-looper:not([hidden]) .lp { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(320px, 31%); grid-template-rows: auto minmax(0, 1fr); }
+  #view-looper .lpbar { grid-column: 1 / -1; }
+  #view-looper .lpstage { grid-column: 1; grid-row: 2; min-height: 0; overflow: hidden; align-content: center; padding: 12px; gap: 10px; container-type: size; }
+  #view-looper .lpside { grid-column: 2; grid-row: 2; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  #view-looper .lptabs { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: #0005; border: 1px solid var(--rig-line); }
+  #view-looper .lptabs button { all: unset; cursor: pointer; flex: 1; text-align: center; padding: 6px 8px; border-radius: 7px; font: 700 11px var(--head); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  #view-looper .lptabs button[aria-selected="true"] { background: var(--surface3); color: var(--txt); box-shadow: inset 0 0 0 1px var(--stroke2); }
+  #view-looper .lptabs button:focus-visible { outline: 2px solid var(--blue); }
+  #view-looper .lpside > .ctlpanel { display: none; min-height: 0; overflow: auto; }
+  #view-looper .lpside > .ctlpanel.lpshown { display: block; flex: 1; }
+  #view-looper .lptrack { padding: 8px 6px; gap: 5px; }
+  #view-looper .lpring { width: min(100%, clamp(56px, 34cqh, 200px)); }
+  #view-looper .lpbtns { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; width: 100%; }
+  #view-looper .lpbtns .btn { padding: 0; height: 26px; font-size: 13px; }
+  #view-looper .lpbtns .lprec { grid-column: 1 / -1; height: 28px; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@container (max-height: 330px) { .lpbtns .btn:not(.lprec) { height: 22px; font-size: 11px; } .lpmeter { display: none; } }
+.lptrack.muted [data-cmd="mute"], .lptrack.rev [data-cmd="reverse"] { background: var(--surface3); box-shadow: inset 0 0 0 1px var(--blue); }
+/* Looper: sections, track filter, drum grid */
+.lpsections { display: flex; gap: 6px; justify-content: center; }
+.lpsection { all: unset; cursor: pointer; min-width: 34px; text-align: center; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--rig-line); font: 800 13px var(--head); letter-spacing: .08em; color: var(--muted); background: #0005; }
+.lpsection.used { color: var(--txt); }
+.lpsection[aria-pressed="true"] { border-color: var(--blue); color: var(--txt); box-shadow: 0 0 0 1px var(--blue) inset, 0 0 12px #0000; background: var(--surface3); }
+.lpsection.next { animation: lpnext .5s ease-in-out infinite; }
+@keyframes lpnext { 50% { border-color: var(--ice); color: var(--ice); } }
+.lpsection:disabled { opacity: .4; cursor: default; }
+.lpsection:focus-visible { outline: 2px solid var(--blue); }
+.lptrack.half [data-cmd="half"] { background: var(--surface3); box-shadow: inset 0 0 0 1px var(--blue); }
+.lpcut { width: 86%; height: auto; accent-color: var(--c); margin: 0; }
+.lpmode[data-mode="drums"] { color: #fff; border-color: #b050ff; background: #b050ff22; box-shadow: 0 0 18px #b050ff55; }
+.lpmap caption { text-align: left; font: 700 11px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 0 2px; }
+.lpgrid { display: grid; grid-template-columns: 64px repeat(var(--steps, 16), minmax(0, 1fr)); gap: 2px; margin-top: 8px; align-items: center; }
+.lpgname { font: 600 10px var(--head); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 4px; }
+.lpgname.inset { color: #d9a6ff; }
+.lpstep { all: unset; box-sizing: border-box; cursor: pointer; height: 16px; border-radius: 3px; background: #ffffff10; border: 1px solid #ffffff10; }
+.lpstep.beat { background: #ffffff1c; }
+.lpstep.on { background: var(--blue); border-color: var(--ice); }
+.lpstep.now { box-shadow: 0 0 0 1px var(--txt) inset; }
+.lpstep:focus-visible { outline: 2px solid var(--ice); }
+.lpgridpages { display: flex; gap: 4px; margin-top: 6px; }
+.lptwo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lptwo label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; }
+.lptwo input[type="range"] { accent-color: var(--blue); height: auto; }
+.lpgridpages .btn[aria-pressed="true"] { border-color: var(--blue); color: var(--txt); }

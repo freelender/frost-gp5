@@ -164,6 +164,20 @@ class MidiTests(live_tests.LiveHostTests):
         c.ge_midi(11,0xbf,40,2);self.settle(40);c.ge_midi(11,0xbf,41,3);self.settle(100)   # BLUE, then DIM WHITE; 2 s later
         c.ge_reboot();self.settle()
         self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(2,3))                # saved with the global settings
+    def test_looper_state_shows_on_the_footswitch_light(self):
+        """CC 42 on channel 16 (the website's looper): the light shows its state while the page keeps sending it."""
+        c=self.c;LED=lambda r,g,b:0x01000000|r|(g<<8)|(b<<16)
+        normal=c.ge_led()
+        c.ge_midi(11,0xbf,42,2);self.assertEqual(c.ge_led(),LED(32,0,0))                # recording: red
+        c.ge_midi(11,0xbf,42,3);self.assertEqual(c.ge_led(),LED(32,14,0))               # overdubbing: orange
+        c.ge_midi(11,0xbf,42,4);self.assertEqual(c.ge_led(),LED(0,32,0))                # playing: green
+        c.ge_advance(2000);c.ge_midi(11,0xbf,42,1);c.ge_advance(2000)
+        self.assertEqual(c.ge_led(),LED(0,10,32))                                        # refreshed: still shown
+        c.ge_advance(600);self.assertEqual(c.ge_led(),normal)                           # 2.5 s of silence: back to the effect
+        c.ge_midi(11,0xbf,42,4);c.ge_midi(11,0xbf,42,0);self.assertEqual(c.ge_led(),normal)   # 0: looper off
+        c.ge_midi(11,0xbf,42,9);self.assertEqual(c.ge_led(),normal)                     # unknown state: off
+        c.ge_midi(11,0xbf,42,6);self.assertEqual(c.ge_led(),LED(18,0,32))               # drum mode: purple
+        c.ge_midi(11,0xbf,43,64);c.ge_midi(11,0xbf,44,5);self.settle(3)                 # position and track/section: the screen redraws
     def test_footswitch_control_alternates_two_values(self):
         c=self.c;MIX=(4,32,127,0)
         self.fsw_press(0,tap=MIX);self.fsw_release(0);self.settle(40);first=self.slot(0)['values'][0]

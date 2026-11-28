@@ -447,6 +447,16 @@ colour** (0 to 4), in the order of GLOBAL SETTINGS → DISPLAY → LED ON / LED 
 Frost saves it with the global settings 1.5 s after the last change. The website's
 Controller page uses them for its colour picker.
 
+### The website's looper on the pedal
+
+While the website's looper is in Loop or drum mode it sends, on channel 16,
+**CC 42 = state** (0 off, 1 loop mode, 2 recording, 3 overdubbing, 4 playing,
+5 counting in or waiting for the bar, 6 drum mode), **CC 43 = loop position**
+(0 to 127) and **CC 44 = track + 4 × section**. The footswitch light shows the state
+(blue, red, orange, green, flashing white, purple) and the screen shows a looper
+view over the usual one: the state in large letters, the loop's progress, the
+track and the section. Without a CC 42 for 2.5 s the pedal goes back to normal.
+
 ## Reserved commands and limits
 
 Only the commands documented here have a performance function. Notes, pitch

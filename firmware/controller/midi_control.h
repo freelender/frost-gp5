@@ -203,6 +203,9 @@ static void fsw_midi(unsigned cc,unsigned value,uint32_t now)
         else return;
         led_dirty=1;led_changed_ms=now;++generation;return;
     }
+    if(cc==42u){unsigned v=value<=6u?value:0u;if(v!=loop_state)++generation;loop_state=v;loop_state_ms=now;return;}   /* the website's looper */
+    if(cc==43u){if(value>127u)value=127u;if(144u*value/127u!=144u*loop_pos/127u)++generation;loop_pos=value;return;}  /* its position: redraw when the bar moves */
+    if(cc==44u){if(value!=loop_info)++generation;loop_info=value;return;}                                            /* its track and section */
     if(cc>=16u && cc<=27u){fsw_def[cc-16u]=(uint8_t)value;fsw_got|=1u<<(cc-16u);return;}
     if(cc==30u || cc==31u){fsw_def[cc-16u]=(uint8_t)value;return;}               /* the pair's b and c */
     if(cc>=33u && cc<=37u){fsw_def[12]=(uint8_t)(cc-32u);fsw_def[13]=(uint8_t)value;fsw_got|=0x1000u;return;}

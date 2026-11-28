@@ -357,6 +357,33 @@ subject to the shared byte limit shown on the page. Use the usage indicator
 and validation message when a large library does not fit. There is one active
 setlist on the pedal; exported JSON files can keep alternatives.
 
+## Looper
+
+**Looper** loops with the GP-5 as your USB audio interface: the pedal's USB input
+brings your finished tone (after Frost's effects) and the pedal mixes what the page
+plays into its outputs, so loops keep your sound and you play over them through
+the same amp. Choose **Start audio** with the GP-5 on USB (Chrome, Edge or Opera)
+and pick the GP-5 for input and output.
+
+- Four tracks in sync, with unlimited undo and redo per track, click-free joins
+  and correction of the USB delay (adjust it under Timing correction).
+- Count-in, tap tempo, loops snapped to whole bars and a metronome; new tracks
+  start on the next bar and can be 1, 2, 4 or 8 times the loop.
+- Per track: reverse, half speed, a filter, mute, decay while overdubbing and a
+  fade when stopping.
+- **Sections A, B and C** (verse, chorus, bridge), switched at the end of the loop.
+- A **drum machine**: nine synthesized pieces on a 16-step grid per bar, ready
+  beats (including blues and shuffle with adjustable swing). In **drum mode** the
+  footswitches play the pieces and record the pattern.
+- Export the mix or the tracks as WAV, and save or open the session in this
+  browser.
+
+With the M-VAVE Chocolate Plus set up on the Controller page, **B+C** pressed
+together switch between Effects mode (presses go to the GP-5) and Loop mode (they
+play the looper; loops keep running in Effects mode). Hold **D** in Loop mode for
+drum mode. The GP-5 shows the looper on its footswitch light and screen
+(CC 42 to 44 on channel 16, see [MIDI commands](Midi%20Command.md)).
+
 ## Firmware
 
 Use this page to select a local `.bin`, review its identity/sections and

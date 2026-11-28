@@ -11,6 +11,7 @@ import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_l
 import { startI18n, keepName } from './i18n.js?v=1.9.1';
 import { startSkins } from './skin.js?v=1.9.1';
 import { ControllerView } from './controller_view.js?v=1.9.1';
+import { LooperView } from './looper_view.js?v=1.9.1';
 import { detectFrost } from './onboarding.js?v=1.9.1';
 
 export const VERSION = '1.9.1';
@@ -95,7 +96,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER',firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER', looper: 'LOOPER', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
 let libraryKind = 'amps';
 function show(view, focus = false) {
   const route = libraryRoute(view); view = route.view;
@@ -145,7 +146,16 @@ const setlists = new SetlistView($('setlist-editor'), {
   removed: () => toast('Setlist removed from the pedal.', 'ok'),
   download: (text, name) => save(new TextEncoder().encode(text), name),
 });
-new ControllerView($('controller'), {
+// The looper and the footswitch controller work together: B+C on the controller switch the looper's Loop mode.
+let controller = null;
+const looper = new LooperView($('looper'), {
+  midiOut: () => controller?.gp5() || null,
+  toast: (text, kind) => toast(text, kind),
+  findController: async () => { await controller?.find(); looper.render(); },
+  controllerReady: () => !!controller?.records,
+});
+controller = new ControllerView($('controller'), {
+  loop: { mode: () => looper.mode, toggle: () => looper.toggleMode(), press: sw => looper.press(sw), release: sw => looper.release(sw) },
   presets: () => state.presets,
   chain: () => live.chainState,
   gp5Out: () => state.mode === 'frost' ? state.pedal?.out : null,
