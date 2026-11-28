@@ -6,6 +6,7 @@
 import { CHOC, SWITCH_NAMES, SINGLE, ALTERNATE, HOLD, REPEAT, SHORT_LONG, KINDS, QUICK, QUICK_DEFAULTS, quickSetup, recognize, toMessage, setupOfRecord, recordOfSetup, parseRecord, buildRecord, describe, switchFor, recordAddress, pedalValue, choiceValue, ChocolateLink, SimulatedChocolate, GESTURE_KINDS, gestureRecord, gesturesOf, actionOfQuick, describeAction } from './chocolate.js?v=1.9.1';
 import { loadCatalog, formatValue } from './live.js?v=1.9.1';
 import { Tour } from './tour.js?v=1.9.1';
+import { keepName } from './i18n.js?v=1.9.1';
 
 // Pairs offered on this page (p: footswitches p and p+1 together). The Chocolate Plus keeps A+B and C+D for itself (its
 // E and F keys, which change its group) and sends nothing for them, so only B+C reaches Frost.
@@ -340,7 +341,7 @@ export class ControllerView {
       case 'block': { const e = this.effect(q.block); return [`BLOCK ${q.block}`, e && !e.empty ? e.name : q.hold ? 'while held' : 'on / off']; }
       case 'param': { const p = this.control(q.block, q.knob); return [p ? p.name : `KNOB ${q.knob}`, `${this.valueText(q.block, q.knob, q.value)} / ${this.valueText(q.block, q.knob, q.value2)}`]; }
       case 'scene': return ['SCENE', q.blocks.length ? q.blocks.join(' ') : 'all off'];
-      case 'preset': { const p = this.hooks.presets?.()[q.preset - 1]; return [`PRESET ${pad2(q.preset)}`, p?.name || '']; }
+      case 'preset': { const p = this.hooks.presets?.()[q.preset - 1]; return [`PRESET ${pad2(q.preset)}`, p?.name || '', true]; }   // true: the line under it is a preset name
       case 'shortlong': return [this.commandLabel(q.short), `long: ${this.commandLabel(q.long)}`];
     }
     if (s.mode === SHORT_LONG && s.a.length && s.b.length) return [this.commandLabel(s.a[0]), `long: ${this.commandLabel(s.b[0])}`];
@@ -351,8 +352,8 @@ export class ControllerView {
     const on = !!this.records;
     this.status();
     this.root.querySelectorAll('.ctlfs').forEach((b, i) => {
-      const [plate, sub] = on ? this.plate(i) : ['—', ''];
-      b.querySelector('.ctlplate').textContent = plate; b.querySelector('.ctlsub').textContent = sub;
+      const [plate, sub, own] = on ? this.plate(i) : ['—', ''];
+      b.querySelector('.ctlplate').textContent = plate; keepName(b.querySelector('.ctlsub'), !!own).textContent = sub;
       b.setAttribute('aria-pressed', String(i === this.sel));
       b.setAttribute('aria-label', `Footswitch ${SWITCH_NAMES[i]}: ${plate}${sub ? ' (' + sub + ')' : ''}`);
       b.classList.toggle('lit', this.lit[i] || this.toggled[i]);
@@ -552,7 +553,9 @@ export class ControllerView {
   }
   presetSelect(cur, onchange) {
     const presets = this.hooks.presets?.() || {};
-    return select(Array.from({ length: 60 }, (_, k) => [k + 1, presets[k]?.name ? `${pad2(k + 1)} · ${presets[k].name}` : pad2(k + 1)]), cur, v => onchange(Number(v)));
+    const s = select(Array.from({ length: 60 }, (_, k) => [k + 1, presets[k]?.name ? `${pad2(k + 1)} · ${presets[k].name}` : pad2(k + 1)]), cur, v => onchange(Number(v)));
+    [...s.options].forEach((o, k) => keepName(o, !!presets[k]?.name));   // preset names are never translated
+    return s;
   }
   listEditor(s) {
     const box = el('div', 'ctlcustom');
