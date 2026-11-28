@@ -8,6 +8,9 @@ import { initFirmware, isBusy } from './firmware.js?v=1.9.1';
 import { SetlistView } from './setlist_view.js?v=1.9.1';
 import { simulatedPedal } from './sim.js?v=1.9.1';
 import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.1';
+import { startI18n, keepName } from './i18n.js?v=1.9.1';
+import { startSkins } from './skin.js?v=1.9.1';
+import { ControllerView } from './controller_view.js?v=1.9.1';
 import { detectFrost } from './onboarding.js?v=1.9.1';
 
 export const VERSION = '1.9.1';
@@ -21,10 +24,13 @@ const state = {
   record: null, nam: null, worker: null, cab: null, dirty: false, train: null,
 };
 $('version').textContent = VERSION;
+startI18n();
+startSkins();
 
 // ---------- feedback: status, toasts, banner, dialog ----------
 function status(kind, text) { $('status').dataset.kind = kind; $('status-text').textContent = text; }
 function showStatus() {
+  dispatchEvent(new Event('frost:status'));   // pages that follow the connection (the Controller's light picker)
   if (state.op) return status('busy', state.op === 'firmware' ? 'Installing firmware…' : state.op + '…');
   if (state.mode === 'connecting') return status('busy', 'Connecting…');
   if (state.mode === 'frost') return status('ok', 'Connected · Frost');
@@ -89,7 +95,7 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER',firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
 let libraryKind = 'amps';
 function show(view, focus = false) {
   const route = libraryRoute(view); view = route.view;
@@ -138,6 +144,19 @@ const setlists = new SetlistView($('setlist-editor'), {
   confirm: (title, text, ok, opts) => ask(title, text, ok, opts), exclusive, error: message => notice(message), saved: () => toast('Songs and setlist saved. On the pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST.', 'ok'),
   removed: () => toast('Setlist removed from the pedal.', 'ok'),
   download: (text, name) => save(new TextEncoder().encode(text), name),
+});
+new ControllerView($('controller'), {
+  presets: () => state.presets,
+  chain: () => live.chainState,
+  gp5Out: () => state.mode === 'frost' ? state.pedal?.out : null,
+  toast: (text, kind) => toast(text, kind),
+  // The GP-5 footswitch light, as GLOBAL SETTINGS -> DISPLAY stores it (bytes 24/25 of glb-0: choice + 1, 0 = default).
+  ledColours: async () => {
+    if (state.mode !== 'frost' || !state.store) return null;
+    let group = null;
+    const ok = await exclusive('Reading the footswitch light', async () => { group = await state.store.readGroup('glb', 0); }, async () => {});
+    return ok ? { on: group?.[24] ? group[24] - 1 : 0, off: group?.[25] ? group[25] - 1 : 0 } : null;
+  },
 });
 async function connect() {
   if (state.checking || state.mode === 'connecting') return;
@@ -254,11 +273,11 @@ const offlineText = () => state.mode === 'demo' ? 'The demo has no storage. Conn
 function list(ul, rows, empty) {
   ul.textContent = '';
   if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = empty; ul.appendChild(li); return; }
-  for (const { tag, name, sub, buttons, current } of rows) {
+  for (const { tag, name, sub, buttons, current, own } of rows) {   // own: the name is one the user chose
     const li = document.createElement('li'); if (current) { li.className = 'current'; li.setAttribute('aria-current', 'true'); }
     const icon = document.createElement('div'); icon.className = 'libicon'; icon.textContent = tag;
     const info = document.createElement('div'); info.className = 'info';
-    const b = document.createElement('b'); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
+    const b = keepName(document.createElement('b'), own); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
     info.append(b, s);
     const btns = document.createElement('div'); btns.className = 'btns';
     for (const [label, cls, fn, aria, off] of buttons) {
@@ -346,7 +365,7 @@ async function renameStored(kind, index) {
 }
 function renderAmps() {
   const all = Object.keys(state.models), idx = matchingSlots(state.models, $('amp-search').value);
-  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', sub: `MODEL ${pad2(i)}`, buttons: [
+  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', own: !!state.models[i].label, sub: `MODEL ${pad2(i)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('amp', i), `Rename MODEL ${pad2(i)}`],
     ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
     ['Remove', 'danger', async () => {
@@ -451,7 +470,7 @@ $('amp-write').onclick = async () => {
 // ---------- cabinets ----------
 function renderCabs() {
   const all = Object.keys(state.cabs), idx = matchingSlots(state.cabs, $('cab-search').value, 1);
-  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, sub: `CAB ${pad2(i + 1)}`, buttons: [
+  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, own: true, sub: `CAB ${pad2(i + 1)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('ir', i), `Rename CAB ${pad2(i + 1)}`],
     ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
     ['Remove', 'danger', async () => {
@@ -504,6 +523,7 @@ function presetStep(dir) {
 function renderPresetNav() {
   const nav = $('preset-nav'), on = !!state.store && live.attached, cur = state.current, p = cur != null ? state.presets[cur] : null;
   nav.hidden = !on; if (!on) return;
+  keepName($('preset-nav-name'), !!(cur != null && cur < PRESETS && p?.name));
   $('preset-nav-name').textContent = cur != null && cur < PRESETS ? `${pad2(cur + 1)} · ${p ? p.name || '(no name)' : 'empty'}` : 'No preset';
   const none = !Object.keys(state.presets).length || !!state.op;
   $('preset-prev').disabled = $('preset-next').disabled = none;
@@ -522,7 +542,7 @@ function pickRender() {
     li.className = (i === state.current ? 'current' : '') + (k === pick.active ? ' active' : '');
     li.setAttribute('aria-selected', i === state.current);
     const n = document.createElement('span'); n.className = 'picknum'; n.textContent = pad2(i + 1);
-    const t = document.createElement('span'); t.className = 'pickname'; t.textContent = state.presets[i].name || '(no name)';
+    const t = document.createElement('span'); t.className = 'pickname'; keepName(t, !!state.presets[i].name); t.textContent = state.presets[i].name || '(no name)';
     li.append(n, t);
     if (i === state.current) { const m = document.createElement('span'); m.className = 'pickmark'; m.textContent = 'playing'; li.append(m); }
     li.onclick = () => pickChoose(i);
@@ -564,7 +584,7 @@ function renderPresets() {
   const q = ($('preset-search').value || '').trim().toLowerCase(), s = state.store;
   const all = Object.keys(state.presets).map(Number).sort((a, b) => a - b);
   const idx = all.filter(i => !q || (state.presets[i].name || '').toLowerCase().includes(q) || pad2(i + 1).includes(q) || String(i + 1) === q);
-  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', sub: `Preset ${pad2(i + 1)} · ${i === state.current ? 'playing now' : 'saved on the pedal'}`, current: i === state.current, buttons: [
+  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', own: !!state.presets[i].name, sub: `Preset ${pad2(i + 1)} · ${i === state.current ? 'playing now' : 'saved on the pedal'}`, current: i === state.current, buttons: [
     ['Load', 'primary', () => loadPreset(i), `Load preset ${pad2(i + 1)}`],
     ['↑', 'ghost', () => movePreset(i, -1), `Move preset ${pad2(i + 1)} up`, i === 0],
     ['↓', 'ghost', () => movePreset(i, 1), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],

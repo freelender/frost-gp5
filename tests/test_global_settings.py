@@ -44,7 +44,7 @@ class GlobalSettingsTests(unittest.TestCase):
                 settings_nav.turn_to(c,pos);rows[top].append(c.ge_settings_row())
         N=settings_nav
         self.assertEqual(rows[0][:4]+rows[0][5:],[N.IN_GAIN,N.OUT_LEVEL,N.OUT_MODE,N.CAB]+([N.DIRECT_MONITOR] if hasattr(c,"ge_monitor_now") else [])+[N.BACK])
-        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.FOOTSWITCH,N.BACK])
+        self.assertEqual(rows[1],[N.HOME,N.BRIGHT,N.SETLIST_HOLD,N.FOOTSWITCH,N.LED_ON,N.LED_OFF,N.BACK])
         self.assertEqual(rows[2],[N.TAP_TEMPO,N.TAP_NOTE,N.TAP_TARGET,N.TEMPO_LIGHT,N.BACK])
         self.assertEqual(rows[3],[N.FIRMWARE,N.VERSION]+([N.BLUETOOTH] if hasattr(c,"ge_bluetooth_now") else [])+[N.RESET,N.FACTORY,N.BACK])
         c.ge_press();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,3))   # BACK -> top, on SYSTEM
@@ -58,6 +58,29 @@ class GlobalSettingsTests(unittest.TestCase):
         self.assertEqual(c.ge_view(),SETTINGS);self.assertEqual(c.ge_paint(),0)
         c.ge_foot();self.settle();self.assertEqual(c.ge_view(),CHAIN)
         self.open_settings();self.assertEqual((c.ge_settings_menu(),c.ge_settings_pos()),(0,0))   # reopens at the top
+    def test_footswitch_led_colours(self):
+        """DISPLAY -> LED ON / LED OFF: mint and dim red by default (the platform's own lights), a chosen colour
+        otherwise; the value being edited shows on the footswitch; the choice survives a restart; RESET SETTINGS
+        brings back the defaults; EFFECT follows the selected effect's colour."""
+        c=self.lib;N=settings_nav;LED=lambda r,g,b:0x01000000|r|(g<<8)|(b<<16)
+        on=c.ge_led()
+        self.assertIn(on,(0,1))                                    # default: dim red (0) or mint (1)
+        self.open_settings();self.go_row(N.LED_ON);c.ge_press();c.ge_turn(2)    # MINT -> GREEN -> BLUE
+        self.assertEqual(c.ge_led(),LED(0,6,32))                   # shown on the footswitch while choosing
+        c.ge_press();self.go_row(N.LED_OFF);c.ge_press();c.ge_turn(1)           # DIM RED -> DARK
+        self.assertEqual(c.ge_led(),LED(0,0,0))
+        c.ge_press();self.leave()
+        self.assertEqual(c.ge_led(),LED(0,6,32) if on else LED(0,0,0))
+        c.ge_foot();self.settle()                                  # the footswitch turns the selected effect the other way
+        self.assertEqual(c.ge_led(),LED(0,0,0) if on else LED(0,6,32))
+        c.ge_reboot();self.settle()
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(2,1))
+        self.open_settings();self.go_row(N.LED_ON);c.ge_press();c.ge_turn(-3)   # BLUE -> MINT -> EFFECT (wraps)
+        self.assertEqual(c.ge_led_choice(0),10);effect=c.ge_led()
+        self.assertTrue(effect&0x01000000 and effect not in (LED(0,6,32),1))
+        c.ge_press();self.leave()
+        self.open_settings();self.go_row(RESET);c.ge_press();c.ge_turn(1);c.ge_press();self.settle()
+        self.assertEqual((c.ge_led_choice(0),c.ge_led_choice(1)),(0,0))
     def test_long_press_opens_settings_short_press_still_edits(self):
         c=self.lib;c.ge_press();self.assertEqual(c.ge_view(),PARAMS)
         c.ge_turn(c.ge_row_total()-2);c.ge_press();self.assertEqual(c.ge_view(),CHAIN)    # BACK row returns home

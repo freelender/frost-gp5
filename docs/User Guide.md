@@ -545,6 +545,8 @@ and exits.
 | DISPLAY | BRIGHTNESS | Adjust screen brightness |
 | DISPLAY | FOOTSWITCH | SELECTED (default): selected-block behavior. CTL: tap toggles the current preset’s CTL-enabled effects on Chain/Stomp |
 | DISPLAY | SETLIST HOLD | Choose previous part or tuner for a Setlist footswitch hold |
+| DISPLAY | LED ON | Footswitch light while the selected effect is on: MINT (default), GREEN, BLUE, ICE, PURPLE, PINK, RED, ORANGE, YELLOW, WHITE, or EFFECT (the colour of the selected effect's category). The footswitch shows the colour while you choose it |
+| DISPLAY | LED OFF | Footswitch light while the selected effect is off: DIM RED (default), DARK, DIM BLUE, DIM WHITE or DIM EFFECT. Both can also be chosen on the website's Controller page |
 | TAP TEMPO | TAP TEMPO | OFF (default): usual footswitch. ON: on a delay or modulation effect, taps set the tempo and a hold switches it on/off; the light flashes on the beat |
 | TAP TEMPO | TAP NOTE | The note a tap sets: 1/4 (default), DOTTED 1/8 or 1/8. Also applies to MIDI tap and MIDI Clock |
 | TAP TEMPO | TAP TARGET | SELECTED (default): a footswitch tap sets the selected effect. GLOBAL: it sets every tempo effect in the chain |
