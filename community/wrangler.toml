@@ -1,0 +1,28 @@
+# Cloudflare Worker of the Frost community (see README.md in this folder).
+name = "frost-community"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# The database: items, authors, reports. Create it with
+#   npx wrangler d1 create frost-community
+# and paste the database_id it prints here.
+[[d1_databases]]
+binding = "DB"
+database_name = "frost-community"
+database_id = "PASTE-THE-D1-DATABASE-ID"
+
+# The files. Without a card on the account, Workers KV:
+#   npx wrangler kv namespace create frost-files
+# and paste the id here. With R2 turned on, use the [[r2_buckets]] block below instead.
+[[kv_namespaces]]
+binding = "KV"
+id = "PASTE-THE-KV-NAMESPACE-ID"
+
+#   npx wrangler r2 bucket create frost-files
+# [[r2_buckets]]
+# binding = "FILES"
+# bucket_name = "frost-files"
+
+[vars]
+# The website the public pages link back to (the "Open" button and ?item= links).
+SITE_URL = "https://freelender.github.io/frost-gp5/"

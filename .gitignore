@@ -30,3 +30,7 @@ model_bank.h
 model_bank.json
 fast_model.h
 .DS_Store
+
+# Community: local test data (community/dev.mjs)
+/community/.local/
+/community/.wrangler/

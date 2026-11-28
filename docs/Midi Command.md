@@ -382,11 +382,80 @@ Frost is a USB MIDI **device**, not a USB host. DIN/TRS MIDI controllers need
 a host/bridge that routes USB MIDI to it. Frost receives BLE MIDI from a
 connected client when SYSTEM → BLUETOOTH is ON. Direct Bluetooth pairing with the Chocolate Plus has not been verified;
 stock Valeton pairing/SysEx instructions do not establish Frost compatibility.
-USB MIDI receives cable 0, channel 1 only; BLE MIDI uses channel 1 too. Other
-channels are ignored.
+USB MIDI receives cable 0, channel 1; BLE MIDI uses channel 1 too. Channel 16
+carries [footswitch gestures](#footswitch-gestures-press-double-press-and-hold).
+Other channels are ignored.
 There is no MIDI learn, channel menu, outgoing MIDI clock or parameter feedback
 in this version. Do not route the GP-5's own outgoing control messages back
 to its input; that can create feedback.
+
+## Footswitch gestures: press, double press and hold
+
+A controller can give each footswitch three actions: a **press**, a **double press**
+(a second press within 0.4 s) and a **hold** (2 s). The website's **Controller** page
+sets this up on an M-VAVE Chocolate Plus; any controller that can send several
+messages per press can do the same. Frost recognises the gestures, so they work
+on stage with the controller plugged straight into the GP-5.
+
+The controller sends on **MIDI channel 16**: when a footswitch goes down, the twelve
+bytes that describe its actions as CC 16 to 27, then **CC 28 = n** (footswitch
+number 0 to 15); when it comes up, **CC 29 = n**. Nothing is stored in the pedal.
+The twelve bytes are three actions (press, double press, hold) of four bytes each:
+
+| Kind (first byte) | Then | Runs |
+|---|---|---|
+| 0 | — | nothing |
+| 1 | CC, value | that CC on channel 1 |
+| 2 | program | that program change (preset) |
+| 3 | CC | a switch the pedal toggles from its own state: 86 tuner, 90 bypass all, 20 to 25 the effect at that chain position |
+| 4 | CC, value A, value B | that CC with A and B in turn |
+| 5 | — | the current preset's CTL effects, each switched the other way (as the GP-5's own footswitch in FOOTSWITCH CTL) |
+
+A press runs at once when the footswitch has no double press and no hold. With a
+hold it runs on release; with a double press, 0.4 s after release. A **tap tempo**
+press (kind 1, CC 85) always runs on the press, so the tempo is exact; such a
+footswitch has no double press. Other channels than 1 and 16 are still ignored.
+
+A press that edits the chain or the view (the effect switches, tuner, CTL and
+effect controls) waits while the pedal is busy, for example during a preset load,
+and runs once it is idle. A switch (kinds 3 to 5) keeps its parity: pressed twice
+while busy it leaves the effect as it was, three times it switches it once. A fixed
+value (kind 1) runs once however often it was pressed.
+
+### Two footswitches together
+
+Two neighbouring footswitches pressed together (n and n+1, the second within
+0.1 s of the first) run a fourth action instead of their own: A+B, B+C and C+D on a
+four-switch controller. Footswitch n carries that pair's action, after its twelve
+bytes and before its press: **CC 30 = value**, **CC 31 = value B** (each left out
+when 0), then **CC 32+kind = CC or program** (kind 1 to 5, as in the table above).
+A footswitch that belongs to a pair, its own or its left neighbour's, reports its
+press as **CC 38 = n** instead of CC 28. Frost then waits 0.1 s for the neighbour
+before running that footswitch's own press; a tap tempo still runs exactly 0.1 s
+after every press, so its spacing is kept. A footswitch then sends at most 16
+messages per press.
+
+On the M-VAVE Chocolate Plus the Controller page offers **B+C** only: the
+controller keeps A+B and C+D for itself (they change its group) and sends
+nothing for them.
+
+### Footswitch light colours
+
+Also on channel 16, **CC 40 = LED ON colour** (0 to 10) and **CC 41 = LED OFF
+colour** (0 to 4), in the order of GLOBAL SETTINGS → DISPLAY → LED ON / LED OFF
+(0 is mint and dim red, the defaults). The footswitch shows the colour at once;
+Frost saves it with the global settings 1.5 s after the last change. The website's
+Controller page uses them for its colour picker.
+
+### The website's looper on the pedal
+
+While the website's looper is in Loop or drum mode it sends, on channel 16,
+**CC 42 = state** (0 off, 1 loop mode, 2 recording, 3 overdubbing, 4 playing,
+5 counting in or waiting for the bar, 6 drum mode), **CC 43 = loop position**
+(0 to 127) and **CC 44 = track + 4 × section**. The footswitch light shows the state
+(blue, red, orange, green, flashing white, purple) and the screen shows a looper
+view over the usual one: the state in large letters, the loop's progress, the
+track and the section. Without a CC 42 for 2.5 s the pedal goes back to normal.
 
 ## Reserved commands and limits
 
