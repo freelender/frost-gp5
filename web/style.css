@@ -1002,8 +1002,9 @@ label {
 }
 .library li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 12px 0;
   border-bottom: 1px solid #263a51;
 }
@@ -1023,7 +1024,7 @@ label {
   font: 700 12px var(--head);
 }
 .library .info {
-  flex: 1;
+  flex: 1 1 180px;   /* the name keeps its room; the buttons go to the next line when they do not fit */
   min-width: 0;
 }
 .library .info b {
@@ -1042,6 +1043,7 @@ label {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
 }
 .library .empty {
   display: block;

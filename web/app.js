@@ -179,6 +179,7 @@ community = new CommunityView($('community'), {
   toast: (text, kind) => toast(text, kind),
   ask: (title, text, ok, opts) => ask(title, text, ok, opts),
   jam: (item, url) => { go('looper'); looper.loadJam(item, url); },
+  pedalItems: () => pedalItems(),
   use: (kind, file) => {
     if (kind === 'preset') {
       if (!state.store) { toast('Connect the GP-5 to import this preset.', 'bad'); return; }
@@ -389,6 +390,25 @@ function shareStored(what, read, bytes, file) {
 }
 /** A file from the pedal goes to the Community page's publish form, with its name as the title. */
 function shareFile(file, title) { go('community'); community.startPublishFile(file, title); }
+/** Share a preset as it is saved on the pedal (the same file Download makes). */
+function sharePreset(i) {
+  return exclusive('Reading a preset', async () => {
+    const p = await state.store.presetFile(i);
+    shareFile(new File([JSON.stringify(p, null, 1)], `frost-preset-${pad2(i + 1)}-${slug(p.name, 'preset')}.frostpreset`), p.name);
+  }, async () => {});
+}
+const shareModel = i => shareStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`);
+const shareCab = i => shareStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`);
+/** What the Community page offers to share straight from the pedal: [group, [[label, share(), own name]]]. */
+function pedalItems() {
+  if (!state.store) return [];
+  const keys = o => Object.keys(o).map(Number).sort((a, b) => a - b);
+  return [
+    ['Presets', keys(state.presets).map(i => [`${pad2(i + 1)} · ${state.presets[i].name || '(no name)'}`, () => sharePreset(i), !!state.presets[i].name])],
+    ['MODELs', keys(state.models).map(i => [`MODEL ${pad2(i)} · ${state.models[i].label || '(no name)'}`, () => shareModel(i), !!state.models[i].label])],
+    ['CABs', keys(state.cabs).map(i => [`CAB ${pad2(i + 1)} · ${state.cabs[i].label}`, () => shareCab(i), true])],
+  ].filter(([, items]) => items.length);
+}
 async function renameStored(kind, index) {
   const store = state.store, entry = (kind === 'amp' ? state.models : state.cabs)[index];
   if (!store || !entry || state.op || isBusy()) return;
@@ -407,7 +427,7 @@ function renderAmps() {
   list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', own: !!state.models[i].label, sub: `MODEL ${pad2(i)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('amp', i), `Rename MODEL ${pad2(i)}`],
     ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
-    ['Share', 'ghost', () => shareStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Share MODEL ${pad2(i)} with the community`],
+    ['Share', 'ghost', () => shareModel(i), `Share MODEL ${pad2(i)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove MODEL ${pad2(i)}?`, `"${state.models[i].label}" is deleted from the pedal. An AMP block set to it plays the default model.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing MODEL ${pad2(i)}`, () => state.store.ampRemove(i))) toast(`MODEL ${pad2(i)} removed.`, 'ok');
@@ -513,7 +533,7 @@ function renderCabs() {
   list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, own: true, sub: `CAB ${pad2(i + 1)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('ir', i), `Rename CAB ${pad2(i + 1)}`],
     ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
-    ['Share', 'ghost', () => shareStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Share CAB ${pad2(i + 1)} with the community`],
+    ['Share', 'ghost', () => shareCab(i), `Share CAB ${pad2(i + 1)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove CAB ${pad2(i + 1)}?`, `"${state.cabs[i].label}" is deleted from the pedal. IR blocks set to it play the built-in cabinet until it is filled again.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing CAB ${pad2(i + 1)}`, () => state.store.irRemove(i))) toast(`CAB ${pad2(i + 1)} removed.`, 'ok');
@@ -569,6 +589,7 @@ function renderPresetNav() {
   const none = !Object.keys(state.presets).length || !!state.op;
   $('preset-prev').disabled = $('preset-next').disabled = none;
   $('preset-nav-open').disabled = !!state.op;
+  $('preset-share').disabled = !!state.op || cur == null || !p;
   if (!pick.el.hidden) { if (state.op) pickOpen(false); else pickRender(); }
 }
 // Preset picker: the live editor's preset name opens a searchable list; one click loads.
@@ -610,6 +631,7 @@ pick.search.onkeydown = e => {
 document.addEventListener('pointerdown', e => { if (!pick.el.hidden && !$('preset-nav').contains(e.target)) pickOpen(false); });
 $('preset-prev').onclick = () => { const i = presetStep(-1); if (i != null) loadPreset(i); };
 $('preset-next').onclick = () => { const i = presetStep(1); if (i != null) loadPreset(i); };
+$('preset-share').onclick = () => { if (state.current != null && state.presets[state.current]) sharePreset(state.current); };
 $('preset-search').oninput = () => renderPresets();
 /** Move preset i by d (-1 up, +1 down): the list changes at once, the pedal follows. */
 function movePreset(i, d) {
@@ -635,10 +657,7 @@ function renderPresets() {
       save(new TextEncoder().encode(JSON.stringify(p, null, 1)), `frost-preset-${pad2(i + 1)}-${slug(name, 'preset')}.frostpreset`);
       toast(`Preset ${pad2(i + 1)} downloaded${extra.length ? ' with ' + extra.join(' and ') : ''}.`, 'ok');
     }, async () => {}), `Download preset ${pad2(i + 1)}`],
-    ['Share', 'ghost', () => exclusive('Reading a preset', async () => {
-      const p = await s.presetFile(i);
-      shareFile(new File([JSON.stringify(p, null, 1)], `frost-preset-${pad2(i + 1)}-${slug(p.name, 'preset')}.frostpreset`), p.name);
-    }, async () => {}), `Share preset ${pad2(i + 1)} with the community`],
+    ['Share', 'ghost', () => sharePreset(i), `Share preset ${pad2(i + 1)} with the community`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
       if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)), refreshPresets)) toast('Preset renamed.', 'ok');
