@@ -487,3 +487,17 @@
 .cmmore { display: flex; justify-content: center; }
 .lpjam { font-size: 13px; font-weight: 700; color: var(--blue); }
 @media (max-width: 760px) { .cmform { grid-template-columns: 1fr; } .cmlist { grid-template-columns: 1fr; } }
+
+/* ---- First-visit welcome (welcome.js) */
+dialog.welcome { max-width: 860px; width: calc(100vw - 32px); border: 1px solid var(--rig-line); border-radius: 18px; padding: 26px 28px; background: var(--surface); color: var(--txt); }
+dialog.welcome::backdrop { background: #000b; backdrop-filter: blur(3px); }
+.welcomehead { display: flex; gap: 18px; align-items: center; }
+.welcomehead h2 { margin: 0 0 4px; font: 800 26px var(--head); }
+.welcomehead p { margin: 0; color: var(--muted); }
+.welcomegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 20px 0 12px; }
+.welcomegrid article { border: 1px solid var(--stroke2); border-radius: 14px; padding: 12px 14px; background: #ffffff06; }
+.welcomegrid h3 { margin: 0 0 6px; font: 800 16px var(--head); color: var(--blue); }
+.welcomegrid p { margin: 0; font-size: 14px; line-height: 1.5; }
+.welcomenote { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+.welcomeactions { display: flex; justify-content: flex-end; gap: 10px; }
+@media (max-width: 760px) { .welcomegrid { grid-template-columns: 1fr; } .welcomehead { flex-direction: column; align-items: flex-start; } }

@@ -13,6 +13,7 @@ import { startSkins } from './skin.js?v=1.9.1';
 import { ControllerView } from './controller_view.js?v=1.9.1';
 import { LooperView } from './looper_view.js?v=1.9.1';
 import { CommunityView } from './community_view.js?v=1.9.1';
+import { startWelcome } from './welcome.js?v=1.9.1';
 import { detectFrost } from './onboarding.js?v=1.9.1';
 
 export const VERSION = '1.9.1';
@@ -186,6 +187,7 @@ community = new CommunityView($('community'), {
   },
 });
 if (!$('view-community').hidden) community.shown();
+startWelcome(go);   // first visit: what Frost and OpenGP5 are, and the tour of the site
 async function connect() {
   if (state.checking || state.mode === 'connecting') return;
   if (state.op || isBusy()) { toast('Wait until the running operation finishes.', 'bad'); return; }

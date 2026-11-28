@@ -64,6 +64,11 @@ The main navigation has **Editor**, **NAMs & IRs**, **Presets** and
 NAMs & IRs combines captures and cabinets in one library; use its
 **Amp models / Cabinet IRs** switch to choose which list to manage.
 
+The first time the site opens, a welcome explains what Frost and OpenGP5 are;
+**Let's start** runs a guided tour that opens every page and shows what it is for,
+down to installing and updating the firmware. **Tutorial**, under About & credits,
+runs the tour again; it never changes anything on the pedal.
+
 The **language** menu beside the status (🌐) chooses the interface language:
 English, the default, or Brazilian Portuguese. It starts in your browser's
 language when the site has it, and your choice is remembered in this browser.
