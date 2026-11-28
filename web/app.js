@@ -273,11 +273,11 @@ const offlineText = () => state.mode === 'demo' ? 'The demo has no storage. Conn
 function list(ul, rows, empty) {
   ul.textContent = '';
   if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = empty; ul.appendChild(li); return; }
-  for (const { tag, name, sub, buttons, current, own } of rows) {
+  for (const { tag, name, sub, buttons, current, own } of rows) {   // own: the name is one the user chose
     const li = document.createElement('li'); if (current) { li.className = 'current'; li.setAttribute('aria-current', 'true'); }
     const icon = document.createElement('div'); icon.className = 'libicon'; icon.textContent = tag;
     const info = document.createElement('div'); info.className = 'info';
-    const b = keepName(document.createElement('b'), own); b.textContent = name;   // own: a name the user chose const s = document.createElement('small'); s.textContent = sub;
+    const b = keepName(document.createElement('b'), own); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
     info.append(b, s);
     const btns = document.createElement('div'); btns.className = 'btns';
     for (const [label, cls, fn, aria, off] of buttons) {
