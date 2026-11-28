@@ -149,6 +149,7 @@ export async function setLanguage(next) {
 /** Mark an element that shows a name the user chose (a song, a preset...), or unmark it when it shows
  *  interface text again, such as "No preset". Marked elements are never translated. */
 export function keepName(el, own = true) {
+  if (!el.dataset) return el;                      // not a page element (a test double)
   if (own) el.dataset.i18nSkip = ''; else delete el.dataset.i18nSkip;
   return el;
 }

@@ -2,6 +2,7 @@
 // 7E 20 save in slot_editor.h): the pedal's
 // editor does the work, so the pedal screen, SAVE and the DSP stay in sync.
 // effects.json is generated from the firmware catalog (tools/export_effects.py).
+import { keepName } from './i18n.js?v=1.9.1';
 const EMPTY = 255;
 let catalog = null;
 export async function loadCatalog() {
@@ -330,7 +331,7 @@ export class LiveView {
     if(this.ui.addFile)sel.add(new Option('Add a model…','add'));
     const show=()=>{
       const models=this.ui.models?.() || {}, options=sel.options || sel.children;
-      for(let i=0;i<=63;i++)options[i].text=`${String(i).padStart(2,'0')} · ${models[i]?.label || (i===0?'Built-in default':'Empty — default fallback')}`;
+      for(let i=0;i<=63;i++){options[i].text=`${String(i).padStart(2,'0')} · ${models[i]?.label || (i===0?'Built-in default':'Empty — default fallback')}`;keepName(options[i],!!models[i]?.label);}
     };
     show();sel.value=value;
     sel.addEventListener('sync',()=>{value=Number(sel.value);show();});
@@ -345,11 +346,11 @@ export class LiveView {
     row.append(el('span','inputlabel','CAB'),sel,status);sel.dataset.cab='1';
     sel.setAttribute('aria-label','CAB');
     sel.add(new Option('00 · Built in',0));const cabs=this.ui.cabs?.() || {};
-    for(let i=1;i<=63;i++)sel.add(new Option(`${String(i).padStart(2,'0')} · ${cabs[i-1]?.label || (cab.number===i && cab.exists?cab.name:'Empty — built-in fallback')}`,i));
+    for(let i=1;i<=63;i++)sel.add(keepName(new Option(`${String(i).padStart(2,'0')} · ${cabs[i-1]?.label || (cab.number===i && cab.exists?cab.name:'Empty — built-in fallback')}`,i),!!(cabs[i-1]?.label || (cab.number===i && cab.exists))));
     if(this.ui.addFile)sel.add(new Option('Add a cabinet…','add'));
     const show=c=>{
       const latest=this.ui.cabs?.() || {}, options=sel.options || sel.children;
-      for(let i=1;i<=63;i++)options[i].text=`${String(i).padStart(2,'0')} · ${latest[i-1]?.label || (c.number===i && c.exists?c.name:'Empty — built-in fallback')}`;
+      for(let i=1;i<=63;i++){options[i].text=`${String(i).padStart(2,'0')} · ${latest[i-1]?.label || (c.number===i && c.exists?c.name:'Empty — built-in fallback')}`;keepName(options[i],!!(latest[i-1]?.label || (c.number===i && c.exists)));}
       cab=c;sel.value=c.number;status.textContent=c.override?'Cabinet bypassed: CAB OVERRIDE is on in pedal settings.':c.busy?'Loading cabinet…':c.error?'Cabinet unavailable — using built in.':!c.exists?'Empty cabinet slot — using built in.':'Cabinet choice is saved with the preset.';
     };
     show(cab);this.cabSync=show;
