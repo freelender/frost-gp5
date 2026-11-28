@@ -439,3 +439,51 @@
 .lptwo label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; }
 .lptwo input[type="range"] { accent-color: var(--blue); height: auto; }
 .lpgridpages .btn[aria-pressed="true"] { border-color: var(--blue); color: var(--txt); }
+.lpjam { font-size: 13px; font-weight: 700; color: var(--blue); }
+
+/* ---- Community page */
+.cm { display: grid; gap: 12px; }
+.cmme { border: 1px solid var(--rig-line); border-radius: 14px; padding: 12px 14px; background: var(--surface); display: grid; gap: 8px; }
+.cmintro { margin: 0; color: var(--muted); font-size: 14px; }
+.cmrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cmrow input { min-width: 200px; }
+.cmlabel { font-size: 13px; color: var(--muted); }
+.cmnick { font: 800 16px var(--head); }
+.cmhint { font-size: 12px; color: var(--muted); }
+.cmcode { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: baseline; }
+.cmcode code { user-select: all; color: var(--txt); }
+.cmpublish { display: grid; gap: 10px; }
+.cmfile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 700; }
+.cmform { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cmform label { display: grid; gap: 4px; }
+.cmform .cmwide { grid-column: 1 / -1; }
+.cmform textarea { resize: vertical; font: inherit; }
+.cmtabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmtabs button { all: unset; cursor: pointer; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--stroke2); font: 700 13px var(--head); color: var(--muted); }
+.cmtabs button[aria-selected="true"] { border-color: var(--blue); color: var(--txt); background: #ffffff0d; }
+.cmtabs button:focus-visible { outline: 2px solid var(--focus, var(--ice)); }
+.cmtools { display: flex; gap: 10px; align-items: center; }
+.cmtools input[type="search"] { flex: 1; min-width: 0; }
+.cmtools input[hidden] { display: none; }
+.cmtools input[hidden] + .btn { margin-left: auto; }
+.cmnotice { margin: 0; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--warn); color: var(--txt); }
+.cmlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+.cmempty { color: var(--muted); grid-column: 1 / -1; }
+.cmshared { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.cmcard { border: 1px solid var(--rig-line); border-radius: 14px; padding: 12px 14px; background: var(--surface); display: grid; gap: 6px; }
+.cmhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cmkind { font: 800 11px var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--blue); border: 1px solid var(--blue); border-radius: 99px; padding: 1px 8px; }
+.cmtitle { margin: 0; font: 800 16px var(--head); overflow-wrap: anywhere; }
+.cmby { font-size: 13px; color: var(--muted); }
+.cmby b { color: var(--txt); }
+.cmfacts { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 13px; }
+.cmfacts span + span::before { content: '·'; margin: 0 7px; color: var(--muted); }
+.cmnote { margin: 0; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--txt); }
+.cmreasons { margin: 0; font-size: 12px; color: var(--warn); }
+.cmactions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.cmactions .cmreport { margin-left: auto; opacity: .75; }
+.cmreplies { display: grid; gap: 8px; margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--stroke2); }
+.cmreply { background: transparent; padding: 8px 10px; }
+.cmmore { display: flex; justify-content: center; }
+.lpjam { font-size: 13px; font-weight: 700; color: var(--blue); }
+@media (max-width: 760px) { .cmform { grid-template-columns: 1fr; } .cmlist { grid-template-columns: 1fr; } }

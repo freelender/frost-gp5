@@ -35,6 +35,10 @@ class WebModuleTests(unittest.TestCase):
         subprocess.run(['node',str(ROOT/'tests/js/looper.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
 
     @unittest.skipUnless(shutil.which('node'),'Node.js needed')
+    def test_community_server(self):
+        subprocess.run(['node',str(ROOT/'tests/js/community.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
+
+    @unittest.skipUnless(shutil.which('node'),'Node.js needed')
     def test_interface_language_tables(self):
         subprocess.run(['node',str(ROOT/'tests/js/i18n.mjs')],cwd=ROOT,check=True,capture_output=True,text=True)
 

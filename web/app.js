@@ -12,6 +12,7 @@ import { startI18n, keepName } from './i18n.js?v=1.9.1';
 import { startSkins } from './skin.js?v=1.9.1';
 import { ControllerView } from './controller_view.js?v=1.9.1';
 import { LooperView } from './looper_view.js?v=1.9.1';
+import { CommunityView } from './community_view.js?v=1.9.1';
 import { detectFrost } from './onboarding.js?v=1.9.1';
 
 export const VERSION = '1.9.1';
@@ -96,8 +97,9 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER', looper: 'LOOPER', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER', looper: 'LOOPER', community: 'COMMUNITY', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
 let libraryKind = 'amps';
+let community = null;   // the Community page reads its list the first time it is shown
 function show(view, focus = false) {
   const route = libraryRoute(view); view = route.view;
   if (route.kind) libraryKind = route.kind;
@@ -109,6 +111,7 @@ function show(view, focus = false) {
     $('models-tab-' + kind).setAttribute('aria-pressed', libraryKind === kind);
   }
   $('breadcrumb').textContent = 'STUDIO / ' + TITLES[view];
+  if (view === 'community') community?.shown();
   if (focus) $('content').focus({ preventScroll: true });
 }
 const go = view => { if (location.hash !== '#' + view) location.hash = view; else show(view); };
@@ -153,6 +156,7 @@ const looper = new LooperView($('looper'), {
   toast: (text, kind) => toast(text, kind),
   findController: async () => { await controller?.find(); looper.render(); },
   controllerReady: () => !!controller?.records,
+  share: (blob, meta) => { go('community'); community.startPublish(blob, meta); },
 });
 controller = new ControllerView($('controller'), {
   loop: { mode: () => looper.mode, toggle: () => looper.toggleMode(), press: sw => looper.press(sw), release: sw => looper.release(sw) },
@@ -168,6 +172,20 @@ controller = new ControllerView($('controller'), {
     return ok ? { on: group?.[24] ? group[24] - 1 : 0, off: group?.[25] ? group[25] - 1 : 0 } : null;
   },
 });
+// The Community page: a loop opens in the Looper to be recorded over; a preset, amp model or cabinet goes through the
+// same import as a file chosen on the Presets or NAMs & IRs page.
+community = new CommunityView($('community'), {
+  toast: (text, kind) => toast(text, kind),
+  ask: (title, text, ok, opts) => ask(title, text, ok, opts),
+  jam: (item, url) => { go('looper'); looper.loadJam(item, url); },
+  use: (kind, file) => {
+    if (kind === 'preset') {
+      if (!state.store) { toast('Connect the GP-5 to import this preset.', 'bad'); return; }
+      go('presets'); importPresetFile(file);
+    } else { go('models'); takeLibraryFile(file); }
+  },
+});
+if (!$('view-community').hidden) community.shown();
 async function connect() {
   if (state.checking || state.mode === 'connecting') return;
   if (state.op || isBusy()) { toast('Wait until the running operation finishes.', 'bad'); return; }
@@ -360,6 +378,15 @@ function downloadStored(what, read, bytes, file) {
     save(bytes(r), file(recordLabel(r))); toast(`${what} downloaded.`, 'ok');
   }, async () => {});
 }
+/** Read one stored AMP model or cabinet and open it on the Community page, ready to publish. */
+function shareStored(what, read, bytes, file) {
+  return exclusive(`Reading ${what}`, async () => {
+    const r = await read(); if (!r) throw new Error(`${what} could not be read`);
+    const label = recordLabel(r); shareFile(new File([bytes(r)], file(label)), label);
+  }, async () => {});
+}
+/** A file from the pedal goes to the Community page's publish form, with its name as the title. */
+function shareFile(file, title) { go('community'); community.startPublishFile(file, title); }
 async function renameStored(kind, index) {
   const store = state.store, entry = (kind === 'amp' ? state.models : state.cabs)[index];
   if (!store || !entry || state.op || isBusy()) return;
@@ -378,6 +405,7 @@ function renderAmps() {
   list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', own: !!state.models[i].label, sub: `MODEL ${pad2(i)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('amp', i), `Rename MODEL ${pad2(i)}`],
     ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
+    ['Share', 'ghost', () => shareStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Share MODEL ${pad2(i)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove MODEL ${pad2(i)}?`, `"${state.models[i].label}" is deleted from the pedal. An AMP block set to it plays the default model.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing MODEL ${pad2(i)}`, () => state.store.ampRemove(i))) toast(`MODEL ${pad2(i)} removed.`, 'ok');
@@ -483,6 +511,7 @@ function renderCabs() {
   list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, own: true, sub: `CAB ${pad2(i + 1)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('ir', i), `Rename CAB ${pad2(i + 1)}`],
     ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
+    ['Share', 'ghost', () => shareStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Share CAB ${pad2(i + 1)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove CAB ${pad2(i + 1)}?`, `"${state.cabs[i].label}" is deleted from the pedal. IR blocks set to it play the built-in cabinet until it is filled again.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing CAB ${pad2(i + 1)}`, () => state.store.irRemove(i))) toast(`CAB ${pad2(i + 1)} removed.`, 'ok');
@@ -604,6 +633,10 @@ function renderPresets() {
       save(new TextEncoder().encode(JSON.stringify(p, null, 1)), `frost-preset-${pad2(i + 1)}-${slug(name, 'preset')}.frostpreset`);
       toast(`Preset ${pad2(i + 1)} downloaded${extra.length ? ' with ' + extra.join(' and ') : ''}.`, 'ok');
     }, async () => {}), `Download preset ${pad2(i + 1)}`],
+    ['Share', 'ghost', () => exclusive('Reading a preset', async () => {
+      const p = await s.presetFile(i);
+      shareFile(new File([JSON.stringify(p, null, 1)], `frost-preset-${pad2(i + 1)}-${slug(p.name, 'preset')}.frostpreset`), p.name);
+    }, async () => {}), `Share preset ${pad2(i + 1)} with the community`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
       if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)), refreshPresets)) toast('Preset renamed.', 'ok');
@@ -650,8 +683,10 @@ function importOptions(a) {
     return [n, `${a.kind} ${pad2(n)} · ${what}`];
   });
 }
-$('import-file').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f || !state.store) return;
+$('import-file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; importPresetFile(f); };
+/** Import a .frostpreset file (chosen here or shared on the Community page) into the preset number chosen on this page. */
+async function importPresetFile(f) {
+  if (!f || !state.store) return;
   let file;
   try { file = parsePresetFile(await f.text()); } catch (err) { toast(`${f.name}: ${err.message}`, 'bad'); return; }
   const i = Number($('import-slot').value), old = state.presets[i], name = file.name;
@@ -679,7 +714,7 @@ $('import-file').onchange = async e => {
   const placed = items.map((a, k) => `${a.kind} ${pad2(picked[k])}`);
   if (await exclusive('Importing a preset', () => state.store.presetImport(i, file, models, cabs), items.length ? refreshAll : refreshPresets))
     toast(`"${name}" is now preset ${pad2(i + 1)}${placed.length ? ' (' + placed.join(', ') + ')' : ''}.`, 'ok');
-};
+}
 function save(bytes, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $('backup').onclick = () => exclusive('Backing up', async () => {
   $('backup-state').textContent = 'Reading everything from the pedal…';

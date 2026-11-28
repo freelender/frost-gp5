@@ -5,6 +5,7 @@
 // play the looper); holding D in Loop mode enters drum mode, where A, B and C play drums. Loops keep running in Effects
 // mode, so you can change presets and come back to overdub. Sections (A, B, C), a drum machine, track effects, WAV
 // export and a saved session complete it. The GP-5 shows the looper on its light and screen (CC 42-44 on channel 16).
+// A loop from the Community page opens on track 1 to be recorded over, and the mix is shared back as a reply.
 import { TRACKS, FOOT_MAP, DRUM_MAP, PIECES, DRUM_PAGES } from './looper_engine.js?v=1.9.1';
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -45,13 +46,14 @@ function wav(chs, rate) {
 function download(blob, name) { const a = el('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
 
 export class LooperView {
-  /** hooks: midiOut() -> MIDIOutput of the GP-5 or null, toast(text, kind), findController(), controllerReady() */
+  /** hooks: midiOut() -> MIDIOutput of the GP-5 or null, toast(text, kind), findController(), controllerReady(),
+   *  share(blob, meta) opens the Community page to publish the mix. */
   constructor(root, hooks) {
     this.root = root; this.hooks = hooks; this.mode = 'effects';
     this.ctx = null; this.node = null; this.stream = null; this.state = null; this.ledSent = -1; this.lat = null; this.screenAt = 0; this.screenSent = '';
     this.offset = Number(localStorage.getItem(OFFSET_KEY) || 0) || 0;
     try { this.tempo = { ...TEMPO_DEFAULT, ...JSON.parse(localStorage.getItem(TEMPO_KEY) || '{}') }; } catch { this.tempo = { ...TEMPO_DEFAULT }; }
-    this.taps = []; this.gridPage = 0; this.waiting = {};
+    this.taps = []; this.gridPage = 0; this.waiting = {}; this.jam = null; this.jamWanted = null;
     this.build(); this.render();
     setInterval(() => this.keepLight(), 1000);
   }
@@ -61,6 +63,7 @@ export class LooperView {
       <div class="lpbar">
         <button class="lpmode" type="button" data-role="mode" aria-live="polite"></button>
         <span class="lpstatus" data-role="status" role="status"></span>
+        <span class="lpjam" data-role="jam" hidden></span>
         <span class="ctlgap"></span>
         <button class="btn ghost small" type="button" data-role="find">Find controller</button>
         <button class="btn primary small" type="button" data-role="audio">Start audio</button>
@@ -113,6 +116,9 @@ export class LooperView {
           <label><span class="ctllabel">GP-5 output (loops)</span><select data-role="out"></select></label>
           <label><span class="ctllabel">Timing correction</span><span class="lpoffset"><input type="range" min="-40" max="40" step="1" data-role="offset"><output data-role="offsetv"></output></span></label>
           <p class="ctlnote" data-role="latency"></p>
+          <div class="lptemporow">
+            <button class="btn primary small" type="button" data-role="shareMix" title="Publish the mix of this section on the Community page, where others can hear it and record over it">Share the mix with the community</button>
+          </div>
           <div class="lptemporow">
             <button class="btn ghost small" type="button" data-role="exportMix">Export the mix (WAV)</button>
             <button class="btn ghost small" type="button" data-role="exportTracks">Export the tracks (WAV)</button>
@@ -175,6 +181,7 @@ export class LooperView {
     this.q('drumVol').oninput = e => this.send({ cmd: 'drumVol', v: Number(e.target.value) });
     this.q('exportMix').onclick = () => this.exportAudio(true);
     this.q('exportTracks').onclick = () => this.exportAudio(false);
+    this.q('shareMix').onclick = () => this.shareMix();
     this.q('save').onclick = () => this.ask({ cmd: 'save' }, 'session', async s => { await idbPut('ultima', s); this.hooks.toast?.('Session saved in this browser.', 'ok'); });
     this.q('open').onclick = async () => {
       const s = await idbGet('ultima').catch(() => null);
@@ -259,11 +266,13 @@ export class LooperView {
       this.send({ cmd: 'tempo', ...this.tempo });
       this.sendLatency(); setTimeout(() => this.sendLatency(), 1000);   // Chrome reports the output latency once it runs
       this.render();
+      if (this.jamWanted) this.applyJam();
     } catch (e) { await this.stopAudio(true); this.hooks.toast?.(e.message || String(e), 'bad'); this.render(); }
   }
   receive(data) {
     if (data.state) {
       this.state = data.state;
+      if (this.jam && data.state.sections && !data.state.sections.some(x => x.used)) this.jam = null;   // cleared: no longer a reply
       if (data.state.bpm && data.state.bpm !== this.tempo.bpm) { this.tempo.bpm = data.state.bpm; try { localStorage.setItem(TEMPO_KEY, JSON.stringify(this.tempo)); } catch { /* private */ } this.showTempo(); }
       this.render(); this.keepLight(); this.sendScreen();
     }
@@ -291,6 +300,43 @@ export class LooperView {
       if (!out) { this.hooks.toast?.('Every track of this section is muted.', 'bad'); return; }
       download(wav(out, x.rate), `${name}-mix.wav`);
     });
+  }
+  // ---- the community: share the mix, and open someone's loop to record over it
+  shareMix() {
+    this.ask({ cmd: 'export' }, 'exported', x => {
+      const out = LooperView.mixOf(x);
+      if (!out) { this.hooks.toast?.('Nothing recorded in this section yet.', 'bad'); return; }
+      const bpm = this.state?.bpm || this.tempo.bpm, beats = this.tempo.beats, bar = bpm ? 60 / bpm * x.rate * beats : 0, j = this.jam;
+      this.hooks.share?.(wav(out, x.rate), { bpm, beats, bars: bar ? Math.max(1, Math.round(out[0].length / bar)) : null, seconds: Math.round(out[0].length / x.rate * 10) / 10,
+        replyTo: j?.id, replyTitle: j?.title, replyNick: j?.nick, title: j ? `Re: ${j.title}`.slice(0, 60) : '' });
+    });
+  }
+  /** A loop from the Community page: it replaces this section's tracks, on track 1, with its tempo, and plays. */
+  loadJam(it, url) {
+    this.jamWanted = { it, url };
+    if (!this.ctx) { this.hooks.toast?.(`Start the audio to open "${it.title}".`); this.render(); return; }
+    this.applyJam();
+  }
+  async applyJam() {
+    const { it, url } = this.jamWanted; this.jamWanted = null;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('The loop could not be downloaded. Try again.');
+      const buf = await this.ctx.decodeAudioData(await res.arrayBuffer());
+      const L = buf.getChannelData(0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L;
+      const tracks = Array.from({ length: TRACKS }, () => null); tracks[0] = { mix: [L, R], mult: 1 };
+      const empty = { len: 0, tracks: [] };
+      const session = { rate: this.ctx.sampleRate, bpm: it.bpm || 0, beats: it.beats || this.tempo.beats, cur: 0, sections: [{ len: L.length, drum: { bars: 1 }, tracks }, empty, empty] };
+      this.ask({ cmd: 'restore', session }, 'restored', ok => {
+        if (!ok) { this.hooks.toast?.('This loop could not be opened.', 'bad'); return; }
+        this.jam = { id: it.id, title: it.title, nick: it.nick };
+        if (it.bpm) this.tempo.bpm = it.bpm;
+        if (it.beats) this.tempo.beats = it.beats;
+        this.saveTempo(); this.send({ cmd: 'play', track: 0 });
+        this.hooks.toast?.(`"${it.title}" is on track 1. Record your part on another track, then share it from the Audio tab.`, 'ok');
+        this.render();
+      });
+    } catch (e) { this.hooks.toast?.(e.message || 'This loop could not be opened.', 'bad'); }
   }
   async stopAudio(quiet) {
     const ctx = this.ctx; this.ctx = null; this.node = null; this.state = null;
@@ -377,6 +423,9 @@ export class LooperView {
     this.q('find').hidden = !!ready;
     this.q('status').textContent = !this.ctx ? 'Audio off. Plug the GP-5 in by USB and choose Start audio.'
       : this.warn || (ready ? 'Ready. Press B+C together on the controller for Loop mode.' : 'Ready. Find the controller to play the looper with your feet, or use the buttons.');
+    const jam = this.q('jam'), j = this.jamWanted?.it || this.jam;
+    jam.hidden = !j;
+    if (j) jam.textContent = this.jamWanted ? `Start the audio to open "${j.title}" by ${j.nick}` : `Recording over "${j.title}" by ${j.nick}`;
     this.q('offsetv').textContent = `${this.offset > 0 ? '+' : ''}${this.offset} ms`;
     this.q('latency').textContent = this.lat ? `Measured delay: in ${this.lat.in.toFixed(1)} ms, out ${this.lat.out.toFixed(1)} ms.` : '';
     this.q('length').textContent = s?.count ? 'Count-in' : s?.len ? `Loop ${s.len.toFixed(2)} s` : s?.recording ? `Recording ${s.recording.toFixed(1)} s` : 'No loop yet';

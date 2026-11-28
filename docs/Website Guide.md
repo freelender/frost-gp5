@@ -384,6 +384,26 @@ play the looper; loops keep running in Effects mode). Hold **D** in Loop mode fo
 drum mode. The GP-5 shows the looper on its footswitch light and screen
 (CC 42 to 44 on channel 16, see [MIDI commands](Midi%20Command.md)).
 
+## Community
+
+**Community** shares loops, presets, amp models and cabinets between GP-5
+players, with the name of who made each one. There is no account: the first time,
+choose a nickname and this browser makes its own signing key; the server gives
+each nickname to the first key that uses it. Save your key to a file to keep the
+same name on another computer.
+
+- **Share** a preset, a MODEL or a CAB from its row on the Presets or NAMs & IRs
+  page, or the mix of a looper section from the Looper's Audio tab.
+- **Record over it** opens someone's loop on track 1 of the Looper, with its
+  tempo; share your mix and it becomes a reply to that loop.
+- **Use on the GP-5** imports a shared preset, model or cabinet like a file.
+- Every item has a public page that plays in any browser, with a **Report**
+  button: a report hides the item at once until a moderator reviews it. The
+  first upload of each nickname waits for a moderator's approval.
+
+The server is a small Cloudflare Worker in [community/](../community/README.md)
+(free plan); the page uses the address set in `web/community.js`.
+
 ## Firmware
 
 Use this page to select a local `.bin`, review its identity/sections and

@@ -181,19 +181,19 @@ const back = new LoopEngine(RATE, 2); assert.equal(back.restore(saved), true);
 assert.equal(back.len, 500); near(back.tracks[0].mix[0][300], e.tracks[0].mix[0][300], 'restored');
 assert.equal(new LoopEngine(44100, 2).restore(saved), false, 'another sample rate is refused');
 
-// ---- A loop opened as a session with its audio on track 1: it plays from its start, a new take goes on another track
-// at the same length, and the exported mix sums them.
+// ---- A community loop: the page opens it as a session with the audio on track 1 (as LooperView.applyJam builds it),
+// it plays from its start, a new take goes on another track at the same length, and the shared mix sums them.
 const { LooperView } = await import(new URL(`looper_view.js?v=${version}`, root));
 const L = Float32Array.from({ length: 400 }, (_, i) => (i + 1) / 1000), R = L.map(v => -v);
 const jam = { rate: RATE, bpm: 92, beats: 4, cur: 0, sections: [{ len: 400, drum: { bars: 1 }, tracks: [{ mix: [L, R], mult: 1 }, null, null, null] }, { len: 0, tracks: [] }, { len: 0, tracks: [] }] };
 e = new LoopEngine(RATE, 2); e.setLatency(IN, OUT); run(e, 50);
 assert.equal(e.restore(jam), true); assert.equal(e.len, 400); assert.equal(e.bpm, 92); assert.equal(e.trackState(0), 'stop');
 e.play(0); const jamOut = run(e, e.t + 800);   // the second pass is at full volume
-assert.ok(jamOut.some(v => Math.abs(v - L[100]) < 1e-6) && jamOut.some(v => Math.abs(v - L[300]) < 1e-6), 'the opened loop plays');
+assert.ok(jamOut.some(v => Math.abs(v - L[100]) < 1e-6) && jamOut.some(v => Math.abs(v - L[300]) < 1e-6), 'the community loop plays');
 e.record(1); run(e, e.t + 400, sig); e.record(1);
 assert.equal(e.tracks[1].layers[0][0].length, 400, 'a take over it has its length');
 const mix = LooperView.mixOf(e.exportTracks());
-assert.equal(mix[0].length, 400); near(mix[1][10], R[10] + e.tracks[1].mix[1][10], 'the exported mix sums the tracks');
+assert.equal(mix[0].length, 400); near(mix[1][10], R[10] + e.tracks[1].mix[1][10], 'the shared mix sums the tracks');
 e.mute(0); near(LooperView.mixOf(e.exportTracks())[0][10], e.tracks[1].mix[0][10], 'a muted track is left out');
 
-console.log('Looper engine: latency, overdub alignment, layers, reverse, tracks, count-in, bars, tap tempo, gestures, bar starts, 2x tracks, half speed, decay, sections, drums, swing, drum mode, export, sessions and opened loops checked');
+console.log('Looper engine: latency, overdub alignment, layers, reverse, tracks, count-in, bars, tap tempo, gestures, bar starts, 2x tracks, half speed, decay, sections, drums, swing, drum mode, export, sessions and community loops checked');
