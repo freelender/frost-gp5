@@ -202,6 +202,35 @@ select {
   align-items: center;
   gap: 12px;
 }
+/* Interface language (i18n.js): a small menu beside the status, English by default. */
+.lang {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--stroke2);
+  border-radius: 30px;
+  color: var(--muted);
+}
+.langicon { font-size: 12px; line-height: 1; }
+.lang select {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 7px 6px;
+  border: 0;
+  background: transparent;
+  color: #8acdf0;
+  cursor: pointer;
+}
+.lang select option { color: #e8f1f8; background: #0f1c28; }
+.lang:focus-within { outline: 2px solid #8acdf0; outline-offset: 1px; }
+.lang select:focus-visible { outline: none; }
+@media (max-width: 760px) {
+  .topright { flex-wrap: wrap; gap: 8px; }
+}
 .container {
   width: 100%;
   max-width: 1400px;
@@ -973,8 +1002,9 @@ label {
 }
 .library li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 12px 0;
   border-bottom: 1px solid #263a51;
 }
@@ -994,7 +1024,7 @@ label {
   font: 700 12px var(--head);
 }
 .library .info {
-  flex: 1;
+  flex: 1 1 180px;   /* the name keeps its room; the buttons go to the next line when they do not fit */
   min-width: 0;
 }
 .library .info b {
@@ -1013,6 +1043,7 @@ label {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
 }
 .library .empty {
   display: block;

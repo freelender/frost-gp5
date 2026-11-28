@@ -8,6 +8,11 @@ import { initFirmware, isBusy } from './firmware.js?v=1.9.1';
 import { SetlistView } from './setlist_view.js?v=1.9.1';
 import { simulatedPedal } from './sim.js?v=1.9.1';
 import { libraryRoute, fileKind, matchingSlots, useLibraryFile } from './model_library.js?v=1.9.1';
+import { startI18n, keepName } from './i18n.js?v=1.9.1';
+import { startSkins } from './skin.js?v=1.9.1';
+import { ControllerView } from './controller_view.js?v=1.9.1';
+import { LooperView } from './looper_view.js?v=1.9.1';
+import { CommunityView } from './community_view.js?v=1.9.1';
 import { detectFrost } from './onboarding.js?v=1.9.1';
 
 export const VERSION = '1.9.1';
@@ -21,10 +26,13 @@ const state = {
   record: null, nam: null, worker: null, cab: null, dirty: false, train: null,
 };
 $('version').textContent = VERSION;
+startI18n();
+startSkins();
 
 // ---------- feedback: status, toasts, banner, dialog ----------
 function status(kind, text) { $('status').dataset.kind = kind; $('status-text').textContent = text; }
 function showStatus() {
+  dispatchEvent(new Event('frost:status'));   // pages that follow the connection (the Controller's light picker)
   if (state.op) return status('busy', state.op === 'firmware' ? 'Installing firmware…' : state.op + '…');
   if (state.mode === 'connecting') return status('busy', 'Connecting…');
   if (state.mode === 'frost') return status('ok', 'Connected · Frost');
@@ -89,8 +97,9 @@ function ask(title, text, ok = 'OK', { danger = false, input = null, selects = n
 }
 
 // ---------- navigation ----------
-const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
+const TITLES = { live: 'EDITOR', models: 'NAMS & IRS', presets: 'PRESETS', setlists: 'SETLISTS', controller: 'CONTROLLER', looper: 'LOOPER', community: 'COMMUNITY', firmware: 'FIRMWARE', about: 'ABOUT & CREDITS' };
 let libraryKind = 'amps';
+let community = null;   // the Community page reads its list the first time it is shown
 function show(view, focus = false) {
   const route = libraryRoute(view); view = route.view;
   if (route.kind) libraryKind = route.kind;
@@ -102,6 +111,7 @@ function show(view, focus = false) {
     $('models-tab-' + kind).setAttribute('aria-pressed', libraryKind === kind);
   }
   $('breadcrumb').textContent = 'STUDIO / ' + TITLES[view];
+  if (view === 'community') community?.shown();
   if (focus) $('content').focus({ preventScroll: true });
 }
 const go = view => { if (location.hash !== '#' + view) location.hash = view; else show(view); };
@@ -139,6 +149,44 @@ const setlists = new SetlistView($('setlist-editor'), {
   removed: () => toast('Setlist removed from the pedal.', 'ok'),
   download: (text, name) => save(new TextEncoder().encode(text), name),
 });
+// The looper and the footswitch controller work together: B+C on the controller switch the looper's Loop mode.
+let controller = null;
+const looper = new LooperView($('looper'), {
+  midiOut: () => controller?.gp5() || null,
+  toast: (text, kind) => toast(text, kind),
+  findController: async () => { await controller?.find(); looper.render(); },
+  controllerReady: () => !!controller?.records,
+  share: (blob, meta) => { go('community'); community.startPublish(blob, meta); },
+});
+controller = new ControllerView($('controller'), {
+  loop: { mode: () => looper.mode, toggle: () => looper.toggleMode(), press: sw => looper.press(sw), release: sw => looper.release(sw) },
+  presets: () => state.presets,
+  chain: () => live.chainState,
+  gp5Out: () => state.mode === 'frost' ? state.pedal?.out : null,
+  toast: (text, kind) => toast(text, kind),
+  // The GP-5 footswitch light, as GLOBAL SETTINGS -> DISPLAY stores it (bytes 24/25 of glb-0: choice + 1, 0 = default).
+  ledColours: async () => {
+    if (state.mode !== 'frost' || !state.store) return null;
+    let group = null;
+    const ok = await exclusive('Reading the footswitch light', async () => { group = await state.store.readGroup('glb', 0); }, async () => {});
+    return ok ? { on: group?.[24] ? group[24] - 1 : 0, off: group?.[25] ? group[25] - 1 : 0 } : null;
+  },
+});
+// The Community page: a loop opens in the Looper to be recorded over; a preset, amp model or cabinet goes through the
+// same import as a file chosen on the Presets or NAMs & IRs page.
+community = new CommunityView($('community'), {
+  toast: (text, kind) => toast(text, kind),
+  ask: (title, text, ok, opts) => ask(title, text, ok, opts),
+  jam: (item, url) => { go('looper'); looper.loadJam(item, url); },
+  pedalItems: () => pedalItems(),
+  use: (kind, file) => {
+    if (kind === 'preset') {
+      if (!state.store) { toast('Connect the GP-5 to import this preset.', 'bad'); return; }
+      go('presets'); importPresetFile(file);
+    } else { go('models'); takeLibraryFile(file); }
+  },
+});
+if (!$('view-community').hidden) community.shown();
 async function connect() {
   if (state.checking || state.mode === 'connecting') return;
   if (state.op || isBusy()) { toast('Wait until the running operation finishes.', 'bad'); return; }
@@ -254,11 +302,11 @@ const offlineText = () => state.mode === 'demo' ? 'The demo has no storage. Conn
 function list(ul, rows, empty) {
   ul.textContent = '';
   if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = empty; ul.appendChild(li); return; }
-  for (const { tag, name, sub, buttons, current } of rows) {
+  for (const { tag, name, sub, buttons, current, own } of rows) {   // own: the name is one the user chose
     const li = document.createElement('li'); if (current) { li.className = 'current'; li.setAttribute('aria-current', 'true'); }
     const icon = document.createElement('div'); icon.className = 'libicon'; icon.textContent = tag;
     const info = document.createElement('div'); info.className = 'info';
-    const b = document.createElement('b'); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
+    const b = keepName(document.createElement('b'), own); b.textContent = name; const s = document.createElement('small'); s.textContent = sub;
     info.append(b, s);
     const btns = document.createElement('div'); btns.className = 'btns';
     for (const [label, cls, fn, aria, off] of buttons) {
@@ -331,6 +379,34 @@ function downloadStored(what, read, bytes, file) {
     save(bytes(r), file(recordLabel(r))); toast(`${what} downloaded.`, 'ok');
   }, async () => {});
 }
+/** Read one stored AMP model or cabinet and open it on the Community page, ready to publish. */
+function shareStored(what, read, bytes, file) {
+  return exclusive(`Reading ${what}`, async () => {
+    const r = await read(); if (!r) throw new Error(`${what} could not be read`);
+    const label = recordLabel(r); shareFile(new File([bytes(r)], file(label)), label);
+  }, async () => {});
+}
+/** A file from the pedal goes to the Community page's publish form, with its name as the title. */
+function shareFile(file, title) { go('community'); community.startPublishFile(file, title); }
+/** Share a preset as it is saved on the pedal (the same file Download makes). */
+function sharePreset(i) {
+  return exclusive('Reading a preset', async () => {
+    const p = await state.store.presetFile(i);
+    shareFile(new File([JSON.stringify(p, null, 1)], `frost-preset-${pad2(i + 1)}-${slug(p.name, 'preset')}.frostpreset`), p.name);
+  }, async () => {});
+}
+const shareModel = i => shareStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`);
+const shareCab = i => shareStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`);
+/** What the Community page offers to share straight from the pedal: [group, [[label, share(), own name]]]. */
+function pedalItems() {
+  if (!state.store) return [];
+  const keys = o => Object.keys(o).map(Number).sort((a, b) => a - b);
+  return [
+    ['Presets', keys(state.presets).map(i => [`${pad2(i + 1)} · ${state.presets[i].name || '(no name)'}`, () => sharePreset(i), !!state.presets[i].name])],
+    ['MODELs', keys(state.models).map(i => [`MODEL ${pad2(i)} · ${state.models[i].label || '(no name)'}`, () => shareModel(i), !!state.models[i].label])],
+    ['CABs', keys(state.cabs).map(i => [`CAB ${pad2(i + 1)} · ${state.cabs[i].label}`, () => shareCab(i), true])],
+  ].filter(([, items]) => items.length);
+}
 async function renameStored(kind, index) {
   const store = state.store, entry = (kind === 'amp' ? state.models : state.cabs)[index];
   if (!store || !entry || state.op || isBusy()) return;
@@ -346,9 +422,10 @@ async function renameStored(kind, index) {
 }
 function renderAmps() {
   const all = Object.keys(state.models), idx = matchingSlots(state.models, $('amp-search').value);
-  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', sub: `MODEL ${pad2(i)}`, buttons: [
+  list($('amp-list'), idx.map(i => ({ tag: pad2(i), name: state.models[i].label || '(no name)', own: !!state.models[i].label, sub: `MODEL ${pad2(i)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('amp', i), `Rename MODEL ${pad2(i)}`],
     ['Download', 'ghost', () => downloadStored(`MODEL ${pad2(i)}`, () => state.store.ampGet(i), r => r, l => `model-${pad2(i)}-${slug(l, 'amp')}.fcm`), `Download MODEL ${pad2(i)} as an .fcm file`],
+    ['Share', 'ghost', () => shareModel(i), `Share MODEL ${pad2(i)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove MODEL ${pad2(i)}?`, `"${state.models[i].label}" is deleted from the pedal. An AMP block set to it plays the default model.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing MODEL ${pad2(i)}`, () => state.store.ampRemove(i))) toast(`MODEL ${pad2(i)} removed.`, 'ok');
@@ -451,9 +528,10 @@ $('amp-write').onclick = async () => {
 // ---------- cabinets ----------
 function renderCabs() {
   const all = Object.keys(state.cabs), idx = matchingSlots(state.cabs, $('cab-search').value, 1);
-  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, sub: `CAB ${pad2(i + 1)}`, buttons: [
+  list($('cab-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.cabs[i].label, own: true, sub: `CAB ${pad2(i + 1)}`, buttons: [
     ['Rename', 'ghost', () => renameStored('ir', i), `Rename CAB ${pad2(i + 1)}`],
     ['Download', 'ghost', () => downloadStored(`CAB ${pad2(i + 1)}`, () => state.store.irGet(i), irWav, l => `cab-${pad2(i + 1)}-${slug(l, 'cab')}.wav`), `Download CAB ${pad2(i + 1)} as a .wav file`],
+    ['Share', 'ghost', () => shareCab(i), `Share CAB ${pad2(i + 1)} with the community`],
     ['Remove', 'danger', async () => {
     if (await ask(`Remove CAB ${pad2(i + 1)}?`, `"${state.cabs[i].label}" is deleted from the pedal. IR blocks set to it play the built-in cabinet until it is filled again.`, 'Remove', { danger: true }))
       if (await exclusive(`Removing CAB ${pad2(i + 1)}`, () => state.store.irRemove(i))) toast(`CAB ${pad2(i + 1)} removed.`, 'ok');
@@ -504,10 +582,12 @@ function presetStep(dir) {
 function renderPresetNav() {
   const nav = $('preset-nav'), on = !!state.store && live.attached, cur = state.current, p = cur != null ? state.presets[cur] : null;
   nav.hidden = !on; if (!on) return;
+  keepName($('preset-nav-name'), !!(cur != null && cur < PRESETS && p?.name));
   $('preset-nav-name').textContent = cur != null && cur < PRESETS ? `${pad2(cur + 1)} · ${p ? p.name || '(no name)' : 'empty'}` : 'No preset';
   const none = !Object.keys(state.presets).length || !!state.op;
   $('preset-prev').disabled = $('preset-next').disabled = none;
   $('preset-nav-open').disabled = !!state.op;
+  $('preset-share').disabled = !!state.op || cur == null || !p;
   if (!pick.el.hidden) { if (state.op) pickOpen(false); else pickRender(); }
 }
 // Preset picker: the live editor's preset name opens a searchable list; one click loads.
@@ -522,7 +602,7 @@ function pickRender() {
     li.className = (i === state.current ? 'current' : '') + (k === pick.active ? ' active' : '');
     li.setAttribute('aria-selected', i === state.current);
     const n = document.createElement('span'); n.className = 'picknum'; n.textContent = pad2(i + 1);
-    const t = document.createElement('span'); t.className = 'pickname'; t.textContent = state.presets[i].name || '(no name)';
+    const t = document.createElement('span'); t.className = 'pickname'; keepName(t, !!state.presets[i].name); t.textContent = state.presets[i].name || '(no name)';
     li.append(n, t);
     if (i === state.current) { const m = document.createElement('span'); m.className = 'pickmark'; m.textContent = 'playing'; li.append(m); }
     li.onclick = () => pickChoose(i);
@@ -549,6 +629,7 @@ pick.search.onkeydown = e => {
 document.addEventListener('pointerdown', e => { if (!pick.el.hidden && !$('preset-nav').contains(e.target)) pickOpen(false); });
 $('preset-prev').onclick = () => { const i = presetStep(-1); if (i != null) loadPreset(i); };
 $('preset-next').onclick = () => { const i = presetStep(1); if (i != null) loadPreset(i); };
+$('preset-share').onclick = () => { if (state.current != null && state.presets[state.current]) sharePreset(state.current); };
 $('preset-search').oninput = () => renderPresets();
 /** Move preset i by d (-1 up, +1 down): the list changes at once, the pedal follows. */
 function movePreset(i, d) {
@@ -564,7 +645,7 @@ function renderPresets() {
   const q = ($('preset-search').value || '').trim().toLowerCase(), s = state.store;
   const all = Object.keys(state.presets).map(Number).sort((a, b) => a - b);
   const idx = all.filter(i => !q || (state.presets[i].name || '').toLowerCase().includes(q) || pad2(i + 1).includes(q) || String(i + 1) === q);
-  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', sub: `Preset ${pad2(i + 1)} · ${i === state.current ? 'playing now' : 'saved on the pedal'}`, current: i === state.current, buttons: [
+  list($('preset-list'), idx.map(i => ({ tag: pad2(i + 1), name: state.presets[i].name || '(no name)', own: !!state.presets[i].name, sub: `Preset ${pad2(i + 1)} · ${i === state.current ? 'playing now' : 'saved on the pedal'}`, current: i === state.current, buttons: [
     ['Load', 'primary', () => loadPreset(i), `Load preset ${pad2(i + 1)}`],
     ['↑', 'ghost', () => movePreset(i, -1), `Move preset ${pad2(i + 1)} up`, i === 0],
     ['↓', 'ghost', () => movePreset(i, 1), `Move preset ${pad2(i + 1)} down`, i === PRESETS - 1],
@@ -574,6 +655,7 @@ function renderPresets() {
       save(new TextEncoder().encode(JSON.stringify(p, null, 1)), `frost-preset-${pad2(i + 1)}-${slug(name, 'preset')}.frostpreset`);
       toast(`Preset ${pad2(i + 1)} downloaded${extra.length ? ' with ' + extra.join(' and ') : ''}.`, 'ok');
     }, async () => {}), `Download preset ${pad2(i + 1)}`],
+    ['Share', 'ghost', () => sharePreset(i), `Share preset ${pad2(i + 1)} with the community`],
     ['Rename', 'ghost', async () => {
       const n = await ask(`Rename preset ${pad2(i + 1)}`, '', 'Rename', { input: { label: 'Name (up to 16 characters)', value: state.presets[i].name } });
       if (n != null && n.trim()) if (await exclusive('Renaming a preset', () => s.presetRename(i, n.slice(0, 16)), refreshPresets)) toast('Preset renamed.', 'ok');
@@ -620,8 +702,10 @@ function importOptions(a) {
     return [n, `${a.kind} ${pad2(n)} · ${what}`];
   });
 }
-$('import-file').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f || !state.store) return;
+$('import-file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; importPresetFile(f); };
+/** Import a .frostpreset file (chosen here or shared on the Community page) into the preset number chosen on this page. */
+async function importPresetFile(f) {
+  if (!f || !state.store) return;
   let file;
   try { file = parsePresetFile(await f.text()); } catch (err) { toast(`${f.name}: ${err.message}`, 'bad'); return; }
   const i = Number($('import-slot').value), old = state.presets[i], name = file.name;
@@ -649,7 +733,7 @@ $('import-file').onchange = async e => {
   const placed = items.map((a, k) => `${a.kind} ${pad2(picked[k])}`);
   if (await exclusive('Importing a preset', () => state.store.presetImport(i, file, models, cabs), items.length ? refreshAll : refreshPresets))
     toast(`"${name}" is now preset ${pad2(i + 1)}${placed.length ? ' (' + placed.join(', ') + ')' : ''}.`, 'ok');
-};
+}
 function save(bytes, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $('backup').onclick = () => exclusive('Backing up', async () => {
   $('backup-state').textContent = 'Reading everything from the pedal…';
