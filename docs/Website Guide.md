@@ -64,6 +64,24 @@ The main navigation has **Editor**, **NAMs & IRs**, **Presets** and
 NAMs & IRs combines captures and cabinets in one library; use its
 **Amp models / Cabinet IRs** switch to choose which list to manage.
 
+The **language** menu beside the status (🌐) chooses the interface language:
+English, the default, or Brazilian Portuguese. It starts in your browser's
+language when the site has it, and your choice is remembered in this browser.
+Effect and knob names, the pedal's menu words and the names you store (songs,
+presets, models, cabinets) stay as the pedal shows them. Each language is one
+file in `web/lang/`; [its README](../web/lang/README.md) shows how to add one.
+
+The **Skin** picker beside it changes the look of the Editor's drawn gear and
+panels: **Frost** (the default), **Vintage** or **Noir**. It only changes the
+website, never the pedal.
+
+In every skin each block keeps its category colour, the same as on the pedal's
+screen: orange overdrive, red distortion, green delay, purple reverb, cyan
+modulation, yellow dynamics and EQ, silver utility and cabinet, gold amp and
+capture, lime pitch. Stompboxes are painted in it; amp and capture heads and
+the cabinet show it on their piping and nameplate, and the tag above each block
+carries it too.
+
 ## Editor
 
 <p align="center"><img src="../assets/docs/website-live-editor.webp" alt="Editor: preset arrows at top left, six-block chain, compact named NAM selector and Replace effect at right" width="760"><br><sub>Editor: preset selector, named NAM model and effect controls (documentation demo)</sub></p>
@@ -338,6 +356,33 @@ Limits: up to 64 library songs, 16 parts per song and 64 performance entries,
 subject to the shared byte limit shown on the page. Use the usage indicator
 and validation message when a large library does not fit. There is one active
 setlist on the pedal; exported JSON files can keep alternatives.
+
+## Looper
+
+**Looper** loops with the GP-5 as your USB audio interface: the pedal's USB input
+brings your finished tone (after Frost's effects) and the pedal mixes what the page
+plays into its outputs, so loops keep your sound and you play over them through
+the same amp. Choose **Start audio** with the GP-5 on USB (Chrome, Edge or Opera)
+and pick the GP-5 for input and output.
+
+- Four tracks in sync, with unlimited undo and redo per track, click-free joins
+  and correction of the USB delay (adjust it under Timing correction).
+- Count-in, tap tempo, loops snapped to whole bars and a metronome; new tracks
+  start on the next bar and can be 1, 2, 4 or 8 times the loop.
+- Per track: reverse, half speed, a filter, mute, decay while overdubbing and a
+  fade when stopping.
+- **Sections A, B and C** (verse, chorus, bridge), switched at the end of the loop.
+- A **drum machine**: nine synthesized pieces on a 16-step grid per bar, ready
+  beats (including blues and shuffle with adjustable swing). In **drum mode** the
+  footswitches play the pieces and record the pattern.
+- Export the mix or the tracks as WAV, and save or open the session in this
+  browser.
+
+With the M-VAVE Chocolate Plus set up on the Controller page, **B+C** pressed
+together switch between Effects mode (presses go to the GP-5) and Loop mode (they
+play the looper; loops keep running in Effects mode). Hold **D** in Loop mode for
+drum mode. The GP-5 shows the looper on its footswitch light and screen
+(CC 42 to 44 on channel 16, see [MIDI commands](Midi%20Command.md)).
 
 ## Firmware
 

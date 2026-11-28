@@ -104,6 +104,8 @@ API unsigned ge_midi_bypass(void){return midi_bypass;}
 API unsigned ge_midi_volume(void){return midi_volume;}
 API unsigned ge_midi_tempo(void){return midi_tempo;}
 API unsigned ge_midi_pending(void){return midi_preset;}
+API int ge_midi_editable(void){return midi_editable();}
+API void ge_host_wrote_flash(void){files_host_written=1;files_host_write_ms=now;}   /* as after a USB file write: busy for the store guard */
 API unsigned ge_dsp_global_flags(void){return frost_global_mode;}
 API float ge_bypass_sample(unsigned on,float dry,float wet){float d[64],w[64];unsigned i;frost_global_mode=on?2u:0u;for(i=0;i<64u;++i){d[i]=dry;w[i]=wet;}frost_bypass_blend(d,w);return w[63];}
 API unsigned ge_editable(void){return editor_editable(&editor);}
@@ -117,6 +119,7 @@ API void ge_busy_reads(unsigned n){busy_reads=n;}
 API unsigned ge_tap_mode(void){return tap_mode;}
 API unsigned ge_now(void){return now;}
 API unsigned ge_led(void){return fw_active();}
+API unsigned ge_led_choice(unsigned off){return off?globals.led_off:globals.led_on;}
 API void ge_tap_note(unsigned n){globals.tap_note=n;}
 API void ge_tempo_light(unsigned n){globals.tempo_light=n;}
 API void ge_tap_tempo(unsigned n){globals.tap_tempo=n;}
@@ -297,6 +300,7 @@ API unsigned ge_settings_pos(void){return settings_pos;}
 API unsigned ge_settings_count(void){return settings_count(settings_menu);}
 
 API unsigned ge_ctl_mask(void){ctl_sync();return ctl_mask;}
+API void ge_set_ctl_mask(unsigned m){unsigned i;ctl_mask=m&63u;for(i=0;i<6u;++i)ctl_types[i]=editor.types[i];}
 API unsigned ge_ctl_mode(void){return globals.footswitch_ctl;}
 
 API const char *ge_firmware_name(void){static char s[24];settings_value(SET_FIRMWARE,s);return s;}
