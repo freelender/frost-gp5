@@ -1,25 +1,45 @@
-// Interface language: the Portuguese table translates interface text, keeps values in place, and never
-// touches the pedal's own words or the names a user stores.
+// Interface languages: the language menu and lang/ folder, then the Portuguese table: it translates interface
+// text, keeps values in place, and never touches the pedal's own words or the names a user stores.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 const root = new URL('../../web/', import.meta.url);
 const app = await fs.readFile(new URL('app.js', root), 'utf8');
 const version = app.match(/export const VERSION = '([^']+)'/)[1];
-const { makeTranslator, translate } = await import(new URL(`i18n.js?v=${version}`, root));
-const { PT } = await import(new URL(`i18n_pt.js?v=${version}`, root));
+const { makeTranslator, translate, keepName, languages } = await import(new URL(`i18n.js?v=${version}`, root));
+const { LANGUAGES } = await import(new URL(`lang/index.js?v=${version}`, root));
+
+// The language menu: English first and needing no file; every other language is one file in lang/ that loads.
+assert.equal(LANGUAGES[0].code, 'en');assert.equal(LANGUAGES[0].load, undefined);
+assert.deepEqual(languages().map(l => l.code), LANGUAGES.map(l => l.code));
+assert.equal(new Set(LANGUAGES.map(l => l.code)).size, LANGUAGES.length);
+const TABLES = {};
+for (const { code, name, load } of LANGUAGES.slice(1)) {
+  assert.ok(name && typeof load === 'function', code);
+  const table = (await load()).default;
+  assert.ok(table && table.text && table.patterns, `lang/${code}.js exports { text, patterns } as default`);
+  TABLES[code] = table;
+}
+// Any file in lang/ besides index.js is offered in the menu.
+for (const file of await fs.readdir(new URL('lang/', root))) if (/\.js$/.test(file) && file !== 'index.js') assert.ok(TABLES[file.replace(/\.js$/, '')], `${file} is not listed in lang/index.js`);
+const PT = TABLES['pt-BR'];
 const pt = makeTranslator(PT);
+
+// A name the user chose is marked so it is never translated; interface text is unmarked again.
+const shown = { dataset: {} };
+assert.equal(keepName(shown), shown);assert.equal(shown.dataset.i18nSkip, '');
+keepName(shown, false);assert.equal('i18nSkip' in shown.dataset, false);
 
 // Before a language is chosen, nothing is translated.
 assert.equal(translate('Connect GP-5'), null);
 
-// Every pattern's translation uses each value it captures, and no value it does not capture.
-for (const [en, out] of Object.entries(PT.patterns)) {
+// Every pattern's translation uses each value it captures, and no value it does not capture (in every language).
+for (const [code, table] of Object.entries(TABLES)) for (const [en, out] of Object.entries(table.patterns)) {
   const holes = en.split('{}').length - 1;
   const used = [...out.matchAll(/\{(\d+)\}/g)].map(m => +m[1]);
   assert.ok(holes > 0, `pattern without {}: ${en}`);
-  assert.deepEqual([...new Set(used)].sort(), [...Array(holes).keys()], `${en} -> ${out}`);
+  assert.deepEqual([...new Set(used)].sort(), [...Array(holes).keys()], `${code}: ${en} -> ${out}`);
 }
-for (const [en, out] of Object.entries(PT.text)) assert.ok(out.trim(), `empty translation for ${en}`);
+for (const [code, table] of Object.entries(TABLES)) for (const [en, out] of Object.entries(table.text)) assert.ok(out.trim(), `${code}: empty translation for ${en}`);
 
 // Exact text, with the spaces around it kept and the spaces inside normalized as the browser shows them.
 assert.equal(pt('Connect GP-5'), 'Conectar GP-5');

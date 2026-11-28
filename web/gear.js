@@ -1,6 +1,8 @@
 // Frost web: the drawn gear of the live editor (pedals, amp heads, capture heads, cabinets) as SVG.
-// Colours come from the effect's category and from the skin's CSS variables (style.css, [data-skin]),
-// so a skin restyles every drawing at once. Pure functions: they return SVG text.
+// Every block carries its category colour, the same as the pedal's own screen (effects.json "colors",
+// engine/control_catalog.h): a stompbox is painted in it, an amp or capture head and a cabinet show it on the
+// piping, the control strip and the nameplate. The skin's CSS variables (rig.css, [data-skin]) only restyle
+// what carries no category (tolex, grille, knobs, cables). Pure functions: they return SVG text.
 
 const CAB = 3, NAM = 33, AMP_CATEGORY = 7;
 /** What a block looks like: 'pedal', 'amp', 'capture', 'cab' or 'empty'. */
@@ -50,8 +52,9 @@ export function pedalSvg(eff, color, on) {
   </svg>`;
 }
 
-/** An amp head (or a NAM capture head): handle, control strip, pilot light, grille and nameplate. */
-export function headSvg(eff, on, capture) {
+/** An amp head (or a NAM capture head): handle, control strip, pilot light, grille and nameplate, the piping
+ *  and the nameplate in the category colour. */
+export function headSvg(eff, on, capture, color = '#E8B85A') {
   const id = ++uid;
   const top = capture ? 'NAM CAPTURE' : eff.short.replace('-', ' ');
   const sub = capture ? 'CAPTURE MODEL' : eff.name;
@@ -61,21 +64,21 @@ export function headSvg(eff, on, capture) {
     <ellipse cx="85" cy="102" rx="80" ry="2.5" fill="#000" opacity=".6"/>
     <path d="M58 12 v-6 q0-4 4-4 h46 q4 0 4 4 v6" fill="none" stroke="url(#hd${id})" stroke-width="4" stroke-linecap="round"/>
     <rect x="3" y="11" width="164" height="89" rx="7" style="fill:url(#tx${id})" stroke="#000" stroke-width="1.5"/>
-    <rect x="9" y="16" width="152" height="19" rx="2.5" fill="#0c0d0f" stroke="#ffffff22" stroke-width=".6"/>
+    <rect x="9" y="16" width="152" height="19" rx="2.5" fill="#0c0d0f" stroke="#ffffff22" stroke-width=".6"/><rect x="9" y="33" width="152" height="2" rx="1" fill="${color}"/>
     ${Array.from({ length: 8 }, (_, i) => miniKnob(36 + i * 14.5, 25.5, 4.2, -40 + i * 25, id)).join('')}
     <rect x="14" y="21.5" width="8" height="8" rx="1" fill="#26292d"/><circle cx="18" cy="25.5" r="2.2" fill="#111"/>
     <circle cx="153" cy="25.5" r="3.4" fill="${on ? '#ff2d22' : '#3a0d0a'}"${on ? ' style="filter:drop-shadow(0 0 4px #ff2d22)"' : ''}/>
-    <rect x="9" y="39" width="152" height="55" rx="3" style="fill:url(#gr${id});stroke:var(--gear-piping)" stroke-width="1.4"/>
+    <rect x="9" y="39" width="152" height="55" rx="3" style="fill:url(#gr${id})" stroke="${color}" stroke-width="1.6"/>
     ${capture ? '<path d="M24 66 q8 -14 16 0 t16 0 t16 0" fill="none" style="stroke:var(--accent-ice, #64caff)" stroke-width="1.6" opacity=".8"/>' : ''}
-    <rect x="${85 - plate / 2}" y="54" width="${plate}" height="25" rx="2" fill="#0007"/>
-    <text x="85" y="69" text-anchor="middle" class="gear-font" font-weight="600" font-size="13" letter-spacing="1" style="fill:var(--gear-logo)">${esc(top)}</text>
+    <rect x="${85 - plate / 2}" y="54" width="${plate}" height="25" rx="2" fill="#0009" stroke="${color}" stroke-opacity=".7" stroke-width=".8"/>
+    <text x="85" y="69" text-anchor="middle" class="gear-font" font-weight="600" font-size="13" letter-spacing="1" fill="${color}">${esc(top)}</text>
     <text x="85" y="76" text-anchor="middle" class="gear-font" font-size="4.6" letter-spacing="1.2" style="fill:var(--gear-logo)" opacity=".75">${esc(sub.toUpperCase())}</text>
     ${corners([[7, 15], [163, 15], [7, 96], [163, 96]])}
   </svg>`;
 }
 
-/** A 4x12 cabinet: the speakers show through the grille cloth. */
-export function cabSvg(on, label = '4X12') {
+/** A 4x12 cabinet: the speakers show through the grille cloth; piping and label in the category colour. */
+export function cabSvg(on, label = '4X12', color = '#C5D0DE') {
   const id = ++uid;
   return `<svg viewBox="0 0 118 124" aria-hidden="true" focusable="false"><defs>${tolex(id)}${grille(id, 2.4)}
     <radialGradient id="cn${id}"><stop offset="0" stop-color="#7a828c"/><stop offset=".16" stop-color="#24272b"/><stop offset=".24" stop-color="#3a3f45"/><stop offset=".8" stop-color="#16181b"/><stop offset=".93" stop-color="#5b626b"/><stop offset="1" stop-color="#2a2e33"/></radialGradient>
@@ -85,8 +88,8 @@ export function cabSvg(on, label = '4X12') {
     <rect x="10" y="10" width="98" height="103" rx="3" fill="#060607"/>
     ${[[35, 37], [83, 37], [35, 86], [83, 86]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="21" fill="url(#cn${id})"/><circle cx="${x}" cy="${y}" r="5" fill="#2e3237"/>`).join('')}
     <rect x="10" y="10" width="98" height="103" rx="3" style="fill:url(#gr${id})" opacity=".68"/>
-    <rect x="10" y="10" width="98" height="103" rx="3" fill="url(#sh${id})" style="stroke:var(--gear-piping)" stroke-width="1.4"/>
-    <rect x="16" y="102" width="26" height="7" rx="1.2" fill="#0009"/><text x="29" y="107.6" text-anchor="middle" class="gear-font" font-size="5" letter-spacing=".6" style="fill:var(--gear-logo)">${esc(label)}</text>
+    <rect x="10" y="10" width="98" height="103" rx="3" fill="url(#sh${id})" stroke="${color}" stroke-width="1.6"/>
+    <rect x="16" y="102" width="26" height="7" rx="1.2" fill="#0009"/><text x="29" y="107.6" text-anchor="middle" class="gear-font" font-size="5" letter-spacing=".6" fill="${color}">${esc(label)}</text>
     ${corners([[7, 7], [111, 7], [7, 116], [111, 116]])}
     ${on ? '' : '<rect x="3" y="3" width="112" height="117" rx="6" fill="#0006"/>'}
   </svg>`;
@@ -97,7 +100,7 @@ const emptySvg = () => `<svg viewBox="0 0 100 158" aria-hidden="true" focusable=
 /** The drawing of one block. */
 export function gearSvg(type, eff, color, on) {
   const kind = gearKind(type, eff);
-  return kind === 'empty' ? emptySvg() : kind === 'cab' ? cabSvg(on) : kind === 'pedal' ? pedalSvg(eff, color, on) : headSvg(eff, on, kind === 'capture');
+  return kind === 'empty' ? emptySvg() : kind === 'cab' ? cabSvg(on, undefined, color || undefined) : kind === 'pedal' ? pedalSvg(eff, color, on) : headSvg(eff, on, kind === 'capture', color || undefined);
 }
 
 /** A big panel knob: tick scale, knurled skirt, cap and pointer (rotate .knob-pointer to show the value). */

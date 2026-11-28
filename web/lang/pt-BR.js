@@ -9,7 +9,7 @@
 // menu words (PRESETS, SAVE, GLOBAL SETTINGS, ...), MODEL/CAB numbers and the DSP LIMIT / CHAIN TOO BIG
 // popups. Names the user stores (presets, songs, parts, models, cabinets) are never in these tables.
 // The pedal only shows unaccented English characters, so the name examples below have no accents either.
-export const PT = {
+export default {
   text: {
     // ---- page: shell and navigation
     'Frost for GP-5': 'Frost para GP-5',
@@ -369,6 +369,7 @@ export const PT = {
     'Setlist': 'Setlist',
     'Setlist name': 'Nome do setlist',
     'Missing song': 'Música ausente',
+    'Missing preset': 'Preset ausente',
     'Add songs from the library, then arrange them in performance order. A song may appear more than once.': 'Adicione músicas da biblioteca e coloque na ordem do show. Uma música pode aparecer mais de uma vez.',
     'Connect the pedal to save or remove its setlist.': 'Conecte o pedal para salvar ou remover o setlist dele.',
     'On the pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST. Tap the footswitch for the next part. DISPLAY → SETLIST HOLD chooses Previous part or Tuner. Turn PARA to select a song; press PARA to edit the sound. The first and last parts stop at the ends of the setlist.': 'No pedal: GLOBAL SETTINGS → DISPLAY → HOME SCREEN → SETLIST. Toque o footswitch para a próxima parte. DISPLAY → SETLIST HOLD escolhe entre a parte anterior ou o afinador. Gire o PARA para escolher uma música; aperte o PARA para editar o som. A primeira e a última parte param nas pontas do setlist.',
@@ -606,6 +607,7 @@ export const PT = {
   },
 
   patterns: {
+    '{} · Missing preset': '{0} · Preset ausente',
     'STUDIO / {}': 'ESTÚDIO / {0}',
     // controller page (M-VAVE Chocolate Plus)
     'Footswitch {}: {} ({})': 'Botão {0}: {1} ({2})',

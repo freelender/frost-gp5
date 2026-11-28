@@ -64,12 +64,23 @@ The main navigation has **Editor**, **NAMs & IRs**, **Presets** and
 NAMs & IRs combines captures and cabinets in one library; use its
 **Amp models / Cabinet IRs** switch to choose which list to manage.
 
-The **EN | PT** switch beside the status chooses the interface language
-(English or Brazilian Portuguese). It starts in your browser's language and is
-remembered in this browser. Effect and knob names, the pedal's menu words and
-the names you store stay as the pedal shows them. The **Skin** picker beside it
-changes the look of the Editor's drawn gear and panels: **Frost** (the default),
-**Vintage** or **Noir**. It only changes the website, never the pedal.
+The **language** menu beside the status (🌐) chooses the interface language:
+English, the default, or Brazilian Portuguese. It starts in your browser's
+language when the site has it, and your choice is remembered in this browser.
+Effect and knob names, the pedal's menu words and the names you store (songs,
+presets, models, cabinets) stay as the pedal shows them. Each language is one
+file in `web/lang/`; [its README](../web/lang/README.md) shows how to add one.
+
+The **Skin** picker beside it changes the look of the Editor's drawn gear and
+panels: **Frost** (the default), **Vintage** or **Noir**. It only changes the
+website, never the pedal.
+
+In every skin each block keeps its category colour, the same as on the pedal's
+screen: orange overdrive, red distortion, green delay, purple reverb, cyan
+modulation, yellow dynamics and EQ, silver utility and cabinet, gold amp and
+capture, lime pitch. Stompboxes are painted in it; amp and capture heads and
+the cabinet show it on their piping and nameplate, and the tag above each block
+carries it too.
 
 ## Editor
 
