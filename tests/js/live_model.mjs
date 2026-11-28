@@ -38,7 +38,8 @@ Object.assign(view,{ui:{models:()=>models,addFile:(...args)=>imports.push(args)}
 // Other controls are independent of the model dropdown.
 view.field=(s,i)=>{knobs.push(i);return new Element('input');};
 await view.renderInspector();
-assert.equal(view.inspector.children[1].children[0].children[0].textContent,'Replace effect');
+const findText=(e,t)=>e?.textContent===t?e:(e?.children||[]).map(c=>findText(c,t)).find(Boolean);
+assert.ok(findText(view.inspector,'Replace effect'),'the block offers Replace effect');
 assert.deepEqual(knobs,[1,2,3,4,5]); // MODEL is no longer a knob
 const select=view.inspector.querySelector('[data-p="0"]');
 assert.equal(select.tag,'select');assert.equal(select.children.length,65);
@@ -74,8 +75,8 @@ select.value='add';select.dispatchEvent(new Event('change'));
 assert.deepEqual(imports,[['amps',0]]);assert.equal(select.value,0);
 assert.equal(await live.setType(0,255),true);
 view.chainState=await live.chain();await view.renderInspector();
-const add=view.inspector.children[1].children[0].children[0];
-assert.equal(add.textContent,'Add Effect');
+const add=findText(view.inspector,'Add Effect');
+assert.ok(add,'an empty block offers Add Effect');
 let focused=false;view.fxSearch={scrollIntoView(){},focus(){focused=true;}};
 add.onclick();assert.equal(focused,true);
 console.log('Live MODEL names, dropdown, queued edits and polling pass (host only).');

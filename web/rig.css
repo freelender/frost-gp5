@@ -1,0 +1,162 @@
+/* Frost web: the live editor rig. The chain is drawn gear (gear.js), the selected block a hardware panel.
+ * Loaded after style.css: it restyles the editor's own parts only (#view-live), plus the skins.
+ * Skins only set variables. Frost, the default, keeps the approved Frost blue; Vintage and Noir are optional looks. */
+:root, [data-skin="frost"] {
+  --rig-bg: #0d1218; --rig-floor: #151c25; --rig-line: #263241;
+  --chip-bg: #18202a; --chip-line: #3f4c5a; --chip-text: #cfdae6;
+  --cable-outer: #8a939d; --cable-inner: #23282e;
+  --gear-tolex: #1e2125; --gear-tolex-dot: #2a2e33; --gear-grille: #15181b; --gear-grille-line: #ffffff18; --gear-piping: #d8dde3; --gear-logo: #f3f6f9; --gear-corner: #b9c2cc; --gear-empty: #4d5b6a;
+  --face1: #232a33; --face2: #12161b; --face-ink: #d9e2ea; --face-font: var(--head);
+  --knob-cap1: #f6f9fc; --knob-cap2: #a7b2bf; --knob-cap3: #4c5662; --knob-skirt: #121519; --knob-pointer: var(--blue); --knob-tick: #7f8c99; --knob-lever: #dfe5eb;
+}
+[data-skin="vintage"] {
+  --bg: #15100b; --surface: #1f1811; --surface2: #2a2017; --surface3: #33281c; --stroke: #4a3a29; --stroke2: #6b5438; --muted: #bba584; --txt: #f6ead6; --blue: #f2b54a; --ice: #f8d79a;
+  --rig-bg: #17110b; --rig-floor: #241a10; --rig-line: #46372a;
+  --chip-bg: #2a2016; --chip-line: #6b5438; --chip-text: #f0dfc2;
+  --cable-outer: #6b4c33; --cable-inner: #24170d;
+  --gear-tolex: #d8c49a; --gear-tolex-dot: #bfa878; --gear-grille: #4f2620; --gear-grille-line: #e6c48a40; --gear-piping: #3b2412; --gear-logo: #fff4dc; --gear-corner: #c9a868; --gear-empty: #7a6248;
+  --face1: #efe2c1; --face2: #d9c69a; --face-ink: #4a2c12; --face-font: Georgia, "Times New Roman", serif;
+  --knob-cap1: #4a4a4a; --knob-cap2: #1c1c1c; --knob-cap3: #000; --knob-skirt: #000; --knob-pointer: #f4ead6; --knob-tick: #6b4a2a; --knob-lever: #f4ead6;
+}
+[data-skin="noir"] {
+  --bg: #0b0b0c; --surface: #151516; --surface2: #1e1e20; --surface3: #262628; --stroke: #2e2e33; --stroke2: #46443f; --muted: #a09a8f; --txt: #f1ede4; --blue: #e9c46a; --ice: #f5dc9a;
+  --rig-bg: #0e0e0f; --rig-floor: #19191b; --rig-line: #2c2c30;
+  --chip-bg: #18181a; --chip-line: #4b4740; --chip-text: #e7dfcf;
+  --cable-outer: #9b9488; --cable-inner: #262422;
+  --gear-tolex: #161617; --gear-tolex-dot: #202022; --gear-grille: #101011; --gear-grille-line: #e9c46a1f; --gear-piping: #e9dcc0; --gear-logo: #f1e6cf; --gear-corner: #cdbb8f; --gear-empty: #5a564e;
+  --face1: #1b1b1c; --face2: #0b0b0c; --face-ink: #eadfc6; --face-font: Georgia, "Times New Roman", serif;
+  --knob-cap1: #fff1b8; --knob-cap2: #d4a646; --knob-cap3: #6e4c12; --knob-skirt: #0d0d0d; --knob-pointer: #1d1404; --knob-tick: #8b7d5e; --knob-lever: #e6e0d4;
+}
+[data-skin="vintage"] .sidebar, [data-skin="noir"] .sidebar { background: var(--surface); }
+[data-skin="vintage"] body, [data-skin="noir"] body { background: var(--bg); }
+.gear-font { font-family: var(--head); }
+
+/* the skin picker, beside the language switch */
+.skinpick { flex-shrink: 0; width: auto; min-width: 0; height: 34px; border: 1px solid var(--stroke2); border-radius: 30px; background: transparent; color: var(--muted); font: 700 11px var(--head); letter-spacing: .04em; padding: 0 10px; }
+
+/* While the rig is shown, the editor fits the window: nothing scrolls and nothing is cut. */
+@media (min-width: 761px) {
+  .main:has(#view-live:not([hidden]) > #live-panel:not([hidden])) { height: 100dvh; }
+  .main:has(#view-live:not([hidden]) > #live-panel:not([hidden])) .container { flex: 1; min-height: 0; max-width: none; padding: 12px 18px 14px; display: flex; flex-direction: column; }
+  #view-live:not([hidden]):has(> #live-panel:not([hidden])) { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+}
+#view-live .editor-heading { display: flex; align-items: center; gap: 14px; margin: 0; flex-wrap: wrap; }
+#view-live .editor-heading .eyebrow { margin: 0; }
+#view-live .editor-heading .headingbuttons { flex: 1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.savebar { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+.savebar label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.savebar .inputlabel { margin: 0; font-size: 11px; white-space: nowrap; }
+.savebar select, .savebar input { height: 32px; width: auto; }
+.savebar select { min-width: 120px; }
+.savebar input { width: 140px; }
+.savebar .btn { height: 32px; padding: 0 14px; white-space: nowrap; }
+.savebar .savestate { font-size: 11px; color: var(--muted); max-width: 260px; line-height: 1.25; text-align: right; }
+.savebar .savestate.dirty { color: var(--warn); }
+.savebar .why { font-size: 10px; line-height: 1.2; color: var(--muted); max-width: 190px; }
+.savebar .why:empty { display: none; }
+
+.rig { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1.08fr) minmax(0, 1fr); gap: 10px; }
+.rigstage { position: relative; min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--rig-line); border-radius: 14px; background: radial-gradient(ellipse at 50% 58%, var(--rig-floor), var(--rig-bg) 72%); }
+.rigbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px 0; color: var(--muted); font-size: 12px; min-width: 0; }
+.rigbar #live-state { flex: none; }
+@media (max-width: 1180px) { .savebar .savestate { display: none; } }
+.rig .signal { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; gap: var(--gap, 18px); padding: 34px 16px 38px; margin: 0; background: none; border: 0; overflow: hidden; }
+.rig .signal::before, .rig .signal::after { content: ""; position: absolute; left: 14px; right: 14px; top: 50%; border-radius: 3px; pointer-events: none; }
+.rig .signal::before { height: 6px; margin-top: -3px; background: var(--cable-outer); box-shadow: 0 2px 6px #0008; }
+.rig .signal::after { height: 2px; margin-top: -1px; background: var(--cable-inner); }
+.rig .chainstrip { position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: var(--gap, 18px); padding: 0; margin: 0; background: none; border: 0; overflow: visible; grid-template-columns: none; }
+.rig .chainend { position: relative; z-index: 1; flex: none; display: grid; justify-items: center; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #0008; border: 1px solid var(--rig-line); color: var(--muted); font: 600 10px/1.2 var(--head); letter-spacing: .08em; text-transform: uppercase; text-align: center; }
+
+.rig .chainstrip .block { all: unset; box-sizing: border-box; position: relative; display: block; flex: none; cursor: pointer; }
+.rig .chainstrip .block::before, .rig .chainstrip .block::after { content: none; display: none; }
+.rig .block .gear-art { position: absolute; inset: 0; display: block; }
+.rig .block .gear-art svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 8px 10px #000a); transition: filter .15s; }
+.rig .block .gear-chip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap; font: 700 11px/1 var(--head); letter-spacing: .1em; padding: 4px 11px 5px; border-radius: 14px; background: var(--chip-bg); border: 2px solid var(--chip-line); color: var(--chip-text); }
+.rig .block .gear-name { position: absolute; top: calc(100% + 7px); left: 50%; transform: translateX(-50%); width: calc(100% + var(--gap, 16px) - 6px); text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font: 600 10.5px/1.18 var(--head); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.rig .block .gear-halo { position: absolute; inset: -14% -12%; border-radius: 18px; background: radial-gradient(ellipse, color-mix(in srgb, var(--effect-color, var(--blue)) 36%, transparent), transparent 70%); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.rig .block.active .gear-halo { opacity: 1; }
+/* The category colour of the pedal's own screen (effects.json "colors"): on the tag, and filling it when selected. */
+.rig .block:not(.empty) .gear-chip { border-color: color-mix(in srgb, var(--effect-color) 75%, transparent); color: var(--effect-color); }
+.rig .block.active .gear-chip { border-color: var(--effect-color, var(--blue)); color: var(--effect-color, var(--blue)); box-shadow: 0 0 12px color-mix(in srgb, var(--effect-color, var(--blue)) 50%, transparent); }
+.rig .block.active:not(.empty) .gear-chip { background: var(--effect-color); color: #0b1320; }
+.rig .block.active .gear-name { color: var(--effect-color, var(--blue)); }
+.rig .block.off .gear-art svg { filter: saturate(.15) brightness(.55) drop-shadow(0 8px 10px #000a); }
+.rig .block:hover .gear-art svg { filter: brightness(1.08) drop-shadow(0 8px 10px #000a); }
+.rig .block.off:hover .gear-art svg { filter: saturate(.15) brightness(.65) drop-shadow(0 8px 10px #000a); }
+.rig .block:focus-visible { outline: 2px solid var(--focus); outline-offset: 8px; border-radius: 10px; }
+.rig .block.dragging { opacity: .45; }
+.rig .block.dropbefore { box-shadow: -10px 0 0 -6px var(--blue); }
+.rig .block.dropafter { box-shadow: 10px 0 0 -6px var(--blue); }
+.rig .block.dropinto .gear-halo { opacity: 1; }
+
+.rig .inspector { min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0, 1fr); margin: 0; padding: 0; border: 1px solid var(--rig-line); border-radius: 14px; background: var(--rig-bg); }
+.rig .inspectorhead { display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--effect-color, #56606b) 55%, #111), color-mix(in srgb, var(--effect-color, #56606b) 18%, #111)); border-bottom: 1px solid #0008; }
+.rig .bandtitle { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; }
+.rig .bandtitle h2 { margin: 0; font: 700 19px/1.1 var(--head); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #0008; }
+.rig .bandtitle .eyebrow { margin: 0; color: #ffffffb3; white-space: nowrap; }
+.rig .headbtns { display: flex; align-items: center; gap: 6px; }
+.rig .typerow { display: flex; align-items: center; gap: 14px; padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--rig-line); color: var(--muted); font-size: 12px; min-width: 0; }
+.rig .typepick { display: flex; align-items: center; gap: 10px; }
+.rig .typepick .inputlabel { margin: 0; font: 700 11px var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--txt); }
+.rig .typepick select { height: 32px; min-width: 240px; }
+.rig .typeinfo { letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.rig .inspector fieldset.pedalface { all: unset; box-sizing: border-box; position: relative; min-height: 0; overflow: hidden; display: flex; align-items: center; gap: clamp(10px, 1.8vw, 30px); padding: 10px clamp(14px, 2vw, 30px) 18px; background: linear-gradient(180deg, var(--face1), var(--face2)); color: var(--face-ink); box-shadow: inset 0 1px 0 #ffffff14, inset 0 -8px 20px #0006; }
+.rig .inspector fieldset.pedalface::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #ffffff07 0 1px, transparent 1px 3px); pointer-events: none; }
+.rig .inspector fieldset.pedalface:disabled { opacity: .85; }
+.rig .faceid { position: relative; flex: none; min-width: 130px; display: grid; justify-items: center; gap: 6px; text-align: center; }
+.rig .faceid b { font: 700 clamp(18px, 1.9vw, 28px)/1.05 var(--face-font); letter-spacing: .04em; }
+.rig .faceid small { font: 700 10px var(--head); letter-spacing: .2em; opacity: .8; }
+.rig .faceart { position: relative; flex: none; height: 86%; aspect-ratio: 118 / 124; }
+.rig .faceart svg { width: 100%; height: 100%; display: block; }
+.rig .picker { position: relative; flex: none; display: grid; gap: 6px; max-width: 320px; }
+.rig .picker .inputlabel { color: var(--face-ink); font-weight: 700; letter-spacing: .12em; }
+.rig .picker select { height: 36px; min-width: 220px; border-radius: 6px; border: 1px solid #0006; background: #000a; color: #fff; }
+.rig .picker .noparams { margin: 0; font-size: 11px; opacity: .8; color: var(--face-ink); }
+.rig .knobrow { all: unset; box-sizing: border-box; position: relative; flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; justify-content: space-around; gap: 6px; }
+.rig .inspector fieldset.pedalface.bypassed .knobrow { opacity: .5; }
+.rig .field { display: grid; justify-items: center; gap: 3px; min-width: 0; margin: 0; }
+.rig .knoblabel { order: -1; font: 700 clamp(10px, .95vw, 13px)/1.1 var(--face-font); letter-spacing: .12em; text-transform: uppercase; color: var(--face-ink); white-space: nowrap; }
+.rig .knobvalue { order: 2; font: 600 12px var(--head); min-width: 46px; text-align: center; padding: 1px 6px; border-radius: 4px; background: #000a; color: #fff; }
+.rig .knobdial { position: relative; margin: 0; }
+.rig .knob { all: unset; display: block; width: clamp(56px, 6vw, 104px); aspect-ratio: 1; cursor: ns-resize; touch-action: none; }
+.rig .knob::before { content: none; display: none; }
+.rig .knob .knob-svg { width: 100%; height: 100%; display: block; }
+.rig .knob.turning .knob-svg { filter: brightness(1.12); }
+.rig .knobinput:focus-visible + .knob, .rig .knobdial:focus-within .knob { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 50%; }
+.rig .togglefield { position: relative; }
+.rig .toggle { all: unset; display: block; cursor: pointer; width: clamp(28px, 2.4vw, 38px); }
+.rig .toggle svg { width: 100%; height: auto; display: block; }
+.rig .toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.rig .togglelabel { font: 700 10px var(--head); letter-spacing: .1em; color: var(--face-ink); }
+.rig .togglevalue { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.rig .togglefield .knoblabel { order: 3; }
+.rig .choicefield .knoblabel { order: -1; }
+.rig .choicefield .choicehead { display: none; }
+.rig .knobhint { position: absolute; right: 12px; bottom: 4px; margin: 0; font-size: 10px; opacity: .55; color: var(--face-ink); }
+.rig .noparams { margin: 0; }
+
+/* the effect library: a dialog over the rig, a page of drawn gear at a time */
+.fx-dialog { width: min(1140px, 94vw); height: min(720px, 88vh); padding: 0; border: 1px solid var(--stroke); border-radius: 16px; background: var(--surface); color: var(--txt); }
+.fx-dialog[open] { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto; overflow: hidden; }
+.fx-dialog::backdrop { background: #000c; }
+.fx-dialoghead { display: flex; align-items: center; gap: 12px; padding: 16px 20px 6px; }
+.fx-dialoghead h2 { margin: 0; font: 700 20px var(--head); }
+.fx-dialoghead p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.fx-dialoghead input { margin-left: auto; width: 260px; height: 36px; }
+.fx-dialog .fx-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 20px 8px; }
+.fx-dialog .fx-results-head { display: flex; justify-content: space-between; padding: 0 20px 6px; color: var(--muted); font-size: 12px; }
+.fx-dialog .fx-results { min-height: 0; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); grid-auto-rows: 188px; gap: 12px 10px; padding: 6px 20px 0; align-content: start; max-height: none; }
+.fx-dialog .fx-card { all: unset; box-sizing: border-box; position: relative; cursor: pointer; display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; gap: 6px; padding: 8px 6px 6px; border-radius: 12px; }
+.fx-dialog .fx-card[hidden] { display: none; }
+.fx-dialog .fx-card:hover, .fx-dialog .fx-card:focus-visible { background: var(--surface2); box-shadow: inset 0 0 0 1px var(--effect-color); }
+.fx-dialog .fx-card.current { box-shadow: inset 0 0 0 2px var(--effect-color); }
+.fx-dialog .fx-card:disabled { opacity: .5; cursor: default; }
+.fx-dialog .fx-mini { min-height: 0; height: 100%; display: block; font-size: 0; background: none; border: 0; width: auto; }
+.fx-dialog .fx-mini svg { height: 100%; width: auto; max-width: 100%; display: block; filter: drop-shadow(0 6px 8px #000a); }
+.fx-dialog .fx-info { display: grid; justify-items: center; text-align: center; gap: 2px; }
+.fx-dialog .fx-info strong { font: 600 11px/1.15 var(--head); letter-spacing: .03em; }
+.fx-dialog .fx-info small { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
+.fx-dialog .fx-add { position: absolute; top: 6px; right: 8px; color: var(--effect-color); font-weight: 700; }
+.fx-dialog .fx-no-results { grid-column: 1 / -1; color: var(--muted); }
+.fx-pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; color: var(--muted); font-size: 12px; }

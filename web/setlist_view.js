@@ -1,4 +1,5 @@
 import { emptySetlist, encodeSetlist, SetlistStore } from './setlist.js?v=1.9.1';
+import { keepName } from './i18n.js?v=1.9.1';
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 export class SetlistView {
   constructor(root, ui) {
@@ -45,7 +46,7 @@ export class SetlistView {
     const grid = el('div', null, 'grid2'), library = el('div', null, 'panel pad'), order = el('div', null, 'panel pad'); grid.append(library, order); r.append(grid);
     library.append(el('h2', 'Songs'));
     const pick = el('select'); pick.setAttribute('aria-label', 'Song to edit');
-    this.data.songs.forEach((song, i) => { const opt = el('option', song.name); opt.value = i; pick.append(opt); });
+    this.data.songs.forEach((song, i) => { const opt = keepName(el('option', song.name)); opt.value = i; pick.append(opt); });
     this.selected = Math.min(this.selected, Math.max(0, this.data.songs.length - 1)); pick.value = this.selected; pick.onchange = () => { this.selected = Number(pick.value); this.render(); }; library.append(pick);
     const add = this.button('New song', () => { const id = Array.from({ length: 64 }, (_, i) => i).find(id => !this.data.songs.some(s => s.id === id)); if (id === undefined) return this.ui.error('The library supports at most 64 songs.'); this.data.songs.push({ id, name: `Song ${id + 1}`, parts: [{ name: 'Intro', preset: Number(Object.keys(this.presets)[0] || 0) }] }); this.selected = this.data.songs.length - 1; this.changed(); }); library.append(add);
     const song = this.data.songs[this.selected];
@@ -55,7 +56,7 @@ export class SetlistView {
       const parts = el('ol', null, 'setlist-parts'); library.append(parts);
       song.parts.forEach((part, i) => {
         const row = el('li'), sel = el('select'); sel.setAttribute('aria-label', `Preset for part ${i + 1}`);
-        for (let p = 0; p < 60; p++) { const opt = el('option', `${String(p + 1).padStart(2, '0')} · ${this.presets[p]?.name || 'Missing preset'}`); opt.value = p; sel.append(opt); } sel.value = part.preset; sel.onchange = () => { part.preset = Number(sel.value); this.changed(); };
+        for (let p = 0; p < 60; p++) { const opt = keepName(el('option', `${String(p + 1).padStart(2, '0')} · ${this.presets[p]?.name || 'Missing preset'}`), !!this.presets[p]?.name); opt.value = p; sel.append(opt); } sel.value = part.preset; sel.onchange = () => { part.preset = Number(sel.value); this.changed(); };
         row.append(this.input(`Part ${i + 1}`, part.name, v => part.name = v), sel, this.button('↑', () => this.move(song.parts, i, -1), `Move part ${i + 1} up`), this.button('↓', () => this.move(song.parts, i, 1), `Move part ${i + 1} down`));
         if (song.parts.length > 1) row.append(this.button('Remove', () => { song.parts.splice(i, 1); this.changed(); })); parts.append(row);
       });
@@ -63,7 +64,7 @@ export class SetlistView {
     } else library.append(el('p', 'Create a song, name its parts and choose a saved preset for each.', 'hint'));
     order.append(el('h2', 'Setlist'), this.input('Setlist name', this.data.name, v => this.data.name = v));
     const items = el('ol', null, 'setlist-order'); order.append(items);
-    this.data.order.forEach((id, i) => { const row = el('li'), song = this.data.songs.find(s => s.id === id); row.append(el('b', song?.name || 'Missing song'), this.button('↑', () => this.move(this.data.order, i, -1), `Move song ${i + 1} up`), this.button('↓', () => this.move(this.data.order, i, 1), `Move song ${i + 1} down`), this.button('Remove', () => { this.data.order.splice(i, 1); this.changed(); })); items.append(row); });
+    this.data.order.forEach((id, i) => { const row = el('li'), song = this.data.songs.find(s => s.id === id); row.append(keepName(el('b', song?.name || 'Missing song'), !!song?.name), this.button('↑', () => this.move(this.data.order, i, -1), `Move song ${i + 1} up`), this.button('↓', () => this.move(this.data.order, i, 1), `Move song ${i + 1} down`), this.button('Remove', () => { this.data.order.splice(i, 1); this.changed(); })); items.append(row); });
     if (!this.data.order.length) order.append(el('p', 'Add songs from the library, then arrange them in performance order. A song may appear more than once.', 'hint'));
     const onPedal = el('div', null, 'actions'); onPedal.append(write, remove); order.append(onPedal);
     if (!this.storage) order.append(el('p', 'Connect the pedal to save or remove its setlist.', 'hint'));
