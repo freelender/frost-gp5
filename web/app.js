@@ -542,7 +542,7 @@ function pickRender() {
     li.className = (i === state.current ? 'current' : '') + (k === pick.active ? ' active' : '');
     li.setAttribute('aria-selected', i === state.current);
     const n = document.createElement('span'); n.className = 'picknum'; n.textContent = pad2(i + 1);
-    const t = document.createElement('span'); t.className = 'pickname'; t.textContent = state.presets[i].name || '(no name)';
+    const t = document.createElement('span'); t.className = 'pickname'; keepName(t, !!state.presets[i].name); t.textContent = state.presets[i].name || '(no name)';
     li.append(n, t);
     if (i === state.current) { const m = document.createElement('span'); m.className = 'pickmark'; m.textContent = 'playing'; li.append(m); }
     li.onclick = () => pickChoose(i);
